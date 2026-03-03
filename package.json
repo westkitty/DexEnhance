@@ -1,0 +1,25 @@
+{
+  "name": "dex-enhance",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "bun run build:bg && bun run build:chatgpt && bun run build:gemini && bun run build:popup && bun run copy:public",
+    "build:bg": "bunx --bun vite build --config vite.config.background.js",
+    "build:chatgpt": "bunx --bun vite build --config vite.config.chatgpt.js",
+    "build:gemini": "bunx --bun vite build --config vite.config.gemini.js",
+    "build:popup": "bunx --bun vite build --config vite.config.popup.js",
+    "copy:public": "cp -r public/. dist/",
+    "watch": "concurrently \"bun run watch:bg\" \"bun run watch:chatgpt\" \"bun run watch:gemini\" \"bun run watch:popup\"",
+    "watch:bg": "bunx --bun vite build --config vite.config.background.js --watch",
+    "watch:chatgpt": "bunx --bun vite build --config vite.config.chatgpt.js --watch",
+    "watch:gemini": "bunx --bun vite build --config vite.config.gemini.js --watch",
+    "watch:popup": "bunx --bun vite build --config vite.config.popup.js --watch"
+  },
+  "dependencies": {
+    "preact": "^10.28.4"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "vite": "^7.3.1"
+  }
+}
