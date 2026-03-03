@@ -1,0 +1,35 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "DexEnhance Watch (all)",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "watch"],
+      "port": 5173
+    },
+    {
+      "name": "DexEnhance Watch: Background",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "watch:bg"],
+      "port": 5173
+    },
+    {
+      "name": "DexEnhance Watch: ChatGPT content",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "watch:chatgpt"],
+      "port": 5174
+    },
+    {
+      "name": "DexEnhance Watch: Gemini content",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "watch:gemini"],
+      "port": 5175
+    },
+    {
+      "name": "DexEnhance Watch: Popup",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "watch:popup"],
+      "port": 5176
+    }
+  ]
+}

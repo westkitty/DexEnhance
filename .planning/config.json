@@ -1,0 +1,10 @@
+{
+  "workflow": {
+    "mode": "interactive",
+    "granularity": "phase",
+    "parallelization": true
+  },
+  "model_profile": "balanced",
+  "project": "DexEnhance",
+  "created": "2026-03-03"
+}
