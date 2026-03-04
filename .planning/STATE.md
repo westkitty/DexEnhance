@@ -133,6 +133,14 @@
 - [x] PromptLibrary: search at top, create form behind toggle, empty-state message, inline delete confirm, inline variable form
 - [x] theme.css: system-ui font first, font-weight 650→700/620→600, new styles for inline forms/hub groups/settings sliders, reduced-motion now clears filter
 - [x] popup/index.html: dark ink tokens, CSS-variable pill/example colors, accent focus rings
+- [x] UI/UX audit pass 2 — remaining 6 surfaces updated:
+- [x] Sidebar: SVG icon set + grouped sections (AI Tools / Utilities) + Feature Tour full-width accent CTA + queue badge when count > 0
+- [x] TokenOverlay: replaced cross-component `dex-sidebar__label` dependency with own `dex-token-overlay__label` class
+- [x] ExportDialog: Export button → `dex-link-btn--accent`; description/hint/error use `dex-form__desc/hint/error`
+- [x] PromptOptimizerModal: all hint/error/warning text uses `dex-form__*` classes; copy-to-clipboard buttons on each result block; "Use Optimized Prompt" accented when result available
+- [x] FeatureTourModal: "← → to navigate" keyboard hint added to tour footer
+- [x] QuickHubPanel: hub description uses `dex-form__desc` (replaces misused `dex-folder-state`)
+- [x] theme.css: `dex-brand-badge:hover`, `dex-tour__step:hover`, `dex-token-overlay__label`, `dex-form__desc/hint/error/warning`, sidebar section/queue-badge styles, optimizer copy-btn, tour footer-left/kbd-hint
 
 ## What's Next
 
