@@ -112,7 +112,7 @@ async function logStorageRoundTrip() {
 
   const ui = createShadowRenderer({ site: 'gemini' });
   const iconUrl = chrome.runtime.getURL('icons/icon128.png');
-  const welcomeIconUrl = chrome.runtime.getURL('icons/dex-logo-circle.svg');
+  const welcomeIconUrl = chrome.runtime.getURL('icons/icon1024.png');
 
   let queueSizeState = 0;
   let welcomeZipping = false;

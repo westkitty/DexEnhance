@@ -1361,6 +1361,11 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Kept forced visibility constraints only for onboarding-critical panels (`welcome`, `fab`) outside active onboarding.
   Aligned HUD settings panel fallback `bgGlassAlpha` with new readability baseline.
   Revalidated ChatGPT/Gemini content bundle builds after the correction.
+
+[2026-03-04] v1.15 — Phase 10 welcome-logo runtime regression correction landed.
+  Replaced welcome-logo source on ChatGPT/Gemini from `dex-logo-circle.svg` to direct `icon1024.png` URL in content scripts.
+  Corrected runtime rendering path for welcome logo in extension `<img>` usage where nested SVG image references can fail.
+  Revalidated ChatGPT/Gemini content builds after logo-source correction.
 ```
 
 ---
