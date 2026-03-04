@@ -49,6 +49,9 @@ import {
   updateThemeInSettings,
 } from '../../lib/ui-settings.js';
 
+const ONBOARDING_SEEN_KEY = 'onboardingSeenVersion';
+const ONBOARDING_VERSION = '2026-03-04-onboarding-v1';
+
 async function getEnabledFlag() {
   const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'enabled' });
   if (!response.ok) {
@@ -109,6 +112,7 @@ async function logStorageRoundTrip() {
 
   const ui = createShadowRenderer({ site: 'chatgpt' });
   const iconUrl = chrome.runtime.getURL('icons/icon128.png');
+  const welcomeIconUrl = chrome.runtime.getURL('icons/dex-logo-circle.svg');
 
   let queueSizeState = 0;
   let welcomeZipping = false;
@@ -118,6 +122,7 @@ async function logStorageRoundTrip() {
   let tokenUpdatedAt = null;
   let featureSettings = normalizeFeatureSettings({});
   let semanticIngestTimer = null;
+  let onboardingCompleted = false;
 
   let hudSettings = normalizeHudSettings({}, { width: window.innerWidth, height: window.innerHeight });
   let persistHudTimer = null;
@@ -150,7 +155,11 @@ async function logStorageRoundTrip() {
   };
 
   const setHudSettings = (nextSettings, { persist = true } = {}) => {
-    hudSettings = normalizeHudSettings(nextSettings, getViewport());
+    let normalized = normalizeHudSettings(nextSettings, getViewport());
+    if (onboardingCompleted) {
+      normalized = updatePanelVisibilityInSettings(normalized, 'welcome', false, getViewport());
+    }
+    hudSettings = normalized;
     applyHudPalette();
     if (persist) scheduleHudSettingsPersist();
     renderUI();
@@ -264,16 +273,46 @@ async function logStorageRoundTrip() {
   });
 
   const markTourSeen = async () => {
+    onboardingCompleted = true;
     const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
-      items: { tourSeenVersion: TOUR_VERSION },
+      items: {
+        tourSeenVersion: TOUR_VERSION,
+        [ONBOARDING_SEEN_KEY]: ONBOARDING_VERSION,
+      },
     });
     if (!setRes.ok) {
       console.warn('[DexEnhance] ChatGPT failed to persist tour seen state:', setRes.error);
     }
   };
 
+  const markOnboardingSeen = async () => {
+    onboardingCompleted = true;
+    const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
+      items: {
+        [ONBOARDING_SEEN_KEY]: ONBOARDING_VERSION,
+      },
+    });
+    if (!setRes.ok) {
+      console.warn('[DexEnhance] ChatGPT failed to persist onboarding seen state:', setRes.error);
+    }
+  };
+
+  const applyPostOnboardingLayout = ({ openPromptLibrary = false } = {}) => {
+    onboardingCompleted = true;
+    let next = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'fab', true, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'hub', false, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'tour', false, getViewport());
+    if (openPromptLibrary) {
+      next = updatePanelVisibilityInSettings(next, 'promptLibrary', true, getViewport());
+    }
+    setHudSettings(next);
+  };
+
   const beginWelcomeZip = () => {
+    onboardingCompleted = true;
     welcomeZipping = true;
+    void markOnboardingSeen();
     renderUI();
   };
 
@@ -374,7 +413,7 @@ async function logStorageRoundTrip() {
           key: 'welcome',
           visible: isPanelOpen('welcome'),
           zipping: welcomeZipping,
-          iconUrl,
+          iconUrl: welcomeIconUrl,
           panelState: panelState('welcome'),
           zipTarget: {
             x: panelState('fab').x,
@@ -541,16 +580,15 @@ async function logStorageRoundTrip() {
           site: 'ChatGPT',
           iconUrl,
           onOpenPrompts: () => {
-            closeWindow('tour');
-            openWindow('promptLibrary');
+            applyPostOnboardingLayout({ openPromptLibrary: true });
             void markTourSeen();
           },
           onClose: () => {
-            closeWindow('tour');
+            applyPostOnboardingLayout();
             void markTourSeen();
           },
           onComplete: () => {
-            closeWindow('tour');
+            applyPostOnboardingLayout();
             void markTourSeen();
           },
           windowState: panelState('tour'),
@@ -657,14 +695,23 @@ async function logStorageRoundTrip() {
   featureSettings = await fetchFeatureSettings();
 
   const tourState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'tourSeenVersion' });
-  if (!tourState.ok || tourState.data !== TOUR_VERSION) {
+  const onboardingState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: ONBOARDING_SEEN_KEY });
+  const hasSeenTour = tourState.ok && tourState.data === TOUR_VERSION;
+  const hasSeenOnboarding = onboardingState.ok && onboardingState.data === ONBOARDING_VERSION;
+  const shouldShowWelcome = !(hasSeenTour || hasSeenOnboarding);
+
+  if (shouldShowWelcome) {
+    onboardingCompleted = false;
     hudSettings = updatePanelVisibilityInSettings(hudSettings, 'welcome', true, getViewport());
     hudSettings = updatePanelVisibilityInSettings(hudSettings, 'fab', false, getViewport());
     hudSettings = updatePanelVisibilityInSettings(hudSettings, 'hub', false, getViewport());
     hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tour', false, getViewport());
   } else {
+    onboardingCompleted = true;
     hudSettings = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
     hudSettings = updatePanelVisibilityInSettings(hudSettings, 'fab', true, getViewport());
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'hub', false, getViewport());
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tour', false, getViewport());
   }
   applyHudPalette();
 
@@ -677,6 +724,9 @@ async function logStorageRoundTrip() {
     if (areaName !== 'local') return;
     if (!changes[HUD_SETTINGS_KEY]) return;
     hudSettings = normalizeHudSettings(changes[HUD_SETTINGS_KEY].newValue, getViewport());
+    if (onboardingCompleted) {
+      hudSettings = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
+    }
     applyHudPalette();
     renderUI();
   });

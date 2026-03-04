@@ -13,8 +13,8 @@ export function WelcomeHandoffModal({
   onGetStarted,
   onZipTransitionEnd,
 }) {
-  const panelWidth = Math.max(320, Number(panelState?.width || 360));
-  const panelHeight = Math.max(340, Number(panelState?.height || 360));
+  const panelWidth = 280;
+  const panelHeight = 294;
 
   const drag = useDraggable({
     initialPosition: {
@@ -33,6 +33,8 @@ export function WelcomeHandoffModal({
         ...panelState,
         x: nextPosition.x,
         y: nextPosition.y,
+        width: panelWidth,
+        height: panelHeight,
       });
     },
   });
@@ -52,6 +54,12 @@ export function WelcomeHandoffModal({
 
   if (!visible) return null;
 
+  const startDrag = (event) => {
+    if (event?.button != null && event.button !== 0) return;
+    if (event.target instanceof Element && event.target.closest('button, input, select, textarea, a')) return;
+    drag.startDrag(event);
+  };
+
   return h('section', {
     class: `dex-welcome${zipping ? ' is-zipping' : ''}`,
     style: {
@@ -63,19 +71,13 @@ export function WelcomeHandoffModal({
       transform: zipStyle || undefined,
       zIndex: 2147483647,
     },
+    onPointerDown: startDrag,
     onTransitionEnd: (event) => {
       if (!zipping) return;
       if (event?.propertyName !== 'transform') return;
       onZipTransitionEnd?.();
     },
   }, [
-    h('header', {
-      class: 'dex-welcome__header',
-      onPointerDown: drag.startDrag,
-    }, [
-      h('span', { class: 'dex-welcome__title' }, 'DexEnhance'),
-      h('span', { class: 'dex-welcome__drag' }, 'Drag'),
-    ]),
     h('div', { class: 'dex-welcome__body' }, [
       iconUrl
         ? h('div', { class: 'dex-welcome__logo-circle' }, [

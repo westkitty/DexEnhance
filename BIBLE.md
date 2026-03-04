@@ -403,6 +403,35 @@ For current execution truth, use:
   - `.planning/phases/phase-10/phase-10-11-HUD-MOBILITY-SETTINGS-PROMPT-HARDENING.md`
   - `.planning/phases/phase-10/phase-10-11-playwright-verification.json`
 
+### State Update (2026-03-04, additive #18)
+
+- Completed onboarding/window-management/logo fidelity stabilization pass with strict append-only logging.
+- Reworked first-run welcome surface to a circle-only composition:
+  - removed visible welcome card box chrome
+  - preserved circular logo + CTA vertical stack
+  - tightened CTA placement beneath logo
+- Added onboarding persistence guard:
+  - introduced `onboardingSeenVersion` (`2026-03-04-onboarding-v1`)
+  - marks onboarding complete on `Get Started`
+  - prevents welcome from reappearing after tour close/complete
+  - added cross-tab storage sync guard so stale writes cannot reopen welcome
+- Hardened post-tour golden-path transitions:
+  - closing/completing tour now enforces post-onboarding layout (`welcome=false`, `tour=false`, `fab=true`, `hub=false`)
+  - optional prompt-library open preserved for tour CTA path
+- Resolved transparency-slider instability:
+  - added stable keyed top-level panel renders in both ChatGPT and Gemini entrypoints to avoid local-state loss/remount churn
+  - opacity submenu interaction tightened with pointer-events gating
+- Completed readability hardening sweep:
+  - raised glass and panel opacity floors
+  - increased contrast and small-text legibility in key UI surfaces (tour/settings/panel controls)
+  - reduced watermark dominance for improved content readability
+- Added higher-fidelity logo assets for welcome flow:
+  - `public/icons/icon1024.png` (source-resolution logo)
+  - `public/icons/dex-logo-circle.svg` (self-contained circular SVG with embedded data URI)
+  - updated manifest web-accessible resources accordingly
+- Re-validated:
+  - `bun run build`
+
 ---
 
 ## 4. COMPLETE REQUIREMENTS REGISTER
@@ -1176,6 +1205,19 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Artifacts:
   - .planning/phases/phase-10/phase-10-11-HUD-MOBILITY-SETTINGS-PROMPT-HARDENING.md
   - .planning/phases/phase-10/phase-10-11-playwright-verification.json
+
+[2026-03-04] PHASE 10 ONBOARDING + LOGO FIDELITY STABILIZATION — Welcome/tour golden-path correction completed.
+  Reworked welcome first-run UI to circle-only presentation and removed visible box chrome.
+  Added onboarding-completion persistence key (`onboardingSeenVersion`) and flow guards so welcome cannot reopen after `Get Started` + tour close/complete.
+  Enforced deterministic post-tour layout state (`welcome=false`, `tour=false`, `fab=true`, `hub=false`) with optional prompt-library CTA path.
+  Stabilized settings transparency controls by keying top-level panel renders to prevent remount-induced local-state loss.
+  Completed readability hardening pass (contrast/opacity/typography floor adjustments) across tour/settings/panel surfaces.
+  Added high-resolution logo assets and welcome-specific circular SVG rendering path:
+  - public/icons/icon1024.png
+  - public/icons/dex-logo-circle.svg (self-contained embedded image payload)
+  Updated manifest web-accessible resources for the new logo assets.
+  Re-validated:
+  - `bun run build`
 ```
 
 ---
@@ -1296,6 +1338,14 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Added popup Settings entrypoint for HUD hue/layout control and synced it via storage.
   Added per-panel opacity controls, FAB sizing, and compact token-bar behavior to reduce UI obstruction.
   Hardened same-tab optimizer submission using multi-path fallback dispatch and revalidated build/Playwright.
+
+[2026-03-04] v1.12 — Phase 10 onboarding/logo fidelity stabilization landed.
+  Reworked first-run welcome flow to circle-only logo composition and tightened CTA handoff behavior.
+  Added explicit onboarding completion key/version and cross-tab guards so welcome cannot reappear after onboarding completion.
+  Enforced deterministic post-tour layout transitions across ChatGPT and Gemini content scripts.
+  Added high-resolution logo asset path for welcome (`icon1024.png`) plus circular SVG (`dex-logo-circle.svg`) and updated manifest exposure.
+  Stabilized window-transparency settings interactions via keyed render strategy and completed readability/opacity contrast hardening.
+  Revalidated build after all UI/state/asset changes.
 ```
 
 ---

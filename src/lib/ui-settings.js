@@ -62,7 +62,7 @@ function centerY(height, viewportHeight) {
 export function panelMinSize(panelId) {
   switch (panelId) {
     case 'welcome':
-      return { minWidth: 320, minHeight: 340 };
+      return { minWidth: 280, minHeight: 294 };
     case 'hub':
       return { minWidth: 340, minHeight: 260 };
     case 'sidebar':
@@ -91,11 +91,11 @@ export function defaultPanelState(panelId, viewport) {
 
   switch (panelId) {
     case 'welcome': {
-      const panelWidth = Math.min(380, Math.max(320, Math.round(width * 0.28)));
-      const panelHeight = Math.max(340, Math.round(panelWidth * 1.04));
+      const panelWidth = 280;
+      const panelHeight = 294;
       return {
         x: centerX(panelWidth, width),
-        y: Math.max(66, centerY(panelHeight, height) - 20),
+        y: Math.max(66, centerY(panelHeight, height) - 10),
         width: panelWidth,
         height: panelHeight,
         opacity: 0.98,
