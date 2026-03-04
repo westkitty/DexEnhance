@@ -90,6 +90,10 @@ export function WelcomeHandoffModal({
             }),
           ])
         : null,
+      h('div', { class: 'dex-welcome__info' }, [
+        h('strong', { class: 'dex-welcome__name' }, 'DexEnhance'),
+        h('span', { class: 'dex-welcome__tagline' }, 'AI workflow assistant for ChatGPT + Gemini'),
+      ]),
       h(
         'button',
         {

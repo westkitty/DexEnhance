@@ -30,6 +30,12 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "watch:popup"],
       "port": 5176
+    },
+    {
+      "name": "DexEnhance Popup Preview",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["preview-server.ts"],
+      "port": 5179
     }
   ]
 }

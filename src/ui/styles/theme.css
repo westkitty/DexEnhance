@@ -6,7 +6,7 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  font-family: "Avenir Next", "Trebuchet MS", "Gill Sans", "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, "Avenir Next", "Segoe UI", sans-serif;
   --dex-radius: 16px;
   --dex-shadow-lg: 0 20px 44px rgba(8, 30, 49, 0.22);
   --dex-shadow-md: 0 12px 28px rgba(8, 30, 49, 0.18);
@@ -171,6 +171,12 @@
   background: var(--dex-shell-strong);
   cursor: pointer;
   font-weight: 700;
+  transition: border-color var(--dex-transition-fast), box-shadow var(--dex-transition-fast);
+}
+
+.dex-sidebar__toggle:hover {
+  border-color: var(--dex-border-strong);
+  box-shadow: var(--dex-shadow-sm);
 }
 
 .dex-sidebar__body {
@@ -281,7 +287,7 @@
   background: color-mix(in srgb, var(--dex-shell-strong) 94%, transparent);
   color: var(--dex-fg);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1;
   padding: 8px 10px;
   min-height: 40px;
@@ -355,17 +361,6 @@
   gap: 8px;
 }
 
-.dex-fab__action {
-  border: 1px solid var(--dex-border);
-  border-radius: 999px;
-  background: var(--dex-bg-base);
-  color: var(--dex-fg);
-  padding: 10px 14px;
-  font-size: 12px;
-  min-height: 42px;
-  cursor: pointer;
-}
-
 .dex-fab__button {
   width: 58px;
   height: 58px;
@@ -380,6 +375,31 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  transition: transform var(--dex-transition-fast), box-shadow var(--dex-transition-fast), filter var(--dex-transition-fast);
+}
+
+.dex-fab__button:hover {
+  transform: scale(1.06);
+  box-shadow: var(--dex-shadow-lg);
+  filter: brightness(1.08);
+}
+
+.dex-fab__action {
+  border: 1px solid var(--dex-border);
+  border-radius: 999px;
+  background: var(--dex-bg-base);
+  color: var(--dex-fg);
+  padding: 10px 14px;
+  font-size: 12px;
+  min-height: 42px;
+  cursor: pointer;
+  transition: border-color var(--dex-transition-fast), box-shadow var(--dex-transition-fast), transform var(--dex-transition-fast);
+}
+
+.dex-fab__action:hover {
+  transform: translateY(-1px);
+  border-color: var(--dex-border-strong);
+  box-shadow: var(--dex-shadow-sm);
 }
 
 .dex-fab__icon {
@@ -588,12 +608,6 @@
   padding: 4px 6px 6px;
 }
 
-.dex-panel-frame__collapsed {
-  padding: 8px 10px;
-  font-size: 12px;
-  color: var(--dex-muted);
-}
-
 .dex-panel-frame__options {
   display: grid;
   gap: 6px;
@@ -794,7 +808,7 @@
 
 .dex-window-row__label {
   font-size: 13px;
-  font-weight: 620;
+  font-weight: 600;
   color: var(--dex-fg);
 }
 
@@ -1208,6 +1222,201 @@ select.dex-input:focus-visible {
   box-shadow: var(--dex-outline);
 }
 
+/* ── Grip icon in PanelFrame header ──────────────────────────── */
+.dex-panel-frame__grip {
+  flex-shrink: 0;
+  opacity: 0.38;
+  margin-right: 4px;
+  color: var(--dex-muted);
+  pointer-events: none;
+}
+
+.dex-panel-frame__header:hover .dex-panel-frame__grip {
+  opacity: 0.65;
+}
+
+/* ── Collapsed panel clickable hint ─────────────────────────── */
+.dex-panel-frame__collapsed {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--dex-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dex-panel-frame__collapsed:hover {
+  color: var(--dex-fg);
+}
+
+.dex-panel-frame__collapsed-hint {
+  font-size: 11px;
+  opacity: 0.62;
+}
+
+/* ── FolderTree inline form ──────────────────────────────────── */
+.dex-folder-inline-form {
+  display: grid;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.dex-folder-inline-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.dex-folder-rename-input {
+  flex: 1;
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+.dex-folder-rename-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.dex-folder-confirm {
+  margin-left: calc(var(--depth, 0) * 14px);
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, #d04658 38%, var(--dex-border));
+  border-radius: 10px;
+  background: color-mix(in srgb, #d04658 6%, var(--dex-shell-strong));
+}
+
+.dex-folder-confirm__text {
+  display: block;
+  font-size: 12px;
+  color: var(--dex-fg);
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+
+.dex-folder-confirm__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dex-folder-menu-btn {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  margin-left: auto;
+}
+
+/* ── PromptLibrary variable form ─────────────────────────────── */
+.dex-var-form {
+  display: grid;
+  gap: 10px;
+  padding: 4px 0 8px;
+}
+
+.dex-var-form__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dex-fg);
+}
+
+/* ── QuickHubPanel grouped layout ────────────────────────────── */
+.dex-hub__group {
+  display: grid;
+  gap: 6px;
+}
+
+.dex-hub__group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dex-muted);
+  padding: 2px 0 0;
+}
+
+.dex-hub__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.dex-hub__action-btn--primary {
+  border-color: color-mix(in srgb, var(--dex-accent) 32%, var(--dex-border));
+  background: color-mix(in srgb, var(--dex-accent) 8%, var(--dex-shell-strong));
+}
+
+.dex-hub__action-btn--primary:hover {
+  background: color-mix(in srgb, var(--dex-accent) 14%, var(--dex-shell-strong));
+}
+
+/* ── WelcomeHandoffModal text additions ──────────────────────── */
+.dex-welcome__info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.dex-welcome__name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--dex-fg);
+}
+
+.dex-welcome__tagline {
+  font-size: 11px;
+  color: var(--dex-muted);
+  line-height: 1.4;
+  max-width: 220px;
+}
+
+/* ── HUDSettingsPanel labeled slider rows ────────────────────── */
+.dex-settings-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dex-settings-swatch {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 1px solid var(--dex-border);
+  flex-shrink: 0;
+}
+
+.dex-settings-slider-row {
+  display: grid;
+  grid-template-columns: 72px 1fr 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.dex-settings-slider-label {
+  font-size: 11px;
+  color: var(--dex-muted);
+  font-weight: 600;
+}
+
+.dex-settings-slider-val {
+  font-size: 11px;
+  color: var(--dex-fg-soft);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (max-width: 1024px) {
   .dex-tour__layout {
     grid-template-columns: 1fr;
@@ -1252,8 +1461,12 @@ select.dex-input:focus-visible {
   .dex-fab,
   .dex-link-btn,
   .dex-fab__button,
-  .dex-tour__step {
+  .dex-fab__action,
+  .dex-tour__step,
+  .dex-prompt-card,
+  .dex-sidebar__toggle {
     transition: none !important;
     animation: none !important;
+    filter: none !important;
   }
 }

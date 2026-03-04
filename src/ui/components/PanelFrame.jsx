@@ -136,9 +136,22 @@ export function PanelFrame({
         {
           class: 'dex-panel-frame__header',
           onPointerDown: startDrag,
+          title: 'Drag to move',
         },
         [
           h('div', { class: 'dex-panel-frame__title' }, [
+            h('svg', {
+              class: 'dex-panel-frame__grip',
+              width: '10', height: '14', viewBox: '0 0 10 14',
+              fill: 'currentColor', 'aria-hidden': 'true',
+            }, [
+              h('circle', { cx: '2.5', cy: '3', r: '1.1' }),
+              h('circle', { cx: '2.5', cy: '7', r: '1.1' }),
+              h('circle', { cx: '2.5', cy: '11', r: '1.1' }),
+              h('circle', { cx: '7.5', cy: '3', r: '1.1' }),
+              h('circle', { cx: '7.5', cy: '7', r: '1.1' }),
+              h('circle', { cx: '7.5', cy: '11', r: '1.1' }),
+            ]),
             iconUrl
               ? h('img', {
                   src: iconUrl,
@@ -232,7 +245,16 @@ export function PanelFrame({
       state.collapsed
         ? compactCollapsed
           ? h('div', { class: 'dex-panel-frame__body dex-panel-frame__body--compact' }, children)
-          : h('div', { class: 'dex-panel-frame__collapsed' }, `${title} minimized`)
+          : h('div', { class: 'dex-panel-frame__collapsed', role: 'button', tabIndex: 0,
+              onClick: () => updatePanel({ ...state, collapsed: false }),
+              onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') updatePanel({ ...state, collapsed: false }); },
+            }, [
+              h('svg', { width: '10', height: '10', viewBox: '0 0 10 10', fill: 'currentColor', 'aria-hidden': 'true', style: 'flex-shrink:0;opacity:0.6;' }, [
+                h('path', { d: 'M2 3l3 4 3-4' }),
+              ]),
+              h('span', null, title),
+              h('span', { class: 'dex-panel-frame__collapsed-hint' }, '— click to expand'),
+            ])
         : h('div', { class: 'dex-panel-frame__body' }, children),
       allowResize && !state.collapsed
         ? h('div', {

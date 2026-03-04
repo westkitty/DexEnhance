@@ -121,6 +121,18 @@
 - [x] Expanded Playwright verifier to assert popup settings modal open path and controls
 - [x] Added artifact `.planning/phases/phase-10/phase-10-11-HUD-MOBILITY-SETTINGS-PROMPT-HARDENING.md`
 - [x] Added artifact `.planning/phases/phase-10/phase-10-11-playwright-verification.json`
+- [x] Full UI/UX audit performed across all 9 surfaces (audit-12 pass)
+- [x] Popup contrast fixed: `--dex-ink` → `#0d1f2d` dark navy — WCAG AA compliant on silver background
+- [x] All `window.prompt()`/`window.confirm()` eliminated — replaced with inline Preact UI (FolderTree + PromptLibrary)
+- [x] FAB grip: `⋮⋮` text replaced with 6-dot SVG icon
+- [x] Hover states added for FAB button, FAB actions, sidebar toggle
+- [x] QuickHubPanel redesigned with SVG icons and 3 grouped sections (AI Tools / Panels / Utilities)
+- [x] HUDSettingsPanel labeled slider rows (Hue/Sat/Light/Alpha) + live color swatch preview
+- [x] WelcomeHandoffModal: product name + tagline added
+- [x] PanelFrame: SVG grip dots in header, improved collapsed state with expand hint + keyboard support
+- [x] PromptLibrary: search at top, create form behind toggle, empty-state message, inline delete confirm, inline variable form
+- [x] theme.css: system-ui font first, font-weight 650→700/620→600, new styles for inline forms/hub groups/settings sliders, reduced-motion now clears filter
+- [x] popup/index.html: dark ink tokens, CSS-variable pill/example colors, accent focus rings
 
 ## What's Next
 
