@@ -10,6 +10,9 @@
     "build:popup": "bunx --bun vite build --config vite.config.popup.js",
     "copy:public": "cp -r public/. dist/",
     "package:zip": "cd dist && find . -name '.DS_Store' -delete && rm -f ../DexEnhance-v1-private.zip && zip -r ../DexEnhance-v1-private.zip . -x '*.DS_Store'",
+    "test": "bun test tests/unit/",
+    "test:e2e": "bunx playwright test tests/e2e/",
+    "test:all": "bun test tests/unit/ && bunx playwright test tests/e2e/",
     "verify:playwright": "node scripts/verify_extension_playwright.cjs",
     "watch": "concurrently \"bun run watch:bg\" \"bun run watch:chatgpt\" \"bun run watch:gemini\" \"bun run watch:popup\"",
     "watch:bg": "bunx --bun vite build --config vite.config.background.js --watch",
@@ -25,6 +28,7 @@
     "preact": "^10.28.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "concurrently": "^9.2.1",
     "playwright": "^1.58.2",
     "vite": "^7.3.1"
