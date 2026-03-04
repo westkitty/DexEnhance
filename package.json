@@ -15,7 +15,9 @@
     "watch:bg": "bunx --bun vite build --config vite.config.background.js --watch",
     "watch:chatgpt": "bunx --bun vite build --config vite.config.chatgpt.js --watch",
     "watch:gemini": "bunx --bun vite build --config vite.config.gemini.js --watch",
-    "watch:popup": "bunx --bun vite build --config vite.config.popup.js --watch"
+    "watch:popup": "bunx --bun vite build --config vite.config.popup.js --watch",
+    "build:firefox": "bun run build && node scripts/build_firefox_dist.cjs",
+    "package:zip:firefox": "bun run build:firefox && cd dist-firefox && find . -name '*.DS_Store' -delete && rm -f ../DexEnhance-v1-firefox.zip && zip -r ../DexEnhance-v1-firefox.zip . -x '*.DS_Store'"
   },
   "dependencies": {
     "docx": "^9.6.0",

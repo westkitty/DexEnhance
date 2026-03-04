@@ -1118,6 +1118,33 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   - not recommended for DexEnhance due brittleness and product/compliance risk
   Artifact:
   - .planning/phases/phase-10/phase-10-08-WATERMARK-VISIBILITY-AND-FEASIBILITY.md
+
+[2026-03-04] PHASE 10 FIREFOX TARGET — Parallel Firefox distribution flow added.
+  Added Firefox dist build path that preserves existing Chromium/Brave dist flow:
+  - `bun run build:firefox` => builds `dist/`, clones to `dist-firefox/`, rewrites Firefox manifest.
+  Added Firefox package flow:
+  - `bun run package:zip:firefox` => DexEnhance-v1-firefox.zip
+  Added Firefox-specific manifest adjustments in generated `dist-firefox/manifest.json`:
+  - browser_specific_settings.gecko metadata
+  - removed declarativeNetRequest permission for compatibility
+  Updated README with Firefox load/test instructions via about:debugging.
+  Re-validated:
+  - `bun run build:firefox`
+  - `bun run package:zip:firefox`
+  Artifact:
+  - .planning/phases/phase-10/phase-10-09-FIREFOX-DIST-TARGET.md
+
+[2026-03-04] PHASE 10 README REFRESH — GitHub presentation updated from DexDictate template reference.
+  Consulted README style from:
+  - https://github.com/westkitty/DexDictate_MacOS
+  Reworked DexEnhance README to include:
+  - centered icon + badge row
+  - concise product positioning and key features
+  - architecture snapshot
+  - install/build/package/test flows for Brave/Chromium + Firefox
+  - preserved constraints and troubleshooting details
+  Artifact:
+  - .planning/phases/phase-10/phase-10-10-README-TEMPLATE-REFRESH.md
 ```
 
 ---
@@ -1220,6 +1247,18 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Added technical feasibility review for reverse-alpha visible watermark removal and documented
   recommendation to avoid shipping this mechanism in DexEnhance v1.
   Revalidated build and Playwright verification.
+
+[2026-03-04] v1.9 — Phase 10 Firefox parallel target landed.
+  Added Firefox-specific dist generation alongside existing Brave/Chromium output.
+  Added Firefox packaging script and output archive path.
+  Added Firefox gecko metadata and removed DNR permission in generated Firefox manifest.
+  Updated README with Firefox temporary-add-on load workflow.
+  Revalidated Firefox build/package commands.
+
+[2026-03-04] v1.10 — Phase 10 README template refresh landed.
+  Updated README structure/style using DexDictate README as presentation reference.
+  Added GitHub-facing hero, badges, feature framing, and clear install/package/verify docs.
+  Preserved technical accuracy for DexEnhance-specific architecture and workflows.
 ```
 
 ---

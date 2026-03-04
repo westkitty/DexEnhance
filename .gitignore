@@ -1,8 +1,12 @@
 node_modules/
 dist/
+dist-firefox/
 bun.lockb
 bun.lock
 *.DS_Store
 
 # Playwright runtime/browser profile artifacts (volatile)
 output/playwright/session/
+
+# Generated Firefox package artifact
+DexEnhance-v1-firefox.zip

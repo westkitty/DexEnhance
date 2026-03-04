@@ -105,6 +105,13 @@
 - [x] Increased modal action button transparency across injected and popup UI surfaces
 - [x] Added feasibility assessment for reverse-alpha watermark-removal mechanism
 - [x] Added artifact `.planning/phases/phase-10/phase-10-08-WATERMARK-VISIBILITY-AND-FEASIBILITY.md`
+- [x] Added parallel Firefox target build output (`dist-firefox`) without changing Chromium `dist`
+- [x] Added Firefox packaging flow (`DexEnhance-v1-firefox.zip`)
+- [x] Added Firefox manifest transformation with gecko metadata and DNR permission removal
+- [x] Updated README with Firefox temporary-load testing instructions
+- [x] Added artifact `.planning/phases/phase-10/phase-10-09-FIREFOX-DIST-TARGET.md`
+- [x] Refreshed GitHub README using DexDictate template style as reference
+- [x] Added artifact `.planning/phases/phase-10/phase-10-10-README-TEMPLATE-REFRESH.md`
 
 ## What's Next
 
@@ -148,3 +155,5 @@ Optional follow-up pass:
 | 2026-03-04 | Hybrid optimizer defaults to local rewrite with optional AI refinement | Prioritizes reliability and speed while keeping advanced hidden-tab path explicit |
 | 2026-03-04 | Modal watermark visibility increased and centered for stronger branding pass | Aligns with latest visual direction while preserving glassmorphic readability and interaction contrast |
 | 2026-03-04 | Reverse-alpha watermark removal evaluated as feasible-but-not-recommended | High brittleness and product/compliance risk for DexEnhance scope |
+| 2026-03-04 | Firefox target is produced from Chromium build output via manifest transform | Preserves single code pipeline while enabling parallel browser-specific packaging |
+| 2026-03-04 | README structure now follows DexDictate-style GitHub presentation | Improves discoverability and onboarding while preserving exact DexEnhance build/test steps |
