@@ -9,6 +9,8 @@
     "build:gemini": "bunx --bun vite build --config vite.config.gemini.js",
     "build:popup": "bunx --bun vite build --config vite.config.popup.js",
     "copy:public": "cp -r public/. dist/",
+    "package:zip": "cd dist && find . -name '.DS_Store' -delete && rm -f ../DexEnhance-v1-private.zip && zip -r ../DexEnhance-v1-private.zip . -x '*.DS_Store'",
+    "verify:playwright": "node scripts/verify_extension_playwright.cjs",
     "watch": "concurrently \"bun run watch:bg\" \"bun run watch:chatgpt\" \"bun run watch:gemini\" \"bun run watch:popup\"",
     "watch:bg": "bunx --bun vite build --config vite.config.background.js --watch",
     "watch:chatgpt": "bunx --bun vite build --config vite.config.chatgpt.js --watch",
@@ -16,10 +18,13 @@
     "watch:popup": "bunx --bun vite build --config vite.config.popup.js --watch"
   },
   "dependencies": {
+    "docx": "^9.6.0",
+    "jspdf": "^4.2.0",
     "preact": "^10.28.4"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "playwright": "^1.58.2",
     "vite": "^7.3.1"
   }
 }

@@ -190,32 +190,202 @@ phase. Each task has exact file contents to create. Follow the plan exactly.
 | Field | Value |
 |---|---|
 | **Milestone** | 1 — Full-Featured Extension v1 |
-| **Phase** | 1 — Foundation & Build Pipeline |
-| **Phase Status** | PLANNED & VERIFIED — Ready to Execute |
-| **Plan File** | `.planning/phases/phase-1/PLAN.md` |
-| **Last Session Terminated At** | Phase 1 planning complete. No code written yet. |
-| **Blocking Issue** | Bun not installed. Install before running `bun run build`. |
+| **Phase** | 10 — Brave Hardening & Private Distribution |
+| **Phase Status** | Implemented — Deep regression + UI sweep complete |
+| **Plan File** | Phase 10 execution artifacts under `.planning/phases/phase-10/` |
+| **Last Session Terminated At** | Phase 10-07 hybrid prompt optimizer implementation complete. |
+| **Blocking Issue** | None (manual authenticated UAT remains optional follow-up). |
 
 ### What Was Done Last Session
 
-1. GSD new-project initialization: created `.planning/PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md`, `STATE.md`, `config.json`
-2. Phase 1 planning: ran researcher → planner → checker agents
-3. Phase 1 PLAN.md written (1,184 lines) and checker-verified (PASS, all 8 dimensions)
-4. `.claude/launch.json` pre-configured with `bun run watch` commands
+1. Implemented hybrid prompt optimizer with deterministic local rewrite as default path.
+2. Added optional AI refinement toggle with same-tab default and hidden-tab advanced mode.
+3. Added service-worker orchestration for hidden-tab AI refinement with safe tab cleanup.
+4. Added optimizer modal UI and integrated actions in Sidebar/FAB across ChatGPT and Gemini.
+5. Wrote Phase 10-07 implementation + verification artifacts under `.planning/phases/phase-10/`.
 
 ### What Needs to Happen Next
 
-**Step 1:** Install Bun if not present: `curl -fsSL https://bun.sh/install | bash`
+**Step 1:** Optional authenticated UAT on ChatGPT and Gemini with real accounts.
 
-**Step 2:** Execute Phase 1: Run `/gsd:execute-phase 1` in Claude Code, OR follow the tasks in `.planning/phases/phase-1/PLAN.md` manually.
+**Step 2:** Optional token-overlay fidelity sign-off against real model responses.
 
-**Step 3:** Human checkpoint (Task 7 in PLAN.md) — load `dist/` in Brave, verify console logs on both sites.
+**Step 3:** Optional export dependency footprint optimization (bundle-size follow-up).
 
 ### Checkpoint: Where Code Last Left Off
 
-No code exists yet. The project directory contains only:
-- `.planning/` (GSD planning artifacts)
-- `.claude/launch.json` (dev server configs, non-functional until Phase 1 executes)
+Phase 10 implementation is complete with stabilization artifacts and private package output.
+For current execution truth, use:
+- `.planning/STATE.md`
+- `.planning/phases/phase-10/phase-10-07-HYBRID-PROMPT-OPTIMIZER.md`
+- `.planning/phases/phase-10/phase-10-07-playwright-verification.json`
+
+### State Update (2026-03-03, additive)
+
+- Phase 1 execution completed after this snapshot was written.
+- Bun installed (`1.3.10`) and `bun run build` now succeeds.
+- Phase 1 output summary written to:
+  - `.planning/phases/phase-1/phase-1-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #2)
+
+- Phase 2 implementation completed after this snapshot was written.
+- Added typed runtime protocol and centralized storage routing through service worker.
+- Added dynamic declarativeNetRequest rule manager scaffolding with live API calls.
+- Phase 2 output summary written to:
+  - `.planning/phases/phase-2/phase-2-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #3)
+
+- Phase 3 implementation completed after this snapshot was written.
+- Implemented both site adapters (`chatgpt`, `gemini`) for textarea/submit/chat-list/generating detection.
+- Added shared observer/event lifecycle in `ChatInterface` for generating-state and chat-list mutation events.
+- Wired adapters into content script entry points with readiness and event logging.
+- Phase 3 output summary written to:
+  - `.planning/phases/phase-3/phase-3-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #4)
+
+- Phase 4 implementation completed after this snapshot was written.
+- Added Shadow DOM renderer and scoped theme system for injected UI.
+- Added Preact `Sidebar` and `FAB` component shells and mounted them on both target sites.
+- Phase 4 output summary written to:
+  - `.planning/phases/phase-4/phase-4-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #5)
+
+- Phase 5 implementation completed after this snapshot was written.
+- Added service-worker folder/chat organization state and CRUD message actions.
+- Sidebar now renders a virtual folder tree with assign/trash/restore/permanent-delete flows.
+- Phase 5 output summary written to:
+  - `.planning/phases/phase-5/phase-5-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #6)
+
+- Phase 6 implementation completed after this snapshot was written.
+- Added shared queue interception controller and wired it into both content scripts.
+- Queue now intercepts submit actions while generating and auto-sends on generating end.
+- Sidebar now displays live queued-message count.
+- Phase 6 output summary written to:
+  - `.planning/phases/phase-6/phase-6-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #7)
+
+- Phase 7 implementation completed after this snapshot was written.
+- Added prompt CRUD protocol + storage model in service worker.
+- Added Prompt Library modal UI with search, edit/delete, and `{{variable}}` substitution insert flow.
+- FAB prompt action now opens Prompt Library on both sites.
+- Phase 7 output summary written to:
+  - `.planning/phases/phase-7/phase-7-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #8)
+
+- Phase 8 implementation completed after this snapshot was written.
+- Added conversation parser + PDF/DOCX export generation in content script context.
+- Added export dialog UI and wired export triggers from FAB and Sidebar.
+- Phase 8 output summary written to:
+  - `.planning/phases/phase-8/phase-8-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #9)
+
+- Phase 9 implementation completed after this snapshot was written.
+- Added API bridge for main-world fetch/XHR interception and postMessage relay.
+- Added token/model overlay in content UI for both target sites.
+- Phase 9 output summary written to:
+  - `.planning/phases/phase-9/phase-9-01-SUMMARY.md`
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #10)
+
+- Phase 10 implementation completed for automated hardening + private packaging.
+- Added README install/packaging guide and generated private zip artifact.
+- Phase 10 output summary written to:
+  - `.planning/phases/phase-10/phase-10-01-SUMMARY.md`
+- Remaining gap is manual Brave Shields aggressive-profile UAT verification.
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #11)
+
+- Added dedicated hardening report:
+  - `.planning/phases/phase-10/phase-10-02-HARDENING-REPORT.md`
+- Report captures:
+  - build/package audit results
+  - bundle size footprint
+  - dynamic-code token findings in transitive vendor bundle paths
+- Remaining gaps are unchanged: manual Brave Shields aggressive-profile UAT + optional export-bundle optimization follow-up.
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #12)
+
+- Performed post-hardening bug sweep + icon integration stabilization pass.
+- Added Playwright extension verification script + report artifact:
+  - `scripts/verify_extension_playwright.cjs`
+  - `.planning/phases/phase-10/phase-10-03-playwright-verification.json`
+- Resolved CSP breakage for API bridge by migrating injection from inline script to packaged web-accessible script.
+- Integrated project icon asset across manifest, popup, and injected Shadow DOM surfaces (including top-right badge).
+- Updated packaging script to rebuild zip cleanly and prevent stale `.DS_Store` entries.
+- For latest state, prefer `.planning/STATE.md` plus Completion Log Section 13 entries dated 2026-03-03.
+
+### State Update (2026-03-03, additive #13)
+
+- Ran additional deep regression sweep after phase-10-03 fixes.
+- Corrected export dedupe behavior to remove adjacent duplicates only (preserves legitimate repeated turns).
+- Corrected install-time stored version to use `chrome.runtime.getManifest().version`.
+- Added popup favicon metadata using bundled icon asset.
+- Re-ran build + Playwright verification + packaging (all pass).
+- Follow-up artifact added:
+  - `.planning/phases/phase-10/phase-10-04-DEEP-SWEEP-FOLLOWUP.md`
+
+### State Update (2026-03-04, additive #14)
+
+- Completed phase-10 UI/tour/prompt-catalog deep sweep with expanded automation checks.
+- Added 60-template prompt catalog versioning + migration wiring in service worker.
+- Added guided Feature Tour modal (ChatGPT + Gemini) and popup onboarding tour (first-run auto-open).
+- Fixed popup onboarding regression caused by absolute build asset path (`/index.js`).
+- Fixed Feature Tour CTA layering issue by closing tour before opening Prompt Library.
+- Expanded Playwright verifier to validate:
+  - popup icon + first-run tour auto-open + close behavior
+  - prompt catalog count/version assertions
+- Added artifacts:
+  - `.planning/phases/phase-10/phase-10-05-UI-TOUR-PROMPT-SWEEP.md`
+  - `.planning/phases/phase-10/phase-10-05-playwright-verification.json`
+
+### State Update (2026-03-04, additive #15)
+
+- Applied gray transparent glassmorphic treatment to popup/modal windows (content UI + popup UI).
+- Added full-logo branding blocks in modal headers and popup tour header.
+- Added watermark logo rendering at exact `opacity: 0.3` in window surfaces.
+- Upgraded motion system for overlays/windows with smoother transform+opacity transitions.
+- Updated popup watermark asset resolution to runtime CSS-variable path (avoids build-time unresolved-asset warnings).
+- Added artifacts:
+  - `.planning/phases/phase-10/phase-10-06-GLASSMORPHIC-UI-BRANDING.md`
+  - `.planning/phases/phase-10/phase-10-06-playwright-verification.json`
+
+### State Update (2026-03-04, additive #16)
+
+- Added hybrid prompt optimizer architecture:
+  - deterministic local rewrite first
+  - optional AI refinement toggle
+  - same-tab default AI mode
+  - hidden-tab explicit advanced mode
+- Added hidden-tab orchestration in service worker using inactive tab lifecycle and worker readiness checks.
+- Added optimizer UI modal with persisted settings (`optimizerSettings`) and wired entry points in Sidebar + FAB.
+- Added runtime message actions:
+  - `OPTIMIZER_REFINE_HIDDEN_TAB`
+  - `OPTIMIZER_WORKER_PING`
+  - `OPTIMIZER_WORKER_REFINE`
+- Added `tabs` permission for advanced hidden-tab mode in manifest.
+- Added artifacts:
+  - `.planning/phases/phase-10/phase-10-07-HYBRID-PROMPT-OPTIMIZER.md`
+  - `.planning/phases/phase-10/phase-10-07-playwright-verification.json`
 
 ---
 
@@ -226,61 +396,61 @@ No code exists yet. The project directory contains only:
 ### INFRA — Infrastructure & Build
 | ID | Requirement | Phase | Status |
 |---|---|---|---|
-| INFRA-01 | Vite build pipeline (4 configs, sequential) outputting MV3-compliant IIFE scripts | 1 | ○ Pending |
-| INFRA-02 | `manifest.json` (MV3) with host_permissions, content_scripts, service_worker, icons | 1 | ○ Pending |
-| INFRA-03 | `lib/storage.js` wrapper over `chrome.storage.local` | 1 | ○ Pending |
-| INFRA-04 | `lib/utils.js`: sanitize, truncate, estimateTokens | 1 | ○ Pending |
-| INFRA-05 | Zero external CDN resources — all bundled | 1 | ○ Pending |
+| INFRA-01 | Vite build pipeline (4 configs, sequential) outputting MV3-compliant IIFE scripts | 1 | ✅ Complete |
+| INFRA-02 | `manifest.json` (MV3) with host_permissions, content_scripts, service_worker, icons | 1 | ✅ Complete |
+| INFRA-03 | `lib/storage.js` wrapper over `chrome.storage.local` | 1 | ✅ Complete |
+| INFRA-04 | `lib/utils.js`: sanitize, truncate, estimateTokens | 1 | ✅ Complete |
+| INFRA-05 | Zero external CDN resources — all bundled | 1 | ✅ Complete |
 
 ### CORE — Service Worker & Messaging
 | ID | Requirement | Phase | Status |
 |---|---|---|---|
-| CORE-01 | `service_worker.js` as single source of truth for cross-site state | 2 | ○ Pending |
-| CORE-02 | Typed message protocol (action-discriminated) for content→background | 2 | ○ Pending |
-| CORE-03 | Background handles all chrome.storage.local ops on behalf of content scripts | 2 | ○ Pending |
-| CORE-04 | `api_interceptor.js` with `declarativeNetRequest` rule management | 2 | ○ Pending |
+| CORE-01 | `service_worker.js` as single source of truth for cross-site state | 2 | ✅ Complete |
+| CORE-02 | Typed message protocol (action-discriminated) for content→background | 2 | ✅ Complete |
+| CORE-03 | Background handles all chrome.storage.local ops on behalf of content scripts | 2 | ✅ Complete |
+| CORE-04 | `api_interceptor.js` with `declarativeNetRequest` rule management | 2 | ✅ Complete |
 
 ### ADAPT — DOM Adapter Layer
 | ID | Requirement | Phase | Status |
 |---|---|---|---|
-| ADAPT-01 | `ChatInterface` abstract contract (getTextarea, getSubmitButton, getChatListContainer, isGenerating) | 3 | ○ Pending |
-| ADAPT-02 | `content/gemini/adapter.js` implementing ChatInterface | 3 | ○ Pending |
-| ADAPT-03 | `content/chatgpt/adapter.js` implementing ChatInterface | 3 | ○ Pending |
-| ADAPT-04 | MutationObserver watching submit button `disabled` → generating state events | 3 | ○ Pending |
-| ADAPT-05 | MutationObserver watching chat list container → `onNewChat` events | 3 | ○ Pending |
+| ADAPT-01 | `ChatInterface` abstract contract (getTextarea, getSubmitButton, getChatListContainer, isGenerating) | 3 | ✅ Complete |
+| ADAPT-02 | `content/gemini/adapter.js` implementing ChatInterface | 3 | ✅ Complete |
+| ADAPT-03 | `content/chatgpt/adapter.js` implementing ChatInterface | 3 | ✅ Complete |
+| ADAPT-04 | MutationObserver watching submit button `disabled` → generating state events | 3 | ✅ Complete |
+| ADAPT-05 | MutationObserver watching chat list container → `onNewChat` events | 3 | ✅ Complete |
 
 ### UI — Shadow DOM Framework
 | ID | Requirement | Phase | Status |
 |---|---|---|---|
-| UI-01 | `ui/shadow-renderer.js` factory (host div → #shadow-root → scoped CSS) | 4 | ○ Pending |
-| UI-02 | Preact rendering within Shadow DOM boundary | 4 | ○ Pending |
-| UI-03 | CSS variable system (`--dex-*`) with site light/dark detection | 4 | ○ Pending |
-| UI-04 | `Sidebar.jsx` collapsible panel component | 4 | ○ Pending |
-| UI-05 | `FAB.jsx` floating action button with expandable menu | 4 | ○ Pending |
+| UI-01 | `ui/shadow-renderer.js` factory (host div → #shadow-root → scoped CSS) | 4 | ✅ Complete |
+| UI-02 | Preact rendering within Shadow DOM boundary | 4 | ✅ Complete |
+| UI-03 | CSS variable system (`--dex-*`) with site light/dark detection | 4 | ✅ Complete |
+| UI-04 | `Sidebar.jsx` collapsible panel component | 4 | ✅ Complete |
+| UI-05 | `FAB.jsx` floating action button with expandable menu | 4 | ✅ Complete |
 
 ### FEAT — Features
 | ID | Requirement | Phase | Status |
 |---|---|---|---|
-| FEAT-01 | Folder data model `{id, name, parentId, chatUrls[]}` via service worker | 5 | ○ Pending |
-| FEAT-02 | Virtual folder tree view in Shadow DOM sidebar | 5 | ○ Pending |
-| FEAT-03 | Chat URL → folder ID mapping, persists across sessions | 5 | ○ Pending |
-| FEAT-04 | Trash/soft-delete with restore | 5 | ○ Pending |
-| FEAT-05 | `content/shared/queue.js` FIFO queue (enqueue/dequeue/peek/isEmpty/size) | 6 | ○ Pending |
-| FEAT-06 | Event interception (Enter/click → enqueue if isGenerating) | 6 | ○ Pending |
-| FEAT-07 | MutationObserver dequeue trigger (button re-enables → send next) | 6 | ○ Pending |
-| FEAT-08 | Prompt Library data model `{id, title, body, tags, variables[]}` | 7 | ○ Pending |
-| FEAT-09 | Prompt Library UI (browse/search/insert with `{{variable}}` substitution) | 7 | ○ Pending |
-| FEAT-10 | Conversation DOM parser → `[{role, content}]` for both sites | 8 | ○ Pending |
-| FEAT-11 | PDF export via jspdf (content script blob) | 8 | ○ Pending |
-| FEAT-12 | DOCX export via docx.js (content script blob) | 8 | ○ Pending |
-| FEAT-13 | Export trigger UI (FAB menu + sidebar button) | 8 | ○ Pending |
+| FEAT-01 | Folder data model `{id, name, parentId, chatUrls[]}` via service worker | 5 | ✅ Complete |
+| FEAT-02 | Virtual folder tree view in Shadow DOM sidebar | 5 | ✅ Complete |
+| FEAT-03 | Chat URL → folder ID mapping, persists across sessions | 5 | ✅ Complete |
+| FEAT-04 | Trash/soft-delete with restore | 5 | ✅ Complete |
+| FEAT-05 | `content/shared/queue.js` FIFO queue (enqueue/dequeue/peek/isEmpty/size) | 6 | ✅ Complete |
+| FEAT-06 | Event interception (Enter/click → enqueue if isGenerating) | 6 | ✅ Complete |
+| FEAT-07 | MutationObserver dequeue trigger (button re-enables → send next) | 6 | ✅ Complete |
+| FEAT-08 | Prompt Library data model `{id, title, body, tags, variables[]}` | 7 | ✅ Complete |
+| FEAT-09 | Prompt Library UI (browse/search/insert with `{{variable}}` substitution) | 7 | ✅ Complete |
+| FEAT-10 | Conversation DOM parser → `[{role, content}]` for both sites | 8 | ✅ Complete |
+| FEAT-11 | PDF export via jspdf (content script blob) | 8 | ✅ Complete |
+| FEAT-12 | DOCX export via docx.js (content script blob) | 8 | ✅ Complete |
+| FEAT-13 | Export trigger UI (FAB menu + sidebar button) | 8 | ✅ Complete |
 
 ### API — Interception
 | ID | Requirement | Phase | Status |
 |---|---|---|---|
-| API-01 | Inline `<script>` injection into main world to monkey-patch `window.fetch` and `XMLHttpRequest` | 9 | ○ Pending |
-| API-02 | Intercepted data relayed to content script via namespaced `window.postMessage` | 9 | ○ Pending |
-| API-03 | Token usage overlay (`TokenOverlay.jsx`) near input area | 9 | ○ Pending |
+| API-01 | Inline `<script>` injection into main world to monkey-patch `window.fetch` and `XMLHttpRequest` | 9 | ✅ Complete |
+| API-02 | Intercepted data relayed to content script via namespaced `window.postMessage` | 9 | ✅ Complete |
+| API-03 | Token usage overlay (`TokenOverlay.jsx`) near input area | 9 | ✅ Complete |
 
 ---
 
@@ -655,6 +825,299 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
 [2026-03-03] BIBLE — This Master Project Bible created.
   Location: /Users/andrew/Projects/DexEnhance/BIBLE.md
   Purpose: Context injection for any AI continuing this project.
+
+[2026-03-03] PHASE 1 EXECUTION — Foundation & Build Pipeline implemented.
+  Created MV3 scaffold files per Phase 1 plan:
+  - public/manifest.json + 3 PNG icons
+  - src/lib/storage.js, src/lib/utils.js
+  - src/background/* stubs
+  - src/content/shared/* stubs
+  - src/content/chatgpt/* and src/content/gemini/* entries/adapters
+  - src/popup/index.html + src/popup/index.js
+  Build verification:
+  - `bun run build` exits 0
+  - dist outputs present with fixed non-hashed filenames
+  - background/service_worker.js output confirmed IIFE format
+  - dist/manifest.json valid MV3
+  - icon files validated as PNG headers
+  Brave checkpoint evidence:
+  - User-provided logs show `[DexEnhance] ChatGPT content script loaded`
+  - User-provided logs show `[DexEnhance] Gemini content script loaded`
+  Note:
+  - `chrome.storage.local` error observed in page-console context is expected
+    (extension APIs are not exposed in page world); extension content script
+    storage path executed successfully (log emitted after storage guard).
+  Summary artifact:
+  - .planning/phases/phase-1/phase-1-01-SUMMARY.md
+
+[2026-03-03] PHASE 2 EXECUTION — Service worker messaging and cross-site state routing implemented.
+  Implemented typed protocol actions via src/lib/message-protocol.js:
+  - PING, STORAGE_GET, STORAGE_GET_ONE, STORAGE_SET, STORAGE_REMOVE, STORAGE_CLEAR
+  - API_RULES_UPDATE, API_RULES_CLEAR
+  Replaced background stub in src/background/service_worker.js with:
+  - async action router returning {ok,data?,error?}
+  - centralized chrome.storage.local handling for content-script requests
+  - top-level synchronous listener registration with async sendResponse path
+  Upgraded src/background/api_interceptor.js:
+  - updateRules(): validates/normalizes rule IDs and calls updateDynamicRules
+  - clearRules(): removes all active dynamic rules
+  Updated content entry points to use background protocol for storage:
+  - src/content/chatgpt/index.js
+  - src/content/gemini/index.js
+  Added per-site storage round-trip probe logs to validate message flow.
+  Manifest updated to include declarativeNetRequest permission.
+  Build verification:
+  - `bun run build` exits 0 after Phase 2 changes.
+  Summary artifact:
+  - .planning/phases/phase-2/phase-2-01-SUMMARY.md
+
+[2026-03-03] PHASE 3 EXECUTION — DOM adapter layer implemented.
+  Upgraded src/content/shared/chat-interface.js with:
+  - onGeneratingStart/onGeneratingEnd/onNewChat event registration
+  - startObservers/stopObservers lifecycle
+  - MutationObserver handling for submit-button state and chat-list mutations
+  Implemented site adapters:
+  - src/content/chatgpt/adapter.js
+  - src/content/gemini/adapter.js
+  Each adapter now implements:
+  - getTextarea()
+  - getSubmitButton()
+  - getChatListContainer()
+  - isGenerating()
+  Wired adapters in content entry points:
+  - src/content/chatgpt/index.js
+  - src/content/gemini/index.js
+  Added adapter readiness and event logs for verification.
+  Build verification:
+  - `bun run build` exits 0 after Phase 3 changes.
+  Summary artifact:
+  - .planning/phases/phase-3/phase-3-01-SUMMARY.md
+
+[2026-03-03] PHASE 4 EXECUTION — Shadow DOM UI framework implemented.
+  Implemented UI mount infrastructure:
+  - src/ui/shadow-renderer.js
+  Implemented scoped UI theme system:
+  - src/ui/styles/theme.css
+  Implemented Preact component shells:
+  - src/ui/components/Sidebar.jsx
+  - src/ui/components/FAB.jsx
+  Wired both target site entry points to render inside Shadow DOM:
+  - src/content/chatgpt/index.js
+  - src/content/gemini/index.js
+  Build verification:
+  - `bun run build` exits 0 after Phase 4 changes.
+  Summary artifact:
+  - .planning/phases/phase-4/phase-4-01-SUMMARY.md
+
+[2026-03-03] PHASE 5 EXECUTION — Folder and chat organization implemented.
+  Extended typed protocol with folder actions:
+  - FOLDER_TREE_GET, FOLDER_CREATE, FOLDER_RENAME
+  - FOLDER_DELETE, FOLDER_RESTORE, FOLDER_DELETE_PERMANENT
+  - FOLDER_ASSIGN_CHAT, FOLDER_UNASSIGN_CHAT, FOLDER_GET_BY_CHAT_URL
+  Implemented service-worker folder state and operations in:
+  - src/background/service_worker.js
+  Added folder tree UI in:
+  - src/ui/components/FolderTree.jsx
+  Updated sidebar integration in:
+  - src/ui/components/Sidebar.jsx
+  Updated themed styles for folder UI in:
+  - src/ui/styles/theme.css
+  Current chat URL assignment wired from:
+  - src/content/chatgpt/index.js
+  - src/content/gemini/index.js
+  Build verification:
+  - `bun run build` exits 0 after Phase 5 changes.
+  Summary artifact:
+  - .planning/phases/phase-5/phase-5-01-SUMMARY.md
+
+[2026-03-03] PHASE 6 EXECUTION — Smart message queue implemented.
+  Implemented shared queue controller in:
+  - src/content/shared/queue-controller.js
+  Wired queue controller in:
+  - src/content/chatgpt/index.js
+  - src/content/gemini/index.js
+  Queue behavior:
+  - Intercepts Enter/click submits while generating and enqueues message text
+  - Clears input after enqueue
+  - Dequeues and auto-sends next item on generating-end observer event
+  Sidebar update:
+  - Queue count displayed in src/ui/components/Sidebar.jsx
+  Build verification:
+  - `bun run build` exits 0 after Phase 6 changes.
+  Summary artifact:
+  - .planning/phases/phase-6/phase-6-01-SUMMARY.md
+
+[2026-03-03] PHASE 7 EXECUTION — Prompt Library implemented.
+  Extended protocol with prompt actions:
+  - PROMPT_LIST, PROMPT_CREATE, PROMPT_UPDATE, PROMPT_DELETE
+  Implemented prompt model + CRUD in:
+  - src/background/service_worker.js
+  Added Prompt Library UI in:
+  - src/ui/components/PromptLibrary.jsx
+  FAB prompt action wiring:
+  - src/ui/components/FAB.jsx
+  - src/content/chatgpt/index.js
+  - src/content/gemini/index.js
+  Adapter-based prompt insertion helper:
+  - src/content/shared/input-utils.js
+  Added modal and prompt-card styles in:
+  - src/ui/styles/theme.css
+  Build verification:
+  - `bun run build` exits 0 after Phase 7 changes.
+  Summary artifact:
+  - .planning/phases/phase-7/phase-7-01-SUMMARY.md
+
+[2026-03-03] PHASE 8 EXECUTION — Universal export implemented.
+  Added parser + export modules:
+  - src/content/shared/parser.js
+  - src/content/shared/exporter.js
+  Added export dialog UI:
+  - src/ui/components/ExportDialog.jsx
+  Export trigger wiring from FAB/sidebar completed in:
+  - src/ui/components/FAB.jsx
+  - src/ui/components/Sidebar.jsx
+  - src/content/chatgpt/index.js
+  - src/content/gemini/index.js
+  Local dependencies added:
+  - jspdf
+  - docx
+  Build verification:
+  - `bun run build` exits 0 after Phase 8 changes.
+  Summary artifact:
+  - .planning/phases/phase-8/phase-8-01-SUMMARY.md
+
+[2026-03-03] PHASE 9 EXECUTION — API interception and token overlay implemented.
+  Implemented API bridge in:
+  - src/content/shared/api-bridge.js
+  Implemented token overlay UI in:
+  - src/ui/components/TokenOverlay.jsx
+  Wired bridge + overlay in:
+  - src/content/chatgpt/index.js
+  - src/content/gemini/index.js
+  Added token overlay styles in:
+  - src/ui/styles/theme.css
+  Build verification:
+  - `bun run build` exits 0 after Phase 9 changes.
+  Summary artifact:
+  - .planning/phases/phase-9/phase-9-01-SUMMARY.md
+
+[2026-03-03] PHASE 10 EXECUTION — Hardening automation + private packaging implemented.
+  Added install/distribution documentation:
+  - README.md
+  Added zip packaging script:
+  - package.json script `package:zip`
+  Generated private artifact:
+  - DexEnhance-v1-private.zip
+  Automated checks completed:
+  - `bun run build`
+  - `bun run package:zip`
+  - source audit for extension-owned external runtime resource fetches
+  Manual-only remainder:
+  - Brave Shields aggressive-profile end-to-end UAT
+  Summary artifact:
+  - .planning/phases/phase-10/phase-10-01-SUMMARY.md
+
+[2026-03-03] PHASE 10 HARDENING REPORT — Post-build audit documented.
+  Report artifact:
+  - .planning/phases/phase-10/phase-10-02-HARDENING-REPORT.md
+  Captured:
+  - automated build/package verification
+  - distribution zip artifact confirmation
+  - bundle size footprint
+  - dynamic-code token findings in transitive vendor bundles
+  Follow-up status:
+  - manual Brave Shields aggressive-profile UAT still required
+  - optional export dependency optimization identified
+
+[2026-03-03] PHASE 10 BUG SWEEP + ICON INTEGRATION — Exhaustive stabilization pass completed.
+  Verified project state alignment against BIBLE + .planning/STATE.md.
+  Implemented user-provided icon asset rollout from:
+  - assets/DexEnhance_Icon_Prime.png
+  Added icon placements across:
+  - manifest/action icons (16/48/128)
+  - in-page top-right brand badge
+  - sidebar header, FAB, token overlay, popup
+  Bug fixes completed:
+  - fixed adapter generating false-positive behavior caused by disabled send controls
+  - fixed parser fallback ordering to preserve conversation chronology
+  - fixed input writing path for framework-controlled editors
+  - fixed API bridge CSP breakage (inline script -> packaged web-accessible script)
+  - fixed icon resource denial via web_accessible_resources entries
+  - fixed package script stale .DS_Store retention in zip
+  Automated verification completed:
+  - `bun run build`
+  - `node scripts/verify_extension_playwright.cjs`
+  - `bun run package:zip`
+  Report artifacts:
+  - .planning/phases/phase-10/phase-10-03-BUG-SWEEP-ICON-INTEGRATION.md
+  - .planning/phases/phase-10/phase-10-03-playwright-verification.json
+
+[2026-03-03] PHASE 10 DEEP SWEEP FOLLOW-UP — Additional regression fixes completed.
+  Added second-pass fixes:
+  - parser dedupe narrowed to adjacent duplicates only (preserve valid repeated turns)
+  - service worker install version now sourced from manifest version
+  - popup favicon metadata added for icon consistency
+  Re-validated:
+  - `bun run build`
+  - `node scripts/verify_extension_playwright.cjs`
+  - `bun run package:zip`
+  Follow-up artifact:
+  - .planning/phases/phase-10/phase-10-04-DEEP-SWEEP-FOLLOWUP.md
+
+[2026-03-04] PHASE 10 UI/TOUR/PROMPT SWEEP — Deep UX regression pass completed.
+  Added prompt catalog seeding/migration versioning and verified 60 default templates.
+  Added multi-step Feature Tour modal in injected UI and onboarding modal in popup UI.
+  Fixed popup onboarding script regression (absolute `/index.js` output path).
+  Fixed tour CTA modal layering by closing tour before opening Prompt Library.
+  Expanded Playwright verification scope to include popup + prompt-catalog assertions.
+  Re-validated:
+  - `bun run build`
+  - `node scripts/verify_extension_playwright.cjs`
+  - `bun run package:zip`
+  Artifacts:
+  - .planning/phases/phase-10/phase-10-05-UI-TOUR-PROMPT-SWEEP.md
+  - .planning/phases/phase-10/phase-10-05-playwright-verification.json
+
+[2026-03-04] PHASE 10 GLASSMORPHIC UI BRANDING — Window system visual refinement completed.
+  Applied gray transparent glassmorphism to popup/modal windows with backdrop blur.
+  Added full-logo brand blocks to modal headers and popup tour intro.
+  Added watermark logo treatment at exact 30% opacity across popup/modal surfaces.
+  Improved modal/overlay motion with smooth high-performance transitions.
+  Updated popup watermark asset path handling to runtime CSS variable (no build-time unresolved-asset warnings).
+  Re-validated:
+  - `bun run build`
+  - `node scripts/verify_extension_playwright.cjs`
+  Artifacts:
+  - .planning/phases/phase-10/phase-10-06-GLASSMORPHIC-UI-BRANDING.md
+  - .planning/phases/phase-10/phase-10-06-playwright-verification.json
+
+[2026-03-04] PHASE 10 HYBRID OPTIMIZER — Local-first prompt optimization landed.
+  Added shared prompt optimizer engine with deterministic rewrite + AI refinement orchestration.
+  Added optional AI refinement toggle and mode selector (same-tab default, hidden-tab advanced).
+  Added hidden-tab refinement execution path in service worker with tab lifecycle cleanup.
+  Added optimizer worker messaging between background and hidden tab content scripts.
+  Added optimizer modal UI and wired actions in Sidebar/FAB on ChatGPT and Gemini.
+  Added `tabs` permission in manifest to support advanced hidden-tab mode.
+  Re-validated:
+  - `bun run build`
+  - `node scripts/verify_extension_playwright.cjs`
+  - `bun run package:zip`
+  Artifacts:
+  - .planning/phases/phase-10/phase-10-07-HYBRID-PROMPT-OPTIMIZER.md
+  - .planning/phases/phase-10/phase-10-07-playwright-verification.json
+
+[2026-03-04] PHASE 10 WATERMARK VISIBILITY + FEASIBILITY SWEEP — UI refinement and mechanism review completed.
+  Ran additional deep regression sweep focused on popup/modal/tour surfaces and architecture constraints.
+  Increased injected and popup modal watermark visibility from 30% to 48% and moved to centered larger treatment.
+  Increased modal action button transparency across injected UI and popup tour buttons.
+  Re-validated:
+  - `bun run build`
+  - `node scripts/verify_extension_playwright.cjs`
+  Added feasibility review for reverse-alpha visible-watermark removal mechanism:
+  - technically feasible in narrow controlled conditions
+  - not recommended for DexEnhance due brittleness and product/compliance risk
+  Artifact:
+  - .planning/phases/phase-10/phase-10-08-WATERMARK-VISIBILITY-AND-FEASIBILITY.md
 ```
 
 ---
@@ -665,9 +1128,101 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
 ```
 [2026-03-03] v0.1 — Initial project Bible created. No code exists yet.
   All 10 phases planned at roadmap level. Phase 1 fully planned (PLAN.md verified).
+
+[2026-03-03] v0.2 — Phase 1 execution complete.
+  Bun installed and build pipeline operational.
+  Dist artifacts now exist and load as MV3 extension bundles.
+  Phase output summary added under .planning/phases/phase-1/.
+
+[2026-03-03] v0.3 — Phase 2 messaging architecture landed.
+  Introduced typed background protocol and moved content-script storage access
+  behind service-worker message routing.
+  Added dynamic declarativeNetRequest rule manager scaffold with live API calls.
+  Added Phase 2 summary artifact under .planning/phases/phase-2/.
+
+[2026-03-03] v0.4 — Phase 3 adapter layer landed.
+  Implemented concrete ChatGPT/Gemini adapter methods and centralized observer
+  lifecycle in shared ChatInterface base class.
+  Added Phase 3 summary artifact under .planning/phases/phase-3/.
+
+[2026-03-03] v0.5 — Phase 4 Shadow DOM UI framework landed.
+  Added Shadow DOM renderer, scoped theme variables, and initial Sidebar/FAB
+  Preact components mounted on both ChatGPT and Gemini content entry points.
+  Added Phase 4 summary artifact under .planning/phases/phase-4/.
+
+[2026-03-03] v0.6 — Phase 5 folder organization landed.
+  Added background folder/chat mapping state model with trash/restore/permanent
+  delete operations and rendered virtual FolderTree in sidebar across both sites.
+  Added Phase 5 summary artifact under .planning/phases/phase-5/.
+
+[2026-03-03] v0.7 — Phase 6 smart queue landed.
+  Added shared queue interception/dequeue controller integrated with adapter
+  generating events and surfaced live queue count in sidebar UI.
+  Added Phase 6 summary artifact under .planning/phases/phase-6/.
+
+[2026-03-03] v0.8 — Phase 7 prompt library landed.
+  Added prompt CRUD model in service worker and Prompt Library modal UI with
+  search/edit/delete and `{{variable}}` substitution insertion flow from FAB.
+  Added Phase 7 summary artifact under .planning/phases/phase-7/.
+
+[2026-03-03] v0.9 — Phase 8 universal export landed.
+  Added conversation parser plus PDF/DOCX export in content script context and
+  wired export actions from both FAB and Sidebar UI surfaces.
+  Added Phase 8 summary artifact under .planning/phases/phase-8/.
+
+[2026-03-03] v1.0 — Phase 9 API bridge landed.
+  Added main-world fetch/XHR interception bridge with postMessage relay and
+  surfaced token/model metadata via TokenOverlay in both site integrations.
+  Added Phase 9 summary artifact under .planning/phases/phase-9/.
+
+[2026-03-03] v1.1 — Phase 10 packaging/hardening automation landed.
+  Added README install guide and repeatable private zip packaging workflow.
+  Created private distribution archive DexEnhance-v1-private.zip.
+  Added Phase 10 summary artifact under .planning/phases/phase-10/.
+
+[2026-03-03] v1.2 — Phase 10 hardening report landed.
+  Added explicit audit artifact for bundle/runtime risk tracking and documented
+  remaining manual UAT/optimization work under .planning/phases/phase-10/.
+
+[2026-03-03] v1.3 — Phase 10 stabilization + branded icon rollout landed.
+  Added exhaustive bug-fix pass across adapters, parser ordering, input writes,
+  CSP-safe API bridge injection, manifest resource access, and zip packaging.
+  Added persistent Playwright verification workflow and report artifact.
+  Integrated DexEnhance_Icon_Prime branding in manifest, popup, and injected UI.
+
+[2026-03-03] v1.4 — Phase 10 deep regression follow-up landed.
+  Corrected parser dedupe logic to preserve non-adjacent repeated turns.
+  Corrected install-time version initialization to track manifest version.
+  Added popup favicon metadata and revalidated build/verify/package pass.
+
+[2026-03-04] v1.5 — Phase 10 UX/onboarding stabilization landed.
+  Added 60-template prompt catalog migration path with versioned seed updates.
+  Added guided feature-tour flows in content UI + popup onboarding tour.
+  Corrected popup build asset path so onboarding script executes in extension context.
+  Expanded Playwright verification coverage for popup/tour/prompt catalog checks.
+
+[2026-03-04] v1.6 — Phase 10 glassmorphic branding refresh landed.
+  Re-styled popup/modal windows with neutral glass surfaces and blur layers.
+  Added full-logo modal branding and watermark treatment at 30% opacity.
+  Upgraded motion quality for overlays/windows while preserving reduced-motion support.
+  Revalidated build and Playwright verification after UI refinements.
+
+[2026-03-04] v1.7 — Phase 10 hybrid prompt optimizer landed.
+  Added deterministic local-first prompt optimization with optional AI refinement.
+  Defaulted AI refinement path to same-tab mode; added hidden-tab advanced mode.
+  Added service-worker hidden-tab orchestration and optimizer worker messaging.
+  Added optimizer modal UI with persisted user settings and action entrypoints in Sidebar/FAB.
+  Revalidated build, Playwright verification, and private zip packaging.
+
+[2026-03-04] v1.8 — Phase 10 watermark visibility + feasibility review landed.
+  Updated injected + popup modal watermark treatment to stronger centered visual presence.
+  Updated modal action button styling toward higher transparency while preserving legibility.
+  Added technical feasibility review for reverse-alpha visible watermark removal and documented
+  recommendation to avoid shipping this mechanism in DexEnhance v1.
+  Revalidated build and Playwright verification.
 ```
 
 ---
 
-*Document version: 0.1 | Created: 2026-03-03 | Next update: After Phase 1 execution completes*
+*Document version: 0.1 | Created: 2026-03-03 | Next update: After next stabilization pass*
 *This is a living document. All AI instances working on this project MUST update the Completion Log (Section 13) and Change Log (Section 14) as work progresses.*

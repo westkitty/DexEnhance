@@ -1,0 +1,50 @@
+// src/lib/message-protocol.js
+// Typed message protocol shared by content scripts and background worker.
+
+export const MESSAGE_ACTIONS = Object.freeze({
+  PING: 'PING',
+  STORAGE_GET: 'STORAGE_GET',
+  STORAGE_GET_ONE: 'STORAGE_GET_ONE',
+  STORAGE_SET: 'STORAGE_SET',
+  STORAGE_REMOVE: 'STORAGE_REMOVE',
+  STORAGE_CLEAR: 'STORAGE_CLEAR',
+  FOLDER_TREE_GET: 'FOLDER_TREE_GET',
+  FOLDER_CREATE: 'FOLDER_CREATE',
+  FOLDER_RENAME: 'FOLDER_RENAME',
+  FOLDER_DELETE: 'FOLDER_DELETE',
+  FOLDER_RESTORE: 'FOLDER_RESTORE',
+  FOLDER_DELETE_PERMANENT: 'FOLDER_DELETE_PERMANENT',
+  FOLDER_ASSIGN_CHAT: 'FOLDER_ASSIGN_CHAT',
+  FOLDER_UNASSIGN_CHAT: 'FOLDER_UNASSIGN_CHAT',
+  FOLDER_GET_BY_CHAT_URL: 'FOLDER_GET_BY_CHAT_URL',
+  PROMPT_LIST: 'PROMPT_LIST',
+  PROMPT_CREATE: 'PROMPT_CREATE',
+  PROMPT_UPDATE: 'PROMPT_UPDATE',
+  PROMPT_DELETE: 'PROMPT_DELETE',
+  OPTIMIZER_REFINE_HIDDEN_TAB: 'OPTIMIZER_REFINE_HIDDEN_TAB',
+  OPTIMIZER_WORKER_PING: 'OPTIMIZER_WORKER_PING',
+  OPTIMIZER_WORKER_REFINE: 'OPTIMIZER_WORKER_REFINE',
+  API_RULES_UPDATE: 'API_RULES_UPDATE',
+  API_RULES_CLEAR: 'API_RULES_CLEAR',
+});
+
+/**
+ * Send a message to the background service worker.
+ * @param {string} action
+ * @param {Record<string, any>} [payload={}]
+ * @returns {Promise<{ok: boolean, data?: any, error?: string}>}
+ */
+export async function sendRuntimeMessage(action, payload = {}) {
+  try {
+    const response = await chrome.runtime.sendMessage({ action, ...payload });
+    if (!response || typeof response !== 'object') {
+      return { ok: false, error: 'Invalid response from background service worker.' };
+    }
+    return response;
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}

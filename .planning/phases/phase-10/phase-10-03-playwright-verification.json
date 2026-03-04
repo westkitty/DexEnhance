@@ -1,0 +1,228 @@
+{
+  "at": "2026-03-04T01:41:14.473Z",
+  "extensionPath": "/Users/andrew/Projects/DexEnhance/dist",
+  "reportPath": "/Users/andrew/Projects/DexEnhance/.planning/phases/phase-10/phase-10-03-playwright-verification.json",
+  "userDataDir": "/var/folders/lm/f_zcrpb94bvg69m2y35klb8r0000gn/T/dexenhance-pw-gVLSuq",
+  "headless": false,
+  "serviceWorkerFound": true,
+  "storageRoundTrip": {
+    "dexPlaywrightProbe": "ok"
+  },
+  "promptCatalog": {
+    "promptCount": 60,
+    "catalogVersion": "2026-03-04-catalog-v1"
+  },
+  "popup": {
+    "url": "chrome-extension://gikjopgpidikoehgpdlpaokckefgmdfk/popup/index.html",
+    "screenshotPath": "/Users/andrew/Projects/DexEnhance/output/playwright/phase10-popup.png",
+    "initial": {
+      "modalOpen": true,
+      "iconPresent": true,
+      "iconSource": "../icons/icon128.png",
+      "openTourButtonPresent": true
+    },
+    "closed": {
+      "modalOpen": false,
+      "progressText": "Step 1 of 6"
+    }
+  },
+  "chatgpt": {
+    "site": "chatgpt",
+    "url": "https://chatgpt.com/",
+    "expectedLogSeen": true,
+    "dexEnhanceErrors": [],
+    "extensionInlineCspErrors": [],
+    "extensionResourceDeniedErrors": [],
+    "pageErrors": [
+      "RequestError: Something went wrong. If this issue persists please contact us through our help center at help.openai.com.",
+      "RequestError: Something went wrong. If this issue persists please contact us through our help center at help.openai.com."
+    ],
+    "ui": {
+      "hostPresent": true,
+      "shadowPresent": true,
+      "sidebarPresent": true,
+      "fabPresent": true,
+      "overlayPresent": true,
+      "badgePresent": true,
+      "sidebarIconPresent": true,
+      "fabIconPresent": true,
+      "overlayIconPresent": true
+    },
+    "screenshotPath": "/Users/andrew/Projects/DexEnhance/output/playwright/phase10-chatgpt.png",
+    "sampleLogs": [
+      {
+        "type": "log",
+        "text": "[DexEnhance] ChatGPT content script loaded"
+      },
+      {
+        "type": "log",
+        "text": "[DexEnhance] ChatGPT adapter ready: {hasTextarea: true, hasSubmitButton: false, hasChatList: true, isGenerating: false}"
+      },
+      {
+        "type": "log",
+        "text": "[DexEnhance] ChatGPT storage message round-trip ok: ok-1772588480705"
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"4011688770\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"831823566\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"3950660279\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"1758722097\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"2205197867\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"2928249761\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"3959994305\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"2042715633\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"workspace_id\" for Gate \"1627064618\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Dynamic config \"463092697\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"2055431672\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Dynamic config \"1001765573\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"3933797510\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Dynamic config \"112877228\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Experiment \"4220976262\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"544603680\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"733205176\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"4100765009\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"1542198993\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"1053331630\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"2335877601\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"2400167019\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"507055138\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"1946731762\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"1829305865\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Gate \"735368229\""
+      },
+      {
+        "type": "warning",
+        "text": "  WARN  [Statsig] The user does not have the required id_type \"userID\" for Dynamic config \"3317473948\""
+      }
+    ]
+  },
+  "gemini": {
+    "site": "gemini",
+    "url": "https://gemini.google.com/",
+    "expectedLogSeen": true,
+    "dexEnhanceErrors": [],
+    "extensionInlineCspErrors": [],
+    "extensionResourceDeniedErrors": [],
+    "pageErrors": [],
+    "ui": {
+      "hostPresent": true,
+      "shadowPresent": true,
+      "sidebarPresent": true,
+      "fabPresent": true,
+      "overlayPresent": true,
+      "badgePresent": true,
+      "sidebarIconPresent": true,
+      "fabIconPresent": true,
+      "overlayIconPresent": true
+    },
+    "screenshotPath": "/Users/andrew/Projects/DexEnhance/output/playwright/phase10-gemini.png",
+    "sampleLogs": [
+      {
+        "type": "info",
+        "text": "Loading the script 'https://www.googletagmanager.com/gtm.js?id=GTM-KKRLL9S' violates the following Content Security Policy directive: \"script-src 'unsafe-inline' 'unsafe-eval' blob: data: https://www.googleadservices.com/pagead/conversion/ https://www.googletagmanager.com/gtag/js https://www.googletagmanager.com/gtag/destination https://www.google.com/js/bg/ https://www.gstatic.com/external_hosted/highlightjs/highlight.pack.js https://www.gstatic.com/monaco_editor/ https://fonts.gstatic.com/s/e/notoemoji/search/wrapper.js https://www.youtube.com/iframe_api https://translate.google.com/translate_a/element.js https://www-onepick-opensocial.googleusercontent.com/gadgets/js/rpc.js https://www.gstatic.com/_/mss/boq-one-google/_/ https://www.gstatic.com/og/_/js/ https://apis.google.com/js/api.js https://apis.google.com/js/client.js https://www.google.com/tools/feedback/chat_load.js https://www.google.com/tools/feedback/help_api.js https://www.google.com/tools/feedback/load.js https://www.google.com/tools/feedback/open.js https://www.google.com/tools/feedback/open_to_help_guide_lazy.js https://www.gstatic.com/feedback/js/ https://www.gstatic.com/feedback/js/help/prod/service/lazy.min.js https://www.gstatic.com/inproduct_help/api/main.min.js https://www.gstatic.com/inproduct_help/chatsupport/chatsupport_button_v2.js https://www.gstatic.com/inproduct_help/service/lazy.min.js https://www.gstatic.com/uservoice/feedback/client/web/live/ https://www.gstatic.com/uservoice/surveys/resources/prod/js/survey/ https://maps.googleapis.com/maps/api/js https://www.gstatic.com/_/mss/boq-bard-web/_/js/k=boq-bard-web.BardChatUi.en_US.MdjY-ld8IzY.2018.O/ https://apis.google.com/_/scs/abc-static/_/js/ https://maps.googleapis.com/maps-api-v3/api/js/ https://maps.googleapis.com/maps/vt https://maps.googleapis.com/maps/api/js/ https://maps.googleapis.com/maps/api/place/js/ https://www.youtube.com/s/player/ https://translate.googleapis.com/_/translate_http/_/js/\". Note that 'script-src-elem' was not explicitly set, so 'script-src' is used as a fallback. The policy is report-only, so the violation has been logged but no further action has been taken."
+      },
+      {
+        "type": "log",
+        "text": "[DexEnhance] Gemini content script loaded"
+      },
+      {
+        "type": "log",
+        "text": "[DexEnhance] Gemini adapter ready: {hasTextarea: false, hasSubmitButton: false, hasChatList: false, isGenerating: false}"
+      },
+      {
+        "type": "log",
+        "text": "[DexEnhance] Gemini storage message round-trip ok: ok-1772588488744"
+      },
+      {
+        "type": "error",
+        "text": "Connecting to 'https://stats.g.doubleclick.net/g/collect?v=2&tid=G-BF8Q35BMLM&cid=1150605049.1772588489&gtm=45je6321h1v9229664005z89113054662za20gzb9113054662zd9113054662&aip=1&dma=0&gcd=13l3l3l3l1l1&npa=0&frm=0&tag_exp=103116026~103200004~115616985~115938465~115938468~116024733~117484252~117755070' violates the following Content Security Policy directive: \"connect-src 'self' https://*.google.com https://*.gstatic.com https://*.google-analytics.com https://csp.withgoogle.com/csp/proto/BardChatUi https://content-push.googleapis.com/upload/ https://*.googleusercontent.com https://ogads-pa.googleapis.com/ https://*.youtube.com https://*.youtube-nocookie.com https://*.googlevideo.com data: https://static.corp.google.com/external_content/scs_corp/bard/artifacts https://*.googleapis.com\". The action has been blocked."
+      },
+      {
+        "type": "warning",
+        "text": "No ID or name found in config."
+      },
+      {
+        "type": "warning",
+        "text": "No ID or name found in config."
+      }
+    ]
+  },
+  "errors": [],
+  "pass": true
+}
