@@ -1,4 +1,24 @@
 
+## General Behavior
+
+- Always proceed autonomously unless explicitly told to pause. Do not ask for confirmation on intermediate steps. If a task has multiple phases, continue through all of them without stopping.
+- When asked about an issue, always investigate thoroughly before responding. Never give dismissive or surface-level answers. If you don't know, say so and dig deeper.
+
+## Build & Debugging
+
+- When encountering build errors, fix ALL errors in a single pass before re-running the build. Do not fix one error, rebuild, fix the next, rebuild, etc.
+- When debugging, investigate the root cause before applying fixes. Do not apply surface-level patches (e.g., adding logging) when the real issue is architectural. Explain your hypothesis before coding.
+- Build command: `bun run build` (runs all 4 bundles: bg, chatgpt, gemini, popup). Always verify with a clean build after any multi-file change set.
+
+## Tech Stack
+
+- **Browser:** Brave (Chromium-based, MV3). Never assume Chrome DevTools or chrome:// URLs — use Brave equivalents.
+- **Package manager:** Bun (not npm/yarn/pnpm)
+- **Build:** Vite multi-entry (vite.config.background.js, vite.config.chatgpt.js, vite.config.gemini.js, vite.config.popup.js)
+- **UI:** Preact + Shadow DOM (no React, no CDN imports)
+- **Language:** JavaScript/JSX throughout (no TypeScript)
+- Primary languages for the broader workspace: TypeScript, JavaScript, Python. Also HTML/CSS and Swift for macOS apps.
+
 Default to using Bun instead of Node.js.
 
 - Use `bun <file>` instead of `node <file>` or `ts-node <file>`
