@@ -49,7 +49,7 @@ export function ExportDialog({
     },
     [
       h('div', { class: 'dex-form' }, [
-        h('p', { class: 'dex-folder-state' }, 'Export this conversation for docs, sharing, or decision logs.'),
+        h('p', { class: 'dex-form__desc' }, 'Export this conversation for docs, sharing, or decision logs.'),
         h('label', { class: 'dex-sidebar__label' }, 'Format'),
         h(
           'select',
@@ -63,15 +63,20 @@ export function ExportDialog({
             h('option', { value: 'docx' }, 'DOCX'),
           ]
         ),
-        error ? h('div', { class: 'dex-folder-state error' }, error) : null,
+        error ? h('div', { class: 'dex-form__error' }, error) : null,
         h(
           'p',
-          { class: 'dex-folder-state' },
+          { class: 'dex-form__hint' },
           format === 'pdf'
             ? 'PDF is ideal for sharing snapshots and read-only archives.'
             : 'DOCX is ideal for editing and adding notes with teammates.'
         ),
-        h('button', { type: 'button', class: 'dex-link-btn', disabled: busy, onClick: handleExport }, busy ? 'Exporting...' : 'Export'),
+        h('button', {
+          type: 'button',
+          class: 'dex-link-btn dex-link-btn--accent',
+          disabled: busy,
+          onClick: handleExport,
+        }, busy ? 'Exporting...' : 'Export'),
       ]),
     ]
   );

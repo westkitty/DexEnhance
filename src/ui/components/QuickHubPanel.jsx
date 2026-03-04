@@ -99,7 +99,7 @@ export function QuickHubPanel({
     },
     [
       h('div', { class: 'dex-hub' }, [
-        h('p', { class: 'dex-folder-state' }, 'Quick Action is your anchor. Open only what you need.'),
+        h('p', { class: 'dex-form__desc' }, 'Quick Action is your anchor. Open only what you need.'),
         ...ACTION_GROUPS.map((group) =>
           h('div', { key: group.label, class: 'dex-hub__group' }, [
             h('div', { class: 'dex-hub__group-label' }, group.label),

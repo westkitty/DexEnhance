@@ -38,6 +38,7 @@ export function PromptOptimizerModal({
   const [localPrompt, setLocalPrompt] = useState('');
   const [finalPrompt, setFinalPrompt] = useState('');
   const [methodUsed, setMethodUsed] = useState('local_only');
+  const [copiedId, setCopiedId] = useState('');
 
   useEffect(() => {
     if (!visible) return;
@@ -47,6 +48,7 @@ export function PromptOptimizerModal({
     setLocalPrompt('');
     setFinalPrompt('');
     setMethodUsed('local_only');
+    setCopiedId('');
 
     void (async () => {
       const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: SETTINGS_KEY });
@@ -106,7 +108,16 @@ export function PromptOptimizerModal({
     onClose?.();
   }
 
+  function copyToClipboard(id, text) {
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(id);
+      window.setTimeout(() => setCopiedId(''), 1800);
+    });
+  }
+
   if (!visible) return null;
+
+  const hasResult = !!(localPrompt || finalPrompt);
 
   return h(
     PanelFrame,
@@ -172,13 +183,13 @@ export function PromptOptimizerModal({
               ),
               h(
                 'p',
-                { class: 'dex-folder-state' },
+                { class: 'dex-form__hint' },
                 settings.refinementMode === 'same_tab'
                   ? 'Same-tab mode is simpler and faster, but the optimization request appears in your current thread.'
                   : 'Hidden-tab mode isolates context and closes automatically, but is more brittle and may fail if UI changes.'
               ),
             ])
-          : h('p', { class: 'dex-folder-state' }, 'Local deterministic rewrite only. No AI call is made.'),
+          : h('p', { class: 'dex-form__hint' }, 'Local deterministic rewrite only. No AI call is made.'),
 
         h('div', { class: 'dex-form__actions' }, [
           h(
@@ -195,27 +206,41 @@ export function PromptOptimizerModal({
             'button',
             {
               type: 'button',
-              class: 'dex-link-btn',
-              disabled: !(finalPrompt || localPrompt),
+              class: `dex-link-btn${hasResult ? ' dex-link-btn--accent' : ''}`,
+              disabled: !hasResult,
               onClick: applyPrompt,
             },
             'Use Optimized Prompt'
           ),
         ]),
 
-        error ? h('div', { class: 'dex-folder-state error' }, error) : null,
-        warning ? h('div', { class: 'dex-folder-state' }, warning) : null,
+        error ? h('p', { class: 'dex-form__error' }, error) : null,
+        warning ? h('p', { class: 'dex-form__warning' }, warning) : null,
 
         localPrompt
           ? h('div', { class: 'dex-optimizer__result' }, [
-              h('strong', null, 'Deterministic Rewrite'),
+              h('div', { class: 'dex-optimizer__result-head' }, [
+                h('strong', null, 'Deterministic Rewrite'),
+                h('button', {
+                  type: 'button',
+                  class: 'dex-link-btn dex-optimizer__copy-btn',
+                  onClick: () => copyToClipboard('local', localPrompt),
+                }, copiedId === 'local' ? 'Copied!' : 'Copy'),
+              ]),
               h('pre', { class: 'dex-optimizer__pre' }, localPrompt),
             ])
           : null,
 
         finalPrompt
           ? h('div', { class: 'dex-optimizer__result' }, [
-              h('strong', null, `Final Output (${methodUsed})`),
+              h('div', { class: 'dex-optimizer__result-head' }, [
+                h('strong', null, `Final Output (${methodUsed})`),
+                h('button', {
+                  type: 'button',
+                  class: 'dex-link-btn dex-optimizer__copy-btn',
+                  onClick: () => copyToClipboard('final', finalPrompt),
+                }, copiedId === 'final' ? 'Copied!' : 'Copy'),
+              ]),
               h('pre', { class: 'dex-optimizer__pre' }, finalPrompt),
             ])
           : null,

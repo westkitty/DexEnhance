@@ -1417,6 +1417,118 @@ select.dex-input:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* ── BrandBadge hover ────────────────────────────────────────── */
+.dex-brand-badge:hover {
+  transform: scale(1.08);
+  box-shadow: var(--dex-shadow-lg);
+}
+
+/* ── Tour step hover ─────────────────────────────────────────── */
+.dex-tour__step:not(.is-active):hover {
+  border-color: var(--dex-border-strong);
+  background: color-mix(in srgb, var(--dex-accent) 6%, var(--dex-shell-strong));
+}
+
+/* ── TokenOverlay own label (replaces dex-sidebar__label dep) ── */
+.dex-token-overlay__label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  opacity: 0.88;
+  color: var(--dex-fg-soft);
+}
+
+/* ── Generic form text variants ──────────────────────────────── */
+.dex-form__desc {
+  font-size: 13px;
+  margin: 4px 0;
+  color: var(--dex-fg-soft);
+  line-height: 1.4;
+}
+
+.dex-form__hint {
+  font-size: 11px;
+  margin: 2px 0;
+  color: var(--dex-muted);
+  line-height: 1.4;
+}
+
+.dex-form__error {
+  font-size: 12px;
+  margin: 4px 0;
+  color: #d04658;
+  line-height: 1.4;
+}
+
+.dex-form__warning {
+  font-size: 12px;
+  margin: 4px 0;
+  color: color-mix(in srgb, #e07a2a 90%, var(--dex-fg));
+  line-height: 1.4;
+}
+
+/* ── Sidebar section groups ──────────────────────────────────── */
+.dex-sidebar__section {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+
+.dex-sidebar__section-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dex-muted);
+}
+
+.dex-sidebar__section-actions {
+  display: grid;
+  gap: 6px;
+}
+
+.dex-sidebar__queue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: color-mix(in srgb, var(--dex-accent) 16%, transparent);
+  color: color-mix(in srgb, var(--dex-accent) 80%, var(--dex-fg));
+}
+
+/* ── Optimizer result header + copy button ───────────────────── */
+.dex-optimizer__result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.dex-optimizer__copy-btn {
+  font-size: 11px;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+/* ── Tour footer left column (progress + kbd hint) ───────────── */
+.dex-tour__footer-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dex-tour__kbd-hint {
+  font-size: 11px;
+  color: var(--dex-muted);
+  opacity: 0.72;
+}
+
 @media (max-width: 1024px) {
   .dex-tour__layout {
     grid-template-columns: 1fr;
@@ -1442,6 +1554,12 @@ select.dex-input:focus-visible {
   .dex-tour__footer {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .dex-tour__footer-left {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
   }
 
   .dex-tour__actions {

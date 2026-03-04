@@ -32,19 +32,19 @@ export function TokenOverlay({ site, model, tokens, source, iconUrl = '', update
       h('span', null, `Dex Tokens • ${site}`),
     ]),
     h('div', { class: 'dex-token-overlay__row' }, [
-      h('span', { class: 'dex-sidebar__label' }, 'Model'),
+      h('span', { class: 'dex-token-overlay__label' }, 'Model'),
       h('span', { class: 'dex-token-overlay__value' }, model || 'Unknown'),
     ]),
     h('div', { class: 'dex-token-overlay__row' }, [
-      h('span', { class: 'dex-sidebar__label' }, 'Tokens'),
+      h('span', { class: 'dex-token-overlay__label' }, 'Tokens'),
       h('span', { class: 'dex-token-overlay__value' }, tokens != null ? String(tokens) : '—'),
     ]),
     h('div', { class: 'dex-token-overlay__row' }, [
-      h('span', { class: 'dex-sidebar__label' }, 'Source'),
+      h('span', { class: 'dex-token-overlay__label' }, 'Source'),
       h('span', { class: 'dex-token-overlay__value' }, sourceLabel),
     ]),
     h('div', { class: 'dex-token-overlay__row' }, [
-      h('span', { class: 'dex-sidebar__label' }, 'Updated'),
+      h('span', { class: 'dex-token-overlay__label' }, 'Updated'),
       h('span', { class: 'dex-token-overlay__value' }, updatedLabel),
     ]),
   ]);

@@ -108,7 +108,10 @@ export function FeatureTourModal({
             : null,
 
           h('footer', { class: 'dex-tour__footer' }, [
-            h('span', { class: 'dex-tour__progress' }, `Step ${stepIndex + 1} of ${steps.length}`),
+            h('div', { class: 'dex-tour__footer-left' }, [
+              h('span', { class: 'dex-tour__progress' }, `Step ${stepIndex + 1} of ${steps.length}`),
+              h('span', { class: 'dex-tour__kbd-hint' }, '← → to navigate'),
+            ]),
             h('div', { class: 'dex-tour__actions' }, [
               h(
                 'button',
