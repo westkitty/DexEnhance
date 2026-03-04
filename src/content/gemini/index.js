@@ -371,6 +371,7 @@ async function logStorageRoundTrip() {
     render(
       h('div', null, [
         h(WelcomeHandoffModal, {
+          key: 'welcome',
           visible: isPanelOpen('welcome'),
           zipping: welcomeZipping,
           iconUrl,
@@ -387,6 +388,7 @@ async function logStorageRoundTrip() {
 
         isPanelOpen('hub')
           ? h(QuickHubPanel, {
+              key: 'hub',
               visible: true,
               iconUrl,
               panelState: panelState('hub'),
@@ -404,6 +406,7 @@ async function logStorageRoundTrip() {
 
         isPanelOpen('sidebar')
           ? h(PanelFrame, {
+              key: 'sidebar',
               panelId: 'sidebar',
               title: 'DexEnhance • Gemini',
               iconUrl,
@@ -440,6 +443,7 @@ async function logStorageRoundTrip() {
 
         isPanelOpen('tokens')
           ? h(PanelFrame, {
+              key: 'tokens',
               panelId: 'tokens',
               title: tokenTitle,
               iconUrl,
@@ -470,6 +474,7 @@ async function logStorageRoundTrip() {
 
         isPanelOpen('fab')
           ? h(FAB, {
+              key: 'fab',
               site: 'Gemini',
               iconUrl,
               panelState: panelState('fab'),
@@ -482,6 +487,7 @@ async function logStorageRoundTrip() {
             })
           : null,
         h(PromptLibrary, {
+          key: 'promptLibrary',
           visible: isPanelOpen('promptLibrary'),
           iconUrl,
           onClose: () => {
@@ -498,6 +504,7 @@ async function logStorageRoundTrip() {
           onWindowStateChange: (next) => setPanel('promptLibrary', next),
         }),
         h(ExportDialog, {
+          key: 'export',
           visible: isPanelOpen('export'),
           iconUrl,
           onClose: () => {
@@ -509,6 +516,7 @@ async function logStorageRoundTrip() {
           onWindowStateChange: (next) => setPanel('export', next),
         }),
         h(PromptOptimizerModal, {
+          key: 'optimizer',
           visible: isPanelOpen('optimizer'),
           site: 'Gemini',
           iconUrl,
@@ -528,6 +536,7 @@ async function logStorageRoundTrip() {
           onWindowStateChange: (next) => setPanel('optimizer', next),
         }),
         h(FeatureTourModal, {
+          key: 'tour',
           visible: isPanelOpen('tour'),
           site: 'Gemini',
           iconUrl,
@@ -549,6 +558,7 @@ async function logStorageRoundTrip() {
           onWindowStateChange: (next) => setPanel('tour', next),
         }),
         h(HUDSettingsPanel, {
+          key: 'settings',
           visible: isPanelOpen('settings'),
           iconUrl,
           panelState: panelState('settings'),

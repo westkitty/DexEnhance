@@ -1116,7 +1116,7 @@ chrome.runtime.onInstalled.addListener((details) => {
           bgGlassHue: 214,
           bgGlassSaturation: 18,
           bgGlassLightness: 86,
-          bgGlassAlpha: 0.34,
+          bgGlassAlpha: 0.44,
           panels: {},
           visibility: {
             welcome: true,

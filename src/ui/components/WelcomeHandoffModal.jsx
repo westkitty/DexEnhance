@@ -13,6 +13,9 @@ export function WelcomeHandoffModal({
   onGetStarted,
   onZipTransitionEnd,
 }) {
+  const panelWidth = Math.max(320, Number(panelState?.width || 360));
+  const panelHeight = Math.max(340, Number(panelState?.height || 360));
+
   const drag = useDraggable({
     initialPosition: {
       x: Number(panelState?.x || 220),
@@ -21,9 +24,9 @@ export function WelcomeHandoffModal({
     disabled: zipping,
     getBounds: () => ({
       minX: 8,
-      maxX: Math.max(8, window.innerWidth - Number(panelState?.width || 320) - 8),
+      maxX: Math.max(8, window.innerWidth - panelWidth - 8),
       minY: 8,
-      maxY: Math.max(8, window.innerHeight - Number(panelState?.height || 190) - 8),
+      maxY: Math.max(8, window.innerHeight - panelHeight - 8),
     }),
     onPositionCommit: (nextPosition) => {
       onPanelStateCommit?.({
@@ -36,8 +39,8 @@ export function WelcomeHandoffModal({
 
   const zipStyle = useMemo(() => {
     if (!zipping) return '';
-    const width = Math.max(240, Number(panelState?.width || 320));
-    const height = Math.max(150, Number(panelState?.height || 190));
+    const width = panelWidth;
+    const height = panelHeight;
     const targetX = Number.isFinite(Number(zipTarget?.x)) ? Number(zipTarget.x) : drag.position.x;
     const targetY = Number.isFinite(Number(zipTarget?.y)) ? Number(zipTarget.y) : drag.position.y;
     const targetSize = Math.max(40, Number(zipTarget?.size || 62));
@@ -45,7 +48,7 @@ export function WelcomeHandoffModal({
     const dy = targetY - drag.position.y + ((targetSize - height) / 2);
     const scale = Math.max(0.14, Math.min(1, targetSize / width));
     return `translate(${Math.round(dx)}px, ${Math.round(dy)}px) scale(${scale.toFixed(3)})`;
-  }, [zipping, panelState?.width, panelState?.height, zipTarget?.x, zipTarget?.y, zipTarget?.size, drag.position.x, drag.position.y]);
+  }, [zipping, panelWidth, panelHeight, zipTarget?.x, zipTarget?.y, zipTarget?.size, drag.position.x, drag.position.y]);
 
   if (!visible) return null;
 
@@ -54,8 +57,8 @@ export function WelcomeHandoffModal({
     style: {
       left: `${Math.round(drag.position.x)}px`,
       top: `${Math.round(drag.position.y)}px`,
-      width: `${Math.max(240, Number(panelState?.width || 320))}px`,
-      minHeight: `${Math.max(150, Number(panelState?.height || 190))}px`,
+      width: `${panelWidth}px`,
+      minHeight: `${panelHeight}px`,
       opacity: panelOpacityValue(panelState?.opacity ?? 0.98),
       transform: zipStyle || undefined,
       zIndex: 2147483647,
@@ -75,13 +78,14 @@ export function WelcomeHandoffModal({
     ]),
     h('div', { class: 'dex-welcome__body' }, [
       iconUrl
-        ? h('img', {
-            src: iconUrl,
-            alt: 'DexEnhance',
-            class: 'dex-welcome__logo',
-          })
+        ? h('div', { class: 'dex-welcome__logo-circle' }, [
+            h('img', {
+              src: iconUrl,
+              alt: 'DexEnhance',
+              class: 'dex-welcome__logo',
+            }),
+          ])
         : null,
-      h('p', { class: 'dex-welcome__copy' }, 'DexEnhance starts unobtrusive. Use Quick Action as your primary anchor.'),
       h(
         'button',
         {

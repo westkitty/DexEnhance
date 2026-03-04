@@ -23,7 +23,7 @@ export const DEFAULT_HUD_SETTINGS = Object.freeze({
   bgGlassHue: 214,
   bgGlassSaturation: 18,
   bgGlassLightness: 86,
-  bgGlassAlpha: 0.34,
+  bgGlassAlpha: 0.44,
   panels: {},
   visibility: {
     welcome: true,
@@ -62,7 +62,7 @@ function centerY(height, viewportHeight) {
 export function panelMinSize(panelId) {
   switch (panelId) {
     case 'welcome':
-      return { minWidth: 280, minHeight: 150 };
+      return { minWidth: 320, minHeight: 340 };
     case 'hub':
       return { minWidth: 340, minHeight: 260 };
     case 'sidebar':
@@ -91,11 +91,11 @@ export function defaultPanelState(panelId, viewport) {
 
   switch (panelId) {
     case 'welcome': {
-      const panelWidth = Math.min(360, Math.max(300, Math.round(width * 0.28)));
-      const panelHeight = 190;
+      const panelWidth = Math.min(380, Math.max(320, Math.round(width * 0.28)));
+      const panelHeight = Math.max(340, Math.round(panelWidth * 1.04));
       return {
         x: centerX(panelWidth, width),
-        y: Math.max(80, centerY(panelHeight, height) - 30),
+        y: Math.max(66, centerY(panelHeight, height) - 20),
         width: panelWidth,
         height: panelHeight,
         opacity: 0.98,
@@ -240,7 +240,7 @@ export function clampPanelState(panelState, viewport, minWidth = 180, minHeight 
     y: clamp(panelState?.y, SAFE_MARGIN, maxY),
     width,
     height,
-    opacity: clamp(panelState?.opacity, 0.08, 1),
+    opacity: clamp(panelState?.opacity, 0.28, 1),
     collapsed: panelState?.collapsed === true,
     pinned: panelState?.pinned === true,
   };
@@ -283,7 +283,7 @@ export function normalizeHudSettings(rawSettings, viewport) {
     bgGlassHue: clamp(source.bgGlassHue ?? DEFAULT_HUD_SETTINGS.bgGlassHue, 0, 360),
     bgGlassSaturation: clamp(source.bgGlassSaturation ?? DEFAULT_HUD_SETTINGS.bgGlassSaturation, 0, 100),
     bgGlassLightness: clamp(source.bgGlassLightness ?? DEFAULT_HUD_SETTINGS.bgGlassLightness, 0, 100),
-    bgGlassAlpha: clamp(source.bgGlassAlpha ?? DEFAULT_HUD_SETTINGS.bgGlassAlpha, 0.06, 0.9),
+    bgGlassAlpha: clamp(source.bgGlassAlpha ?? DEFAULT_HUD_SETTINGS.bgGlassAlpha, 0.18, 0.9),
     panels: {},
     visibility: normalizeVisibility(source.visibility),
   };
@@ -350,7 +350,7 @@ export function resetPanelInSettings(settings, panelId, viewport) {
 }
 
 export function panelOpacityValue(value) {
-  return clamp(value, 0.08, 1);
+  return clamp(value, 0.28, 1);
 }
 
 export function hueToHudPalette(hue) {

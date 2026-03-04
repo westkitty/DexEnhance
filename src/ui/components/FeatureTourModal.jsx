@@ -128,6 +128,7 @@ export function FeatureTourModal({
                   onClick: () => {
                     if (isLastStep) {
                       onComplete?.();
+                      onClose?.();
                       return;
                     }
                     setStepIndex((value) => Math.min(value + 1, steps.length - 1));

@@ -26,7 +26,7 @@ export function HUDSettingsPanel({
   bgGlassHue = 214,
   bgGlassSaturation = 18,
   bgGlassLightness = 86,
-  bgGlassAlpha = 0.34,
+  bgGlassAlpha = 0.44,
   onBackgroundChange,
   panelVisibility = {},
   panelOpacities = {},
@@ -143,7 +143,7 @@ export function HUDSettingsPanel({
           }),
           h('input', {
             type: 'range',
-            min: 0.06,
+            min: 0.18,
             max: 0.9,
             step: 0.01,
             value: Number(bgGlassAlpha),
@@ -186,7 +186,7 @@ export function HUDSettingsPanel({
               h('div', { class: `dex-window-row__opacity${modeOn ? ' is-open' : ''}` }, [
                 h('input', {
                   type: 'range',
-                  min: 0.08,
+                  min: 0.28,
                   max: 1,
                   step: 0.02,
                   value: Number.isFinite(Number(panelOpacities?.[panelId])) ? Number(panelOpacities[panelId]) : 0.96,
