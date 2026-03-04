@@ -387,6 +387,22 @@ For current execution truth, use:
   - `.planning/phases/phase-10/phase-10-07-HYBRID-PROMPT-OPTIMIZER.md`
   - `.planning/phases/phase-10/phase-10-07-playwright-verification.json`
 
+### State Update (2026-03-04, additive #17)
+
+- Completed cross-site HUD mobility + visibility hardening pass for ChatGPT and Gemini.
+- Unified both site entrypoints on shared panel-state orchestration (`hudUiSettingsV1`) with:
+  - draggable/resizable/collapsible/pinnable windows
+  - per-panel transparency controls
+  - spectrum accent-hue customization
+  - FAB size customization
+- Added popup-level `Settings` entry with HUD hue + reset controls that write into shared HUD storage.
+- Tuned Dex Tokens behavior into compact collapsed bar mode to reduce obstruction of modal action controls.
+- Hardened same-tab prompt optimizer submission with layered fallbacks (button click, Enter-key dispatch, form submit path).
+- Expanded Playwright verification to assert popup settings modal open path and hue-control presence.
+- Added artifacts:
+  - `.planning/phases/phase-10/phase-10-11-HUD-MOBILITY-SETTINGS-PROMPT-HARDENING.md`
+  - `.planning/phases/phase-10/phase-10-11-playwright-verification.json`
+
 ---
 
 ## 4. COMPLETE REQUIREMENTS REGISTER
@@ -1145,6 +1161,21 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   - preserved constraints and troubleshooting details
   Artifact:
   - .planning/phases/phase-10/phase-10-10-README-TEMPLATE-REFRESH.md
+
+[2026-03-04] PHASE 10 HUD MOBILITY + SETTINGS HARDENING — UI obstruction fixes and control-system unification completed.
+  Unified ChatGPT and Gemini content scripts on shared panelized HUD state (`hudUiSettingsV1`).
+  Added draggable/resizable/collapsible/pinnable behavior across injected windows and popouts.
+  Added per-panel transparency controls + FAB size control + reset actions in HUD settings panel.
+  Added popup main-view Settings button and settings modal with spectrum hue + layout/theme reset actions.
+  Tuned Dex Tokens to compact collapsed-bar behavior to avoid blocking modal buttons and chat controls.
+  Hardened same-tab prompt optimizer submission with button/Enter/form fallback chain.
+  Expanded Playwright verifier to assert popup settings modal behavior.
+  Re-validated:
+  - `bun run build`
+  - `bun run verify:playwright`
+  Artifacts:
+  - .planning/phases/phase-10/phase-10-11-HUD-MOBILITY-SETTINGS-PROMPT-HARDENING.md
+  - .planning/phases/phase-10/phase-10-11-playwright-verification.json
 ```
 
 ---
@@ -1259,6 +1290,12 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Updated README structure/style using DexDictate README as presentation reference.
   Added GitHub-facing hero, badges, feature framing, and clear install/package/verify docs.
   Preserved technical accuracy for DexEnhance-specific architecture and workflows.
+
+[2026-03-04] v1.11 — Phase 10 HUD mobility/settings hardening landed.
+  Unified cross-site HUD panel management for ChatGPT and Gemini with persisted panel-state settings.
+  Added popup Settings entrypoint for HUD hue/layout control and synced it via storage.
+  Added per-panel opacity controls, FAB sizing, and compact token-bar behavior to reduce UI obstruction.
+  Hardened same-tab optimizer submission using multi-path fallback dispatch and revalidated build/Playwright.
 ```
 
 ---

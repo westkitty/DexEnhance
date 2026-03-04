@@ -142,6 +142,60 @@ function hasNewAssistant(before, after) {
   return false;
 }
 
+function isDisabledElement(element) {
+  if (!(element instanceof HTMLElement)) return true;
+  if (element.hasAttribute('disabled')) return true;
+  const ariaDisabled = `${element.getAttribute('aria-disabled') || ''}`.toLowerCase();
+  return ariaDisabled === 'true';
+}
+
+function dispatchEnterKey(target) {
+  if (!(target instanceof HTMLElement)) return false;
+  const eventInit = {
+    key: 'Enter',
+    code: 'Enter',
+    keyCode: 13,
+    which: 13,
+    bubbles: true,
+    cancelable: true,
+  };
+  const down = new KeyboardEvent('keydown', eventInit);
+  const pressed = target.dispatchEvent(down);
+  target.dispatchEvent(new KeyboardEvent('keypress', eventInit));
+  target.dispatchEvent(new KeyboardEvent('keyup', eventInit));
+  return pressed;
+}
+
+async function submitRefinementPayload({ adapter, inputEl }) {
+  const submitButton = adapter.getSubmitButton();
+  if (submitButton instanceof HTMLElement && !isDisabledElement(submitButton)) {
+    submitButton.click();
+    await sleep(180);
+    if (adapter.isGenerating()) return 'button_click';
+  }
+
+  dispatchEnterKey(inputEl);
+  await sleep(220);
+  if (adapter.isGenerating()) return 'enter_key';
+
+  const form = inputEl instanceof HTMLElement ? inputEl.closest('form') : null;
+  if (form instanceof HTMLFormElement) {
+    try {
+      form.requestSubmit?.();
+      await sleep(220);
+      if (adapter.isGenerating()) return 'form_request_submit';
+    } catch {
+      // Fall through to explicit submit event dispatch.
+    }
+
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await sleep(220);
+    if (adapter.isGenerating()) return 'form_submit_event';
+  }
+
+  return '';
+}
+
 async function waitUntilIdle(adapter, timeoutMs = 15000) {
   const startedAt = Date.now();
   while (Date.now() - startedAt < timeoutMs) {
@@ -160,9 +214,8 @@ export async function runAiRefinementInCurrentTab({ adapter, localPrompt, timeou
   await waitUntilIdle(adapter, 15000);
 
   const inputEl = adapter.getTextarea();
-  const submitButton = adapter.getSubmitButton();
-  if (!(inputEl instanceof HTMLElement) || !(submitButton instanceof HTMLElement)) {
-    throw new Error('Could not access the active prompt input or submit button.');
+  if (!(inputEl instanceof HTMLElement)) {
+    throw new Error('Could not access the active prompt input.');
   }
 
   const before = captureAssistantSnapshot();
@@ -174,7 +227,10 @@ export async function runAiRefinementInCurrentTab({ adapter, localPrompt, timeou
   }
 
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  submitButton.click();
+  const submissionMethod = await submitRefinementPayload({ adapter, inputEl });
+  if (!submissionMethod) {
+    throw new Error('Unable to submit optimization request from current composer.');
+  }
 
   const startedAt = Date.now();
   let observedGenerating = false;

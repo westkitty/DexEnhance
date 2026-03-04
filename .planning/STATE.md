@@ -112,6 +112,15 @@
 - [x] Added artifact `.planning/phases/phase-10/phase-10-09-FIREFOX-DIST-TARGET.md`
 - [x] Refreshed GitHub README using DexDictate template style as reference
 - [x] Added artifact `.planning/phases/phase-10/phase-10-10-README-TEMPLATE-REFRESH.md`
+- [x] Unified ChatGPT + Gemini onto shared draggable/resizable/collapsible/pinnable panel system
+- [x] Added centralized HUD settings model (`hudUiSettingsV1`) with per-panel min-size clamping
+- [x] Added Dex Tokens compact collapsed bar behavior to reduce modal/button obstruction
+- [x] Added per-panel opacity controls + FAB size control + reset actions in injected HUD settings panel
+- [x] Added popup-level Settings button + modal with hue slider and layout/theme reset actions
+- [x] Hardened same-tab prompt optimizer submission with click/Enter/form fallbacks
+- [x] Expanded Playwright verifier to assert popup settings modal open path and controls
+- [x] Added artifact `.planning/phases/phase-10/phase-10-11-HUD-MOBILITY-SETTINGS-PROMPT-HARDENING.md`
+- [x] Added artifact `.planning/phases/phase-10/phase-10-11-playwright-verification.json`
 
 ## What's Next
 
@@ -157,3 +166,4 @@ Optional follow-up pass:
 | 2026-03-04 | Reverse-alpha watermark removal evaluated as feasible-but-not-recommended | High brittleness and product/compliance risk for DexEnhance scope |
 | 2026-03-04 | Firefox target is produced from Chromium build output via manifest transform | Preserves single code pipeline while enabling parallel browser-specific packaging |
 | 2026-03-04 | README structure now follows DexDictate-style GitHub presentation | Improves discoverability and onboarding while preserving exact DexEnhance build/test steps |
+| 2026-03-04 | HUD state now uses panel-specific min-size clamping + unified cross-site layout model | Prevents small-surface regressions (FAB/token bar) and keeps draggable/resizable controls consistent on ChatGPT and Gemini |

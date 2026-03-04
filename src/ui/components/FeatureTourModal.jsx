@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { TOUR_STEPS } from '../tour-content.js';
+import { PanelFrame } from './PanelFrame.jsx';
 
 export function FeatureTourModal({
   visible,
@@ -9,6 +10,9 @@ export function FeatureTourModal({
   onClose,
   onComplete,
   onOpenPrompts,
+  windowState,
+  defaultWindowState,
+  onWindowStateChange,
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const steps = useMemo(() => TOUR_STEPS, []);
@@ -38,29 +42,24 @@ export function FeatureTourModal({
 
   const isLastStep = stepIndex === steps.length - 1;
 
-  return h('div', { class: 'dex-modal-overlay dex-tour-overlay' }, [
-    h('section', {
-      class: 'dex-modal dex-tour',
-      'aria-label': 'DexEnhance Feature Tour',
-      style: iconUrl ? `--dex-watermark-url:url("${iconUrl}")` : undefined,
-    }, [
-      h('header', { class: 'dex-modal__header dex-tour__header' }, [
-        h('div', { class: 'dex-modal__brand' }, [
-          iconUrl
-            ? h('img', {
-                src: iconUrl,
-                alt: 'DexEnhance logo',
-                class: 'dex-modal__logo',
-              })
-            : null,
-          h('div', null, [
-            h('div', { class: 'dex-modal__title' }, 'DexEnhance'),
-            h('div', { class: 'dex-tour__eyebrow' }, `Feature Tour • ${site}`),
-          ]),
-        ]),
-        h('button', { type: 'button', class: 'dex-link-btn', onClick: () => onClose?.() }, 'Skip Tour'),
-      ]),
-
+  return h(
+    PanelFrame,
+    {
+      panelId: 'tour',
+      title: `Feature Tour • ${site}`,
+      iconUrl,
+      panelState: windowState,
+      defaultState: defaultWindowState,
+      onPanelStateChange: onWindowStateChange,
+      onClose,
+      minWidth: 560,
+      minHeight: 320,
+      zIndex: 2147483647,
+      showPin: true,
+      showClose: true,
+      allowResize: true,
+    },
+    [
       h('div', { class: 'dex-tour__layout' }, [
         h(
           'aside',
@@ -138,6 +137,6 @@ export function FeatureTourModal({
           ]),
         ]),
       ]),
-    ]),
-  ]);
+    ]
+  );
 }

@@ -141,6 +141,12 @@
       margin-bottom: 10px;
     }
 
+    .brand-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .brand {
       display: flex;
       align-items: center;
@@ -186,6 +192,14 @@
       transition: transform 180ms ease, box-shadow 220ms ease, filter 220ms ease;
       box-shadow: 0 10px 22px rgba(12, 16, 22, 0.28);
       backdrop-filter: blur(10px) saturate(120%);
+    }
+
+    .settings-btn {
+      background: linear-gradient(
+        135deg,
+        color-mix(in srgb, #6b7280 78%, transparent),
+        color-mix(in srgb, #4b5563 78%, transparent)
+      );
     }
 
     .tour-btn:hover {
@@ -339,6 +353,59 @@
       font-size: 16px;
     }
 
+    .settings-field {
+      margin: 10px 0;
+      display: grid;
+      gap: 6px;
+    }
+
+    .settings-label {
+      font-size: 12px;
+      color: var(--dex-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .settings-slider {
+      width: 100%;
+      accent-color: var(--dex-accent);
+    }
+
+    .settings-slider--spectrum {
+      -webkit-appearance: none;
+      appearance: none;
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid var(--dex-border);
+      background: linear-gradient(90deg, #ff3b30 0%, #ff9500 16%, #ffcc00 32%, #34c759 48%, #00c7be 64%, #007aff 80%, #af52de 100%);
+    }
+
+    .settings-slider--spectrum::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 2px solid #fff;
+      background: rgba(230, 236, 246, 0.96);
+      cursor: pointer;
+    }
+
+    .settings-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .settings-note {
+      margin: 8px 0 0;
+      font-size: 11px;
+      color: var(--dex-muted);
+      line-height: 1.5;
+    }
+
     .tour-modal .tour-sub {
       margin: 4px 0 10px;
       font-size: 12px;
@@ -436,7 +503,10 @@
           <p class="muted">Cross-site workflow assistant for ChatGPT + Gemini</p>
         </div>
       </div>
-      <button id="open-tour" class="tour-btn" type="button">Tour</button>
+      <div class="brand-actions">
+        <button id="open-settings" class="tour-btn settings-btn" type="button">Settings</button>
+        <button id="open-tour" class="tour-btn" type="button">Tour</button>
+      </div>
     </div>
 
     <div class="feature-grid">
@@ -482,6 +552,32 @@
       </div>
       <div class="tour-actions">
         <button id="tour-close" class="btn ghost" type="button">Close</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="settings-modal" class="modal-backdrop" aria-hidden="true">
+    <section class="tour-modal" aria-label="DexEnhance Popup Settings">
+      <div class="tour-modal__brand">
+        <img src="../icons/icon128.png" alt="DexEnhance logo" />
+        <h2>HUD Settings</h2>
+      </div>
+      <p class="tour-sub">Tune HUD color and reset layout for both sites.</p>
+
+      <div class="settings-field">
+        <label class="settings-label" for="hud-hue">Accent Hue <strong id="hud-hue-value">202°</strong></label>
+        <input id="hud-hue" class="settings-slider settings-slider--spectrum" type="range" min="0" max="360" step="1" value="202" />
+      </div>
+
+      <div class="settings-row">
+        <button id="reset-layout" class="btn" type="button">Reset Window Layout</button>
+        <button id="reset-theme" class="btn" type="button">Reset Theme</button>
+      </div>
+
+      <p id="settings-status" class="settings-note">Changes sync to ChatGPT and Gemini HUD instantly.</p>
+
+      <div class="tour-actions">
+        <button id="settings-close" class="btn ghost" type="button">Close</button>
       </div>
     </section>
   </div>

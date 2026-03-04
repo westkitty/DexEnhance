@@ -26,12 +26,21 @@ import {
   writeOptimizedComposerText,
 } from '../shared/prompt-optimizer.js';
 import { PromptOptimizerModal } from '../../ui/components/PromptOptimizerModal.jsx';
+import { PanelFrame } from '../../ui/components/PanelFrame.jsx';
+import { HUDSettingsPanel } from '../../ui/components/HUDSettingsPanel.jsx';
+import {
+  DEFAULT_HUD_SETTINGS,
+  HUD_SETTINGS_KEY,
+  defaultPanelState,
+  hueToHudPalette,
+  normalizeHudSettings,
+  updatePanelInSettings,
+} from '../../lib/ui-settings.js';
 
 async function getEnabledFlag() {
   const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'enabled' });
   if (!response.ok) {
     console.error('[DexEnhance] ChatGPT failed to read enabled flag via background:', response.error);
-    // Fail-open so extension remains available even if messaging has a transient issue.
     return true;
   }
   return response.data !== false;
@@ -88,17 +97,73 @@ async function logStorageRoundTrip() {
     isGenerating: adapter.isGenerating(),
   });
   await logStorageRoundTrip();
+
   const ui = createShadowRenderer({ site: 'chatgpt' });
   const iconUrl = chrome.runtime.getURL('icons/icon128.png');
+
   let queueSizeState = 0;
   let promptLibraryOpen = false;
   let exportDialogOpen = false;
   let tourModalOpen = false;
   let optimizerOpen = false;
+  let settingsOpen = false;
   let tokenModel = null;
   let tokenCount = null;
   let tokenSource = null;
   let tokenUpdatedAt = null;
+
+  let hudSettings = normalizeHudSettings({}, { width: window.innerWidth, height: window.innerHeight });
+  let persistHudTimer = null;
+
+  const getViewport = () => ({ width: window.innerWidth, height: window.innerHeight });
+
+  const panelState = (panelId) => hudSettings.panels[panelId] || defaultPanelState(panelId, getViewport());
+  const panelDefault = (panelId) => defaultPanelState(panelId, getViewport());
+
+  const applyHudPalette = () => {
+    const palette = hueToHudPalette(hudSettings.accentHue);
+    ui.mountPoint.style.setProperty('--dex-accent', palette.accent);
+    ui.mountPoint.style.setProperty('--dex-accent-2', palette.accent2);
+    ui.mountPoint.style.setProperty('--dex-cta', palette.cta);
+  };
+
+  const scheduleHudSettingsPersist = () => {
+    if (persistHudTimer) window.clearTimeout(persistHudTimer);
+    persistHudTimer = window.setTimeout(() => {
+      void sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
+        items: {
+          [HUD_SETTINGS_KEY]: hudSettings,
+        },
+      });
+    }, 220);
+  };
+
+  const setHudSettings = (nextSettings, { persist = true } = {}) => {
+    hudSettings = normalizeHudSettings(nextSettings, getViewport());
+    applyHudPalette();
+    if (persist) scheduleHudSettingsPersist();
+    renderUI();
+  };
+
+  const setPanel = (panelId, nextPanel) => {
+    setHudSettings(updatePanelInSettings(hudSettings, panelId, nextPanel, getViewport()));
+  };
+
+  const openAnyModal = (panelName) => {
+    if (panelName === 'prompts') promptLibraryOpen = true;
+    if (panelName === 'export') exportDialogOpen = true;
+    if (panelName === 'optimizer') optimizerOpen = true;
+    if (panelName === 'tour') tourModalOpen = true;
+    setPanel('tokens', {
+      ...panelState('tokens'),
+      collapsed: true,
+      pinned: false,
+      x: Math.max(8, window.innerWidth - 250),
+      y: Math.max(8, window.innerHeight - 62),
+      width: 220,
+      height: 48,
+    });
+  };
 
   const markTourSeen = async () => {
     const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
@@ -189,55 +254,86 @@ async function logStorageRoundTrip() {
   };
 
   const renderUI = () => {
+    const tokenTitle = `Dex Tokens • ChatGPT${tokenCount != null ? ` • ${tokenCount}` : ''}`;
+
     render(
       h('div', null, [
-        h(Sidebar, {
-          site: 'ChatGPT',
-          currentChatUrl: window.location.href,
-          queueSize: queueSizeState,
+        h(PanelFrame, {
+          panelId: 'sidebar',
+          title: 'DexEnhance • ChatGPT',
           iconUrl,
-          onRequestTour: () => {
-            tourModalOpen = true;
-            renderUI();
-          },
-          onRequestPrompts: () => {
-            promptLibraryOpen = true;
-            renderUI();
-          },
-          onRequestOptimizer: () => {
-            optimizerOpen = true;
-            renderUI();
-          },
-          onRequestExport: () => {
-            exportDialogOpen = true;
-            renderUI();
-          },
-        }),
+          panelState: panelState('sidebar'),
+          defaultState: panelDefault('sidebar'),
+          onPanelStateChange: (next) => setPanel('sidebar', next),
+          minWidth: 280,
+          minHeight: 280,
+          zIndex: 2147483645,
+          showClose: false,
+          showPin: true,
+          allowResize: true,
+        }, [
+          h(Sidebar, {
+            site: 'ChatGPT',
+            currentChatUrl: window.location.href,
+            queueSize: queueSizeState,
+            iconUrl,
+            onRequestTour: () => openAnyModal('tour'),
+            onRequestPrompts: () => openAnyModal('prompts'),
+            onRequestOptimizer: () => openAnyModal('optimizer'),
+            onRequestExport: () => openAnyModal('export'),
+            onRequestSettings: () => {
+              settingsOpen = true;
+              renderUI();
+            },
+          }),
+        ]),
+
+        h(PanelFrame, {
+          panelId: 'tokens',
+          title: tokenTitle,
+          iconUrl,
+          panelState: panelState('tokens'),
+          defaultState: panelDefault('tokens'),
+          onPanelStateChange: (next) => setPanel('tokens', next),
+          minWidth: 180,
+          minHeight: 48,
+          zIndex: 2147483644,
+          showClose: false,
+          showPin: false,
+          showOptions: false,
+          allowResize: true,
+          compactCollapsed: true,
+        }, [
+          h(TokenOverlay, {
+            site: 'ChatGPT',
+            model: tokenModel,
+            tokens: tokenCount,
+            source: tokenSource,
+            updatedAt: tokenUpdatedAt,
+            iconUrl,
+            compact: panelState('tokens').collapsed,
+          }),
+        ]),
+
         h(BrandBadge, {
           site: 'ChatGPT',
           iconUrl,
-          onClick: () => {
-            tourModalOpen = true;
-            renderUI();
-          },
+          onClick: () => openAnyModal('tour'),
         }),
         h(FAB, {
           site: 'ChatGPT',
           iconUrl,
+          panelState: panelState('fab'),
+          onPanelStateChange: (next) => setPanel('fab', next),
           onAction: (action) => {
-            if (action === 'tour') {
-              tourModalOpen = true;
+            if (action === 'tour') openAnyModal('tour');
+            else if (action === 'optimize') openAnyModal('optimizer');
+            else if (action === 'prompts') openAnyModal('prompts');
+            else if (action === 'settings') {
+              settingsOpen = true;
               renderUI();
-            } else if (action === 'optimize') {
-              optimizerOpen = true;
-              renderUI();
-            } else if (action === 'prompts') {
-              promptLibraryOpen = true;
-              renderUI();
-            } else if (action === 'export') {
-              exportDialogOpen = true;
-              renderUI();
-            }
+            } else if (action === 'export') openAnyModal('export');
+            else renderUI();
           },
         }),
         h(PromptLibrary, {
@@ -253,6 +349,9 @@ async function logStorageRoundTrip() {
               console.warn('[DexEnhance] ChatGPT prompt insert failed: no textarea found');
             }
           },
+          windowState: panelState('promptLibrary'),
+          defaultWindowState: panelDefault('promptLibrary'),
+          onWindowStateChange: (next) => setPanel('promptLibrary', next),
         }),
         h(ExportDialog, {
           visible: exportDialogOpen,
@@ -262,6 +361,9 @@ async function logStorageRoundTrip() {
             renderUI();
           },
           onExport: handleExport,
+          windowState: panelState('export'),
+          defaultWindowState: panelDefault('export'),
+          onWindowStateChange: (next) => setPanel('export', next),
         }),
         h(PromptOptimizerModal, {
           visible: optimizerOpen,
@@ -279,14 +381,9 @@ async function logStorageRoundTrip() {
               console.warn('[DexEnhance] ChatGPT optimizer apply failed: no textarea found');
             }
           },
-        }),
-        h(TokenOverlay, {
-          site: 'ChatGPT',
-          model: tokenModel,
-          tokens: tokenCount,
-          source: tokenSource,
-          updatedAt: tokenUpdatedAt,
-          iconUrl,
+          windowState: panelState('optimizer'),
+          defaultWindowState: panelDefault('optimizer'),
+          onWindowStateChange: (next) => setPanel('optimizer', next),
         }),
         h(FeatureTourModal, {
           visible: tourModalOpen,
@@ -308,6 +405,63 @@ async function logStorageRoundTrip() {
             renderUI();
             void markTourSeen();
           },
+          windowState: panelState('tour'),
+          defaultWindowState: panelDefault('tour'),
+          onWindowStateChange: (next) => setPanel('tour', next),
+        }),
+        h(HUDSettingsPanel, {
+          visible: settingsOpen,
+          iconUrl,
+          panelState: panelState('settings'),
+          defaultPanelState: panelDefault('settings'),
+          onPanelStateChange: (next) => setPanel('settings', next),
+          accentHue: hudSettings.accentHue,
+          onAccentHueChange: (hue) => {
+            setHudSettings({
+              ...hudSettings,
+              accentHue: hue,
+            });
+          },
+          panelOpacities: {
+            sidebar: panelState('sidebar').opacity,
+            tokens: panelState('tokens').opacity,
+            fab: panelState('fab').opacity,
+            promptLibrary: panelState('promptLibrary').opacity,
+            optimizer: panelState('optimizer').opacity,
+            tour: panelState('tour').opacity,
+            export: panelState('export').opacity,
+          },
+          onPanelOpacityChange: (panelId, opacity) => {
+            setPanel(panelId, {
+              ...panelState(panelId),
+              opacity,
+            });
+          },
+          fabSize: panelState('fab').width,
+          onFabSizeChange: (size) => {
+            const safeSize = Math.max(52, Math.min(96, Number(size) || 62));
+            setPanel('fab', {
+              ...panelState('fab'),
+              width: safeSize,
+              height: safeSize,
+            });
+          },
+          onResetLayout: () => {
+            setHudSettings({
+              ...hudSettings,
+              panels: {},
+            });
+          },
+          onResetTheme: () => {
+            setHudSettings({
+              accentHue: DEFAULT_HUD_SETTINGS.accentHue,
+              panels: {},
+            });
+          },
+          onClose: () => {
+            settingsOpen = false;
+            renderUI();
+          },
         }),
       ]),
       ui.mountPoint
@@ -321,6 +475,26 @@ async function logStorageRoundTrip() {
     tokenCount = Number.isFinite(Number(payload?.tokens)) ? Number(payload.tokens) : tokenCount;
     tokenSource = payload?.source || tokenSource;
     tokenUpdatedAt = Number.isFinite(Number(payload?.at)) ? Number(payload.at) : Date.now();
+    renderUI();
+  });
+
+  const hudRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: HUD_SETTINGS_KEY });
+  if (hudRes.ok) {
+    hudSettings = normalizeHudSettings(hudRes.data, getViewport());
+  }
+  applyHudPalette();
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+    if (!changes[HUD_SETTINGS_KEY]) return;
+    hudSettings = normalizeHudSettings(changes[HUD_SETTINGS_KEY].newValue, getViewport());
+    applyHudPalette();
+    renderUI();
+  });
+
+  window.addEventListener('resize', () => {
+    hudSettings = normalizeHudSettings(hudSettings, getViewport());
+    applyHudPalette();
     renderUI();
   });
 
@@ -340,5 +514,4 @@ async function logStorageRoundTrip() {
   });
   queueSizeState = queueController.getQueueSize();
   renderUI();
-  // Phase 4 will mount Shadow DOM UI here.
 })();

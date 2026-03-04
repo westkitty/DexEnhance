@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.js';
+import { PanelFrame } from './PanelFrame.jsx';
 
 async function callAction(action, payload = {}) {
   const response = await sendRuntimeMessage(action, payload);
@@ -26,7 +27,15 @@ function applyVariables(prompt) {
   return output;
 }
 
-export function PromptLibrary({ visible, onClose, onInsert, iconUrl = '' }) {
+export function PromptLibrary({
+  visible,
+  onClose,
+  onInsert,
+  iconUrl = '',
+  windowState,
+  defaultWindowState,
+  onWindowStateChange,
+}) {
   const [prompts, setPrompts] = useState([]);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
@@ -135,25 +144,24 @@ export function PromptLibrary({ visible, onClose, onInsert, iconUrl = '' }) {
 
   if (!visible) return null;
 
-  return h('div', { class: 'dex-modal-overlay' }, [
-      h('section', {
-        class: 'dex-modal',
-        'aria-label': 'Prompt Library',
-        style: iconUrl ? `--dex-watermark-url:url("${iconUrl}")` : undefined,
-      }, [
-      h('header', { class: 'dex-modal__header' }, [
-        h('div', { class: 'dex-modal__brand' }, [
-          iconUrl
-            ? h('img', {
-                src: iconUrl,
-                alt: 'DexEnhance logo',
-                class: 'dex-modal__logo',
-              })
-            : null,
-          h('h3', { class: 'dex-modal__title' }, 'Prompt Library'),
-        ]),
-        h('button', { type: 'button', class: 'dex-link-btn', onClick: () => onClose?.() }, 'Close'),
-      ]),
+  return h(
+    PanelFrame,
+    {
+      panelId: 'promptLibrary',
+      title: 'Prompt Library',
+      iconUrl,
+      panelState: windowState,
+      defaultState: defaultWindowState,
+      onPanelStateChange: onWindowStateChange,
+      onClose,
+      minWidth: 520,
+      minHeight: 320,
+      zIndex: 2147483647,
+      showPin: true,
+      showClose: true,
+      allowResize: true,
+    },
+    [
       h('p', { class: 'dex-tour__description' }, 'Reusable prompts with variable placeholders and instant insertion.'),
       h('div', { class: 'dex-prompt-filter-row' }, [
         h(
@@ -260,6 +268,6 @@ export function PromptLibrary({ visible, onClose, onInsert, iconUrl = '' }) {
           ])
         )
       ),
-    ]),
-  ]);
+    ]
+  );
 }

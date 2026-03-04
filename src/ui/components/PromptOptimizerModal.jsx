@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.js';
+import { PanelFrame } from './PanelFrame.jsx';
 
 const SETTINGS_KEY = 'optimizerSettings';
 const DEFAULT_SETTINGS = Object.freeze({
@@ -25,6 +26,9 @@ export function PromptOptimizerModal({
   onClose,
   onOptimize,
   onApply,
+  windowState,
+  defaultWindowState,
+  onWindowStateChange,
 }) {
   const [sourcePrompt, setSourcePrompt] = useState('');
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
@@ -104,29 +108,24 @@ export function PromptOptimizerModal({
 
   if (!visible) return null;
 
-  return h('div', { class: 'dex-modal-overlay' }, [
-    h('section', {
-      class: 'dex-modal dex-optimizer',
-      'aria-label': 'Hybrid Prompt Optimizer',
-      style: iconUrl ? `--dex-watermark-url:url("${iconUrl}")` : undefined,
-    }, [
-      h('header', { class: 'dex-modal__header' }, [
-        h('div', { class: 'dex-modal__brand' }, [
-          iconUrl
-            ? h('img', {
-                src: iconUrl,
-                alt: 'DexEnhance logo',
-                class: 'dex-modal__logo',
-              })
-            : null,
-          h('div', null, [
-            h('h3', { class: 'dex-modal__title' }, 'Hybrid Prompt Optimizer'),
-            h('div', { class: 'dex-tour__eyebrow' }, `Local first • ${site}`),
-          ]),
-        ]),
-        h('button', { type: 'button', class: 'dex-link-btn', onClick: () => onClose?.() }, 'Close'),
-      ]),
-
+  return h(
+    PanelFrame,
+    {
+      panelId: 'optimizer',
+      title: `Hybrid Prompt Optimizer • ${site}`,
+      iconUrl,
+      panelState: windowState,
+      defaultState: defaultWindowState,
+      onPanelStateChange: onWindowStateChange,
+      onClose,
+      minWidth: 520,
+      minHeight: 300,
+      zIndex: 2147483647,
+      showPin: true,
+      showClose: true,
+      allowResize: true,
+    },
+    [
       h('div', { class: 'dex-form' }, [
         h('label', { class: 'dex-sidebar__label' }, 'Source Prompt'),
         h('textarea', {
@@ -221,6 +220,6 @@ export function PromptOptimizerModal({
             ])
           : null,
       ]),
-    ]),
-  ]);
+    ]
+  );
 }

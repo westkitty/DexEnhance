@@ -1,7 +1,16 @@
 import { h } from 'preact';
 import { useState } from 'preact/hooks';
+import { PanelFrame } from './PanelFrame.jsx';
 
-export function ExportDialog({ visible, onClose, onExport, iconUrl = '' }) {
+export function ExportDialog({
+  visible,
+  onClose,
+  onExport,
+  iconUrl = '',
+  windowState,
+  defaultWindowState,
+  onWindowStateChange,
+}) {
   const [format, setFormat] = useState('pdf');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -21,25 +30,24 @@ export function ExportDialog({ visible, onClose, onExport, iconUrl = '' }) {
 
   if (!visible) return null;
 
-  return h('div', { class: 'dex-modal-overlay' }, [
-    h('section', {
-      class: 'dex-modal',
-      'aria-label': 'Export Conversation',
-      style: iconUrl ? `--dex-watermark-url:url("${iconUrl}")` : undefined,
-    }, [
-      h('header', { class: 'dex-modal__header' }, [
-        h('div', { class: 'dex-modal__brand' }, [
-          iconUrl
-            ? h('img', {
-                src: iconUrl,
-                alt: 'DexEnhance logo',
-                class: 'dex-modal__logo',
-              })
-            : null,
-          h('h3', { class: 'dex-modal__title' }, 'Export Conversation'),
-        ]),
-        h('button', { type: 'button', class: 'dex-link-btn', onClick: () => onClose?.() }, 'Close'),
-      ]),
+  return h(
+    PanelFrame,
+    {
+      panelId: 'export',
+      title: 'Export Conversation',
+      iconUrl,
+      panelState: windowState,
+      defaultState: defaultWindowState,
+      onPanelStateChange: onWindowStateChange,
+      onClose,
+      minWidth: 340,
+      minHeight: 220,
+      zIndex: 2147483647,
+      showPin: true,
+      showClose: true,
+      allowResize: true,
+    },
+    [
       h('div', { class: 'dex-form' }, [
         h('p', { class: 'dex-folder-state' }, 'Export this conversation for docs, sharing, or decision logs.'),
         h('label', { class: 'dex-sidebar__label' }, 'Format'),
@@ -65,6 +73,6 @@ export function ExportDialog({ visible, onClose, onExport, iconUrl = '' }) {
         ),
         h('button', { type: 'button', class: 'dex-link-btn', disabled: busy, onClick: handleExport }, busy ? 'Exporting...' : 'Export'),
       ]),
-    ]),
-  ]);
+    ]
+  );
 }

@@ -99,16 +99,31 @@ async function verifyPopup(context, extensionId) {
       const modal = document.getElementById('tour-modal');
       const icon = document.querySelector('.brand img');
       const openButton = document.getElementById('open-tour');
+      const settingsButton = document.getElementById('open-settings');
       return {
         modalOpen: Boolean(modal?.classList.contains('is-open')),
         iconPresent: Boolean(icon),
         iconSource: icon?.getAttribute('src') || '',
         openTourButtonPresent: Boolean(openButton),
+        openSettingsButtonPresent: Boolean(settingsButton),
       };
     });
 
     await page.click('#tour-close').catch(() => {});
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(220);
+    await page.click('#open-settings').catch(() => {});
+    await page.waitForTimeout(320);
+    const settingsState = await page.evaluate(() => {
+      const modal = document.getElementById('settings-modal');
+      const hue = document.getElementById('hud-hue');
+      return {
+        modalOpen: Boolean(modal?.classList.contains('is-open')),
+        hueControlPresent: Boolean(hue),
+      };
+    });
+
+    await page.click('#settings-close').catch(() => {});
+    await page.waitForTimeout(240);
     await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
 
     const closed = await page.evaluate(() => {
@@ -123,6 +138,7 @@ async function verifyPopup(context, extensionId) {
       url,
       screenshotPath,
       initial,
+      settingsState,
       closed,
     };
   } finally {
@@ -135,7 +151,7 @@ async function verifyPopup(context, extensionId) {
   const extensionPath = path.resolve(projectRoot, 'dist');
   const reportPath = path.resolve(
     projectRoot,
-    '.planning/phases/phase-10/phase-10-05-playwright-verification.json'
+    '.planning/phases/phase-10/phase-10-11-playwright-verification.json'
   );
   const outputDir = path.resolve(projectRoot, 'output/playwright');
 
@@ -234,6 +250,12 @@ async function verifyPopup(context, extensionId) {
     }
     if (!result.popup?.initial?.iconPresent) {
       result.errors.push('Popup icon was not detected.');
+    }
+    if (!result.popup?.initial?.openSettingsButtonPresent) {
+      result.errors.push('Popup settings button was not detected.');
+    }
+    if (!result.popup?.settingsState?.modalOpen || !result.popup?.settingsState?.hueControlPresent) {
+      result.errors.push('Popup settings modal did not open correctly.');
     }
     if (!result.popup?.initial?.modalOpen) {
       result.errors.push('Popup tour did not auto-open on first launch.');
