@@ -3,3 +3,6 @@ dist/
 bun.lockb
 bun.lock
 *.DS_Store
+
+# Playwright runtime/browser profile artifacts (volatile)
+output/playwright/session/
