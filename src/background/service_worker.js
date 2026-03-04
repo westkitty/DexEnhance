@@ -7,7 +7,19 @@
 
 import { MESSAGE_ACTIONS } from '../lib/message-protocol.js';
 import { DEFAULT_PROMPT_TEMPLATES, PROMPT_CATALOG_VERSION } from '../lib/default-prompts.js';
+import {
+  FEATURE_SETTINGS_KEY,
+  normalizeFeatureSettings,
+  replaceFeatureSettings as replaceFeatureSettingsShape,
+  updateFeatureModule,
+} from '../lib/feature-settings.js';
 import { clearRules, updateRules } from './api_interceptor.js';
+import {
+  buildSemanticClipboardPreamble,
+  getSemanticClipboardStats,
+  querySemanticClipboard,
+  upsertSemanticClipboardContext,
+} from './semantic-clipboard-db.js';
 
 const storage = chrome.storage.local;
 const STORAGE_KEYS = Object.freeze({
@@ -15,7 +27,31 @@ const STORAGE_KEYS = Object.freeze({
   CHAT_FOLDER_MAP: 'chatFolderMap',
   PROMPTS: 'prompts',
   PROMPT_CATALOG_VERSION: 'promptCatalogVersion',
+  FEATURE_SETTINGS: FEATURE_SETTINGS_KEY,
 });
+
+const CANVAS_SESSION_TTL_MS = 15 * 60 * 1000;
+const CANVAS_SWEEP_ALARM = 'dexenhance_canvas_session_sweep';
+const CANVAS_FIELD_LIMIT_BYTES = 250 * 1024;
+const CANVAS_TOTAL_LIMIT_BYTES = 750 * 1024;
+const SEMANTIC_EMBEDDING_RUNTIME_PATH = 'offscreen/embeddings.html';
+
+/** @type {Map<string, {
+ *   sessionId: string,
+ *   claimToken: string,
+ *   originTabId: number,
+ *   popupTabId: number|null,
+ *   popupWindowId: number|null,
+ *   codeBundle: {html:string,css:string,js:string},
+ *   revision: number,
+ *   site: 'chatgpt'|'gemini',
+ *   chatUrl: string,
+ *   sourceTurnId: string,
+ *   expiresAt: number,
+ * }>} */
+const canvasSessions = new Map();
+const canvasSessionPorts = new Map();
+let semanticRuntimeTabId = null;
 
 function ok(data) {
   return data === undefined ? { ok: true } : { ok: true, data };
@@ -72,6 +108,365 @@ function promptFingerprint(prompt) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function clampInt(value, min, max, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  const rounded = Math.round(n);
+  return Math.min(max, Math.max(min, rounded));
+}
+
+function byteLength(value) {
+  try {
+    return new TextEncoder().encode(String(value || '')).length;
+  } catch {
+    return String(value || '').length;
+  }
+}
+
+function createClaimToken() {
+  const bytes = new Uint8Array(24);
+  globalThis.crypto.getRandomValues(bytes);
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let token = '';
+  for (const byte of bytes) {
+    token += alphabet[byte % alphabet.length];
+  }
+  return token;
+}
+
+function siteFromUrl(value) {
+  if (typeof value !== 'string') return '';
+  try {
+    const parsed = new URL(value);
+    if (parsed.hostname === 'chatgpt.com') return 'chatgpt';
+    if (parsed.hostname === 'gemini.google.com') return 'gemini';
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+function isAllowedChatSender(sender) {
+  const tabUrl = sender?.tab?.url || sender?.url || '';
+  return siteFromUrl(String(tabUrl || '')) !== '';
+}
+
+function normalizeCanvasSite(site, fallbackUrl) {
+  if (site === 'chatgpt' || site === 'gemini') return site;
+  return siteFromUrl(fallbackUrl);
+}
+
+function normalizeCodeBundle(input) {
+  const source = isRecord(input) ? input : {};
+  const html = typeof source.html === 'string' ? source.html.trim() : '';
+  const css = typeof source.css === 'string' ? source.css.trim() : '';
+  const js = typeof source.js === 'string' ? source.js.trim() : '';
+
+  const htmlBytes = byteLength(html);
+  const cssBytes = byteLength(css);
+  const jsBytes = byteLength(js);
+  const total = htmlBytes + cssBytes + jsBytes;
+
+  if (htmlBytes > CANVAS_FIELD_LIMIT_BYTES || cssBytes > CANVAS_FIELD_LIMIT_BYTES || jsBytes > CANVAS_FIELD_LIMIT_BYTES) {
+    throw new Error('CANVAS payload field exceeds maximum size.');
+  }
+  if (total > CANVAS_TOTAL_LIMIT_BYTES) {
+    throw new Error('CANVAS payload exceeds maximum combined size.');
+  }
+
+  return { html, css, js };
+}
+
+function removeCanvasSession(sessionId) {
+  if (!sessionId) return;
+  const port = canvasSessionPorts.get(sessionId);
+  if (port) {
+    try {
+      port.disconnect();
+    } catch {}
+    canvasSessionPorts.delete(sessionId);
+  }
+  canvasSessions.delete(sessionId);
+}
+
+function cleanupExpiredCanvasSessions(now = Date.now()) {
+  for (const [sessionId, session] of canvasSessions.entries()) {
+    if (!session || session.expiresAt <= now) {
+      canvasSessions.delete(sessionId);
+    }
+  }
+}
+
+function cleanupCanvasSessionsByTabId(tabId) {
+  if (!Number.isFinite(Number(tabId))) return;
+  for (const [sessionId, session] of canvasSessions.entries()) {
+    if (!session) continue;
+    if (session.originTabId === Number(tabId) || session.popupTabId === Number(tabId)) {
+      canvasSessions.delete(sessionId);
+    }
+  }
+}
+
+async function ensureCanvasSweepAlarm() {
+  await chrome.alarms.create(CANVAS_SWEEP_ALARM, {
+    periodInMinutes: 5,
+    delayInMinutes: 1,
+  });
+}
+
+async function openCanvasFromChat(sender, message) {
+  if (!isAllowedChatSender(sender)) {
+    throw new Error('CANVAS_OPEN_FROM_CHAT rejected: sender is not an allowed chat tab.');
+  }
+
+  const originTabId = Number(sender?.tab?.id);
+  if (!Number.isFinite(originTabId)) {
+    throw new Error('CANVAS_OPEN_FROM_CHAT requires a valid sender tab.');
+  }
+
+  const site = normalizeCanvasSite(message?.site, sender?.tab?.url || sender?.url || '');
+  if (!site) {
+    throw new Error('CANVAS_OPEN_FROM_CHAT requires site: "chatgpt" or "gemini".');
+  }
+
+  const codeBundle = normalizeCodeBundle(message?.codeBundle);
+  if (!codeBundle.html && !codeBundle.css && !codeBundle.js) {
+    throw new Error('CANVAS_OPEN_FROM_CHAT requires non-empty html/css/js payload.');
+  }
+
+  cleanupExpiredCanvasSessions();
+  const sessionId = createId();
+  const claimToken = createClaimToken();
+  const sourceTurnId = typeof message?.sourceTurnId === 'string' ? message.sourceTurnId : '';
+  const chatUrl = normalizeChatUrl(typeof message?.chatUrl === 'string' ? message.chatUrl : sender?.tab?.url || '');
+  const expiresAt = Date.now() + CANVAS_SESSION_TTL_MS;
+
+  const popupUrl = chrome.runtime.getURL(`popup/canvas.html#sid=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(claimToken)}`);
+  const popupWindow = await chrome.windows.create({
+    url: popupUrl,
+    type: 'popup',
+    focused: true,
+    width: 1280,
+    height: 900,
+  });
+
+  const popupTabId = Number(popupWindow?.tabs?.[0]?.id);
+  const popupWindowId = Number(popupWindow?.id);
+
+  canvasSessions.set(sessionId, {
+    sessionId,
+    claimToken,
+    originTabId,
+    popupTabId: Number.isFinite(popupTabId) ? popupTabId : null,
+    popupWindowId: Number.isFinite(popupWindowId) ? popupWindowId : null,
+    codeBundle,
+    revision: 1,
+    site,
+    chatUrl,
+    sourceTurnId,
+    expiresAt,
+  });
+
+  return {
+    sessionId,
+    popupTabId: Number.isFinite(popupTabId) ? popupTabId : null,
+    popupWindowId: Number.isFinite(popupWindowId) ? popupWindowId : null,
+    revision: 1,
+  };
+}
+
+function getCanvasSessionOrThrow(sessionId) {
+  cleanupExpiredCanvasSessions();
+  const session = canvasSessions.get(sessionId);
+  if (!session) {
+    throw new Error('Canvas session not found or expired.');
+  }
+  return session;
+}
+
+async function claimCanvasSession(sender, message) {
+  const sessionId = typeof message?.sessionId === 'string' ? message.sessionId : '';
+  const token = typeof message?.token === 'string' ? message.token : '';
+  if (!sessionId || !token) {
+    throw new Error('CANVAS_SESSION_CLAIM requires sessionId and token.');
+  }
+
+  const session = getCanvasSessionOrThrow(sessionId);
+  const senderTabId = Number(sender?.tab?.id);
+  if (token !== session.claimToken) {
+    throw new Error('Canvas claim token mismatch.');
+  }
+
+  if (Number.isFinite(session.popupTabId) && Number.isFinite(senderTabId) && session.popupTabId !== senderTabId) {
+    throw new Error('Canvas claim denied for non-session tab.');
+  }
+
+  if (Number.isFinite(senderTabId)) {
+    session.popupTabId = senderTabId;
+  }
+  session.claimToken = '';
+  session.expiresAt = Date.now() + CANVAS_SESSION_TTL_MS;
+  canvasSessions.set(sessionId, session);
+
+  return {
+    sessionId: session.sessionId,
+    revision: session.revision,
+    codeBundle: session.codeBundle,
+    sandboxPolicy: {
+      sandbox: 'allow-scripts',
+      csp: "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none';",
+    },
+  };
+}
+
+async function updateCanvasSession(sender, message) {
+  const sessionId = typeof message?.sessionId === 'string' ? message.sessionId : '';
+  if (!sessionId) throw new Error('CANVAS_SESSION_UPDATE requires sessionId.');
+
+  const session = getCanvasSessionOrThrow(sessionId);
+  const senderTabId = Number(sender?.tab?.id);
+  if (!Number.isFinite(senderTabId) || senderTabId !== session.originTabId) {
+    throw new Error('CANVAS_SESSION_UPDATE rejected: sender does not own this session.');
+  }
+
+  const codeBundle = normalizeCodeBundle(message?.codeBundle);
+  if (!codeBundle.html && !codeBundle.css && !codeBundle.js) {
+    throw new Error('CANVAS_SESSION_UPDATE requires non-empty html/css/js payload.');
+  }
+
+  session.codeBundle = codeBundle;
+  session.revision += 1;
+  session.expiresAt = Date.now() + CANVAS_SESSION_TTL_MS;
+  canvasSessions.set(sessionId, session);
+
+  const port = canvasSessionPorts.get(sessionId);
+  if (port) {
+    try {
+      port.postMessage({
+        action: MESSAGE_ACTIONS.CANVAS_APPLY_UPDATE,
+        sessionId,
+        revision: session.revision,
+        codeBundle: session.codeBundle,
+      });
+    } catch {
+      canvasSessionPorts.delete(sessionId);
+    }
+  } else if (Number.isFinite(session.popupTabId)) {
+    await chrome.tabs.sendMessage(session.popupTabId, {
+      action: MESSAGE_ACTIONS.CANVAS_APPLY_UPDATE,
+      sessionId,
+      revision: session.revision,
+      codeBundle: session.codeBundle,
+    }).catch(() => {});
+  }
+
+  return {
+    sessionId,
+    revision: session.revision,
+  };
+}
+
+async function closeCanvasSession(sender, message) {
+  const sessionId = typeof message?.sessionId === 'string' ? message.sessionId : '';
+  if (!sessionId) throw new Error('CANVAS_SESSION_CLOSE requires sessionId.');
+
+  const session = getCanvasSessionOrThrow(sessionId);
+  const senderTabId = Number(sender?.tab?.id);
+  const authorized = Number.isFinite(senderTabId)
+    ? senderTabId === session.originTabId || senderTabId === session.popupTabId
+    : true;
+  if (!authorized) {
+    throw new Error('CANVAS_SESSION_CLOSE rejected for unauthorized sender.');
+  }
+
+  removeCanvasSession(sessionId);
+  return { closed: true, sessionId };
+}
+
+function normalizeRuntimeFeatureSettings(value) {
+  return normalizeFeatureSettings(value);
+}
+
+async function getFeatureSettings() {
+  const data = await storage.get(STORAGE_KEYS.FEATURE_SETTINGS);
+  const normalized = normalizeRuntimeFeatureSettings(data[STORAGE_KEYS.FEATURE_SETTINGS]);
+  return normalized;
+}
+
+async function ensureFeatureSettingsInitialized() {
+  const raw = await storage.get(STORAGE_KEYS.FEATURE_SETTINGS);
+  const source = raw[STORAGE_KEYS.FEATURE_SETTINGS];
+  if (!isRecord(source)) {
+    const normalizedDefault = normalizeFeatureSettings({});
+    await storage.set({ [STORAGE_KEYS.FEATURE_SETTINGS]: normalizedDefault });
+    return normalizedDefault;
+  }
+
+  const normalized = normalizeFeatureSettings(source);
+  const sourceJson = JSON.stringify(source || {});
+  const normalizedJson = JSON.stringify(normalized);
+  if (sourceJson !== normalizedJson) {
+    await storage.set({ [STORAGE_KEYS.FEATURE_SETTINGS]: normalized });
+  }
+  return normalized;
+}
+
+async function updateFeatureSettingsModule(moduleId, patch) {
+  const current = await getFeatureSettings();
+  const next = updateFeatureModule(current, moduleId, patch);
+  await storage.set({
+    [STORAGE_KEYS.FEATURE_SETTINGS]: next,
+  });
+  return next;
+}
+
+async function replaceFeatureSettings(nextSettings) {
+  const next = replaceFeatureSettingsShape(nextSettings);
+  await storage.set({
+    [STORAGE_KEYS.FEATURE_SETTINGS]: next,
+  });
+  return next;
+}
+
+async function ensureSemanticEmbeddingRuntime() {
+  if (chrome.offscreen?.createDocument) {
+    try {
+      const hasDocument = typeof chrome.offscreen.hasDocument === 'function'
+        ? await chrome.offscreen.hasDocument()
+        : false;
+      if (!hasDocument) {
+        await chrome.offscreen.createDocument({
+          url: SEMANTIC_EMBEDDING_RUNTIME_PATH,
+          reasons: ['DOM_PARSER'],
+          justification: 'Local semantic embedding runtime for Semantic Clipboard.',
+        });
+      }
+      return { runtime: 'offscreen' };
+    } catch (error) {
+      console.warn('[DexEnhance] Offscreen embedding runtime unavailable, falling back to hidden tab:', error);
+    }
+  }
+
+  if (Number.isFinite(semanticRuntimeTabId)) {
+    try {
+      await chrome.tabs.get(Number(semanticRuntimeTabId));
+      return { runtime: 'hidden_tab', tabId: Number(semanticRuntimeTabId) };
+    } catch {
+      semanticRuntimeTabId = null;
+    }
+  }
+
+  const tab = await chrome.tabs.create({
+    url: chrome.runtime.getURL(SEMANTIC_EMBEDDING_RUNTIME_PATH),
+    active: false,
+  });
+  if (!Number.isFinite(tab?.id)) {
+    throw new Error('Failed to create semantic embedding runtime tab.');
+  }
+  semanticRuntimeTabId = Number(tab.id);
+  return { runtime: 'hidden_tab', tabId: Number(semanticRuntimeTabId) };
 }
 
 function normalizeOptimizerSite(site) {
@@ -500,9 +895,10 @@ async function deletePrompt(id) {
 /**
  * Handle one protocol message.
  * @param {any} message
+ * @param {chrome.runtime.MessageSender} sender
  * @returns {Promise<{ok: boolean, data?: any, error?: string}>}
  */
-async function handleMessage(message) {
+async function handleMessage(message, sender) {
   const action = message?.action;
 
   switch (action) {
@@ -591,6 +987,84 @@ async function handleMessage(message) {
         prompt: message.prompt,
       }));
 
+    case MESSAGE_ACTIONS.FEATURE_SETTINGS_GET:
+      return ok(await getFeatureSettings());
+
+    case MESSAGE_ACTIONS.FEATURE_SETTINGS_UPDATE_MODULE:
+      return ok(await updateFeatureSettingsModule(message.moduleId, message.patch));
+
+    case MESSAGE_ACTIONS.FEATURE_SETTINGS_REPLACE:
+      return ok(await replaceFeatureSettings(message.settings));
+
+    case MESSAGE_ACTIONS.CANVAS_OPEN_FROM_CHAT:
+      if ((await getFeatureSettings()).modules.popoutCanvas.enabled !== true) {
+        return fail('Pop-Out Canvas is disabled in feature settings.');
+      }
+      return ok(await openCanvasFromChat(sender, message));
+
+    case MESSAGE_ACTIONS.CANVAS_SESSION_CLAIM:
+      return ok(await claimCanvasSession(sender, message));
+
+    case MESSAGE_ACTIONS.CANVAS_SESSION_UPDATE:
+      return ok(await updateCanvasSession(sender, message));
+
+    case MESSAGE_ACTIONS.CANVAS_SESSION_CLOSE:
+      return ok(await closeCanvasSession(sender, message));
+
+    case MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_UPSERT_CONTEXT: {
+      const settings = await getFeatureSettings();
+      if (settings.modules.semanticClipboard.enabled !== true) {
+        return fail('Semantic Clipboard is disabled in feature settings.');
+      }
+      await ensureSemanticEmbeddingRuntime().catch(() => {});
+      const maxTrackedTabs = clampInt(
+        message.maxTrackedTabs,
+        1,
+        20,
+        settings.modules.semanticClipboard.maxTrackedTabs
+      );
+      return ok(await upsertSemanticClipboardContext({
+        sourceUrl: message.sourceUrl || sender?.tab?.url || sender?.url || '',
+        title: message.title || '',
+        tabId: sender?.tab?.id,
+        windowId: sender?.tab?.windowId,
+        chunks: message.chunks,
+        maxTrackedTabs,
+      }));
+    }
+
+    case MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_QUERY: {
+      const settings = await getFeatureSettings();
+      if (settings.modules.semanticClipboard.enabled !== true) {
+        return fail('Semantic Clipboard is disabled in feature settings.');
+      }
+      await ensureSemanticEmbeddingRuntime().catch(() => {});
+      return ok(await querySemanticClipboard({
+        queryText: message.queryText,
+        topK: message.topK ?? settings.modules.semanticClipboard.topK,
+        maxTrackedTabs: message.maxTrackedTabs ?? settings.modules.semanticClipboard.maxTrackedTabs,
+      }));
+    }
+
+    case MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_BUILD_PREAMBLE: {
+      const settings = await getFeatureSettings();
+      if (settings.modules.semanticClipboard.enabled !== true) {
+        return fail('Semantic Clipboard is disabled in feature settings.');
+      }
+      await ensureSemanticEmbeddingRuntime().catch(() => {});
+      return ok(await buildSemanticClipboardPreamble({
+        queryText: message.queryText,
+        topK: message.topK ?? settings.modules.semanticClipboard.topK,
+        maxTrackedTabs: message.maxTrackedTabs ?? settings.modules.semanticClipboard.maxTrackedTabs,
+      }));
+    }
+
+    case MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_STATS:
+      if ((await getFeatureSettings()).modules.semanticClipboard.enabled !== true) {
+        return fail('Semantic Clipboard is disabled in feature settings.');
+      }
+      return ok(await getSemanticClipboardStats());
+
     case MESSAGE_ACTIONS.API_RULES_UPDATE: {
       const rules = message.rules;
       if (!Array.isArray(rules)) {
@@ -612,6 +1086,7 @@ async function handleMessage(message) {
 // ─── Event: Extension Installed / Updated ────────────────────────────────────
 chrome.runtime.onInstalled.addListener((details) => {
   console.log('[DexEnhance] Extension installed/updated:', details.reason);
+  void ensureCanvasSweepAlarm().catch(() => {});
 
   if (details.reason === 'install') {
     const manifestVersion = chrome.runtime.getManifest()?.version || '0.0.0';
@@ -631,17 +1106,68 @@ chrome.runtime.onInstalled.addListener((details) => {
         [STORAGE_KEYS.CHAT_FOLDER_MAP]: {},
         [STORAGE_KEYS.PROMPTS]: seededPrompts,
         [STORAGE_KEYS.PROMPT_CATALOG_VERSION]: PROMPT_CATALOG_VERSION,
+        [STORAGE_KEYS.FEATURE_SETTINGS]: normalizeFeatureSettings({}),
       })
       .catch((error) => {
         console.error('[DexEnhance] Failed to write default install settings:', error);
       });
+  } else {
+    void ensureFeatureSettingsInitialized().catch((error) => {
+      console.error('[DexEnhance] Failed to normalize feature settings after update:', error);
+    });
   }
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  void ensureCanvasSweepAlarm().catch(() => {});
+  void ensureFeatureSettingsInitialized().catch((error) => {
+    console.error('[DexEnhance] Failed to normalize feature settings on startup:', error);
+  });
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  cleanupCanvasSessionsByTabId(tabId);
+  if (Number(tabId) === Number(semanticRuntimeTabId)) {
+    semanticRuntimeTabId = null;
+  }
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm?.name !== CANVAS_SWEEP_ALARM) return;
+  cleanupExpiredCanvasSessions();
+});
+
+chrome.runtime.onConnect.addListener((port) => {
+  const name = typeof port?.name === 'string' ? port.name : '';
+  if (!name.startsWith('dex_canvas_session:')) return;
+
+  const sessionId = name.slice('dex_canvas_session:'.length);
+  if (!sessionId) {
+    try {
+      port.disconnect();
+    } catch {}
+    return;
+  }
+
+  if (!canvasSessions.has(sessionId)) {
+    try {
+      port.disconnect();
+    } catch {}
+    return;
+  }
+
+  canvasSessionPorts.set(sessionId, port);
+  port.onDisconnect.addListener(() => {
+    if (canvasSessionPorts.get(sessionId) === port) {
+      canvasSessionPorts.delete(sessionId);
+    }
+  });
 });
 
 // ─── Event: Messages from Content Scripts ────────────────────────────────────
 // Registered synchronously at top level (MV3 requirement).
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  void handleMessage(message)
+  void handleMessage(message, sender)
     .then((response) => {
       sendResponse(response);
     })

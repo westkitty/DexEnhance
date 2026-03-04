@@ -1,5 +1,6 @@
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../lib/message-protocol.js';
 import { DEFAULT_HUD_SETTINGS, HUD_SETTINGS_KEY } from '../lib/ui-settings.js';
+import { normalizeFeatureSettings } from '../lib/feature-settings.js';
 import { TOUR_STEPS, TOUR_VERSION } from '../ui/tour-content.js';
 
 const POPUP_TOUR_KEY = 'popupTourSeenVersion';
@@ -21,9 +22,19 @@ const hueValueEl = document.getElementById('hud-hue-value');
 const resetLayoutButton = document.getElementById('reset-layout');
 const resetThemeButton = document.getElementById('reset-theme');
 const settingsStatusEl = document.getElementById('settings-status');
+const featureToggleEls = {
+  ghostOverlay: document.getElementById('feature-ghostOverlay'),
+  observerAgent: document.getElementById('feature-observerAgent'),
+  semanticClipboard: document.getElementById('feature-semanticClipboard'),
+  popoutCanvas: document.getElementById('feature-popoutCanvas'),
+  macroRecorder: document.getElementById('feature-macroRecorder'),
+  conversationMapper: document.getElementById('feature-conversationMapper'),
+  promptUnitTesting: document.getElementById('feature-promptUnitTesting'),
+};
 
 let stepIndex = 0;
 let hudSettings = {};
+let featureSettings = normalizeFeatureSettings({});
 let hueSaveTimer = null;
 
 document.documentElement.style.setProperty('--dex-popup-logo-url', 'url("../icons/icon128.png")');
@@ -94,6 +105,42 @@ async function loadHudSettings() {
   setStatus('Changes sync to ChatGPT and Gemini HUD instantly.');
 }
 
+function paintFeatureToggles() {
+  for (const [moduleId, inputEl] of Object.entries(featureToggleEls)) {
+    if (!(inputEl instanceof HTMLInputElement)) continue;
+    inputEl.checked = featureSettings.modules[moduleId]?.enabled === true;
+  }
+}
+
+async function loadFeatureSettings() {
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.FEATURE_SETTINGS_GET, {});
+  if (!response.ok) {
+    featureSettings = normalizeFeatureSettings({});
+    paintFeatureToggles();
+    setStatus('Could not load feature toggles; defaults applied.');
+    return;
+  }
+
+  featureSettings = normalizeFeatureSettings(response.data);
+  paintFeatureToggles();
+}
+
+async function updateFeatureToggle(moduleId, enabled) {
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.FEATURE_SETTINGS_UPDATE_MODULE, {
+    moduleId,
+    patch: { enabled },
+  });
+  if (!response.ok) {
+    setStatus(`Feature toggle failed: ${response.error || 'unknown error'}`);
+    paintFeatureToggles();
+    return;
+  }
+
+  featureSettings = normalizeFeatureSettings(response.data);
+  paintFeatureToggles();
+  setStatus(`Saved feature toggle: ${moduleId}`);
+}
+
 async function markTourSeen() {
   const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
     items: {
@@ -154,7 +201,7 @@ modalEl?.addEventListener('click', (event) => {
 openSettingsButton?.addEventListener('click', () => {
   setModalOpen(modalEl, false);
   setModalOpen(settingsModalEl, true);
-  void loadHudSettings();
+  void Promise.all([loadHudSettings(), loadFeatureSettings()]);
 });
 
 closeSettingsButton?.addEventListener('click', () => {
@@ -197,6 +244,13 @@ resetThemeButton?.addEventListener('click', () => {
     'Theme and opacity reset to defaults.'
   );
 });
+
+for (const [moduleId, inputEl] of Object.entries(featureToggleEls)) {
+  inputEl?.addEventListener('change', (event) => {
+    const nextEnabled = event.currentTarget.checked === true;
+    void updateFeatureToggle(moduleId, nextEnabled);
+  });
+}
 
 settingsModalEl?.addEventListener('click', (event) => {
   if (event.target === settingsModalEl) {

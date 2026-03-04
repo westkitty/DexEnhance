@@ -11,6 +11,8 @@ export function Sidebar({
   onRequestPrompts,
   onRequestOptimizer,
   onRequestSettings,
+  onRequestContext,
+  onRequestLiveRender,
   iconUrl = '',
 }) {
   const [liveUrl, setLiveUrl] = useState(currentChatUrl || window.location.href);
@@ -74,6 +76,24 @@ export function Sidebar({
           onClick: () => onRequestPrompts?.(),
         },
         'Prompt Library'
+      ),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'dex-link-btn',
+          onClick: () => onRequestContext?.(),
+        },
+        'Inject Context'
+      ),
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'dex-link-btn',
+          onClick: () => onRequestLiveRender?.(),
+        },
+        'Live Render Latest Code'
       ),
       h(
         'button',

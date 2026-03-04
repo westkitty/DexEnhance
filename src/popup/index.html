@@ -406,6 +406,42 @@
       line-height: 1.5;
     }
 
+    .feature-toggle-list {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .feature-toggle-row {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: start;
+      padding: 8px;
+      border: 1px solid var(--dex-border);
+      border-radius: 10px;
+      background: rgba(170, 177, 190, 0.22);
+      backdrop-filter: blur(8px) saturate(110%);
+    }
+
+    .feature-toggle-row input[type=\"checkbox\"] {
+      margin-top: 2px;
+      accent-color: var(--dex-accent);
+    }
+
+    .feature-toggle-title {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .feature-toggle-desc {
+      margin: 3px 0 0;
+      font-size: 11px;
+      color: var(--dex-muted);
+      line-height: 1.4;
+    }
+
     .tour-modal .tour-sub {
       margin: 4px 0 10px;
       font-size: 12px;
@@ -572,6 +608,58 @@
       <div class="settings-row">
         <button id="reset-layout" class="btn" type="button">Reset Window Layout</button>
         <button id="reset-theme" class="btn" type="button">Reset Theme</button>
+      </div>
+
+      <div class="feature-toggle-list">
+        <label class="feature-toggle-row">
+          <input id="feature-ghostOverlay" type="checkbox" />
+          <span>
+            <p class="feature-toggle-title">Ghost Overlay</p>
+            <p class="feature-toggle-desc">Selection-triggered semantic overlay on external pages.</p>
+          </span>
+        </label>
+        <label class="feature-toggle-row">
+          <input id="feature-observerAgent" type="checkbox" />
+          <span>
+            <p class="feature-toggle-title">Observer Agent</p>
+            <p class="feature-toggle-desc">Watchpoint monitor for DOM deltas and alerts.</p>
+          </span>
+        </label>
+        <label class="feature-toggle-row">
+          <input id="feature-semanticClipboard" type="checkbox" />
+          <span>
+            <p class="feature-toggle-title">Semantic Clipboard</p>
+            <p class="feature-toggle-desc">Local semantic context memory and prompt preamble injection.</p>
+          </span>
+        </label>
+        <label class="feature-toggle-row">
+          <input id="feature-popoutCanvas" type="checkbox" />
+          <span>
+            <p class="feature-toggle-title">Pop-Out Canvas</p>
+            <p class="feature-toggle-desc">Open generated code in a detached live render window.</p>
+          </span>
+        </label>
+        <label class="feature-toggle-row">
+          <input id="feature-macroRecorder" type="checkbox" />
+          <span>
+            <p class="feature-toggle-title">Macro Recorder</p>
+            <p class="feature-toggle-desc">Capture browser interaction macros for LLM transformation.</p>
+          </span>
+        </label>
+        <label class="feature-toggle-row">
+          <input id="feature-conversationMapper" type="checkbox" />
+          <span>
+            <p class="feature-toggle-title">Conversation Mapper</p>
+            <p class="feature-toggle-desc">Graph visualization layer for chat knowledge mapping.</p>
+          </span>
+        </label>
+        <label class="feature-toggle-row">
+          <input id="feature-promptUnitTesting" type="checkbox" />
+          <span>
+            <p class="feature-toggle-title">Prompt Unit Testing</p>
+            <p class="feature-toggle-desc">Matrix test bench for Smart Queue prompt variants.</p>
+          </span>
+        </label>
       </div>
 
       <p id="settings-status" class="settings-note">Changes sync to ChatGPT and Gemini HUD instantly.</p>

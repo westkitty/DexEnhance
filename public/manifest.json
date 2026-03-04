@@ -36,7 +36,10 @@
     "activeTab",
     "tabs",
     "scripting",
-    "declarativeNetRequest"
+    "declarativeNetRequest",
+    "notifications",
+    "alarms",
+    "offscreen"
   ],
   "host_permissions": [
     "https://chatgpt.com/*",

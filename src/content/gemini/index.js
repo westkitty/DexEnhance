@@ -28,6 +28,14 @@ import {
 import { PromptOptimizerModal } from '../../ui/components/PromptOptimizerModal.jsx';
 import { PanelFrame } from '../../ui/components/PanelFrame.jsx';
 import { HUDSettingsPanel } from '../../ui/components/HUDSettingsPanel.jsx';
+import { normalizeFeatureSettings } from '../../lib/feature-settings.js';
+import { fetchFeatureSettings, watchFeatureSettings } from '../shared/feature-flags.js';
+import { createPopoutCanvasController } from '../shared/popout-canvas-controller.js';
+import {
+  buildSemanticClipboardPreamble,
+  ingestSemanticClipboardContext,
+  prependPreambleToComposer,
+} from '../shared/semantic-clipboard-client.js';
 import {
   DEFAULT_HUD_SETTINGS,
   HUD_SETTINGS_KEY,
@@ -84,9 +92,6 @@ async function logStorageRoundTrip() {
   adapter.onGeneratingEnd(() => {
     console.log('[DexEnhance] Gemini generating ended');
   });
-  adapter.onNewChat((payload) => {
-    console.log('[DexEnhance] Gemini chat-list mutation observed:', payload);
-  });
   adapter.startObservers();
 
   console.log('[DexEnhance] Gemini content script loaded');
@@ -111,6 +116,8 @@ async function logStorageRoundTrip() {
   let tokenCount = null;
   let tokenSource = null;
   let tokenUpdatedAt = null;
+  let featureSettings = normalizeFeatureSettings({});
+  let semanticIngestTimer = null;
 
   let hudSettings = normalizeHudSettings({}, { width: window.innerWidth, height: window.innerHeight });
   let persistHudTimer = null;
@@ -164,6 +171,85 @@ async function logStorageRoundTrip() {
       height: 48,
     });
   };
+
+  const popoutCanvasController = createPopoutCanvasController({
+    adapter,
+    site: 'gemini',
+    getFeatureSettings: () => featureSettings,
+  });
+
+  const runSemanticClipboardInject = async () => {
+    if (featureSettings.modules.semanticClipboard.enabled !== true) {
+      console.warn('[DexEnhance] Semantic Clipboard is disabled in settings.');
+      return;
+    }
+
+    const queryText = readCurrentComposerText(adapter) || adapter.getLatestAssistantTurnText();
+    if (!queryText.trim()) {
+      console.warn('[DexEnhance] Semantic Clipboard inject skipped: no prompt text detected.');
+      return;
+    }
+
+    const response = await buildSemanticClipboardPreamble({
+      queryText,
+      topK: featureSettings.modules.semanticClipboard.topK,
+      maxTrackedTabs: featureSettings.modules.semanticClipboard.maxTrackedTabs,
+    });
+
+    if (!response.ok) {
+      console.warn('[DexEnhance] Semantic Clipboard preamble request failed:', response.error);
+      return;
+    }
+
+    const preamble = typeof response.data?.preamble === 'string' ? response.data.preamble : '';
+    if (!preamble.trim()) {
+      console.warn('[DexEnhance] Semantic Clipboard has no relevant context yet.');
+      return;
+    }
+
+    const applied = prependPreambleToComposer(adapter, preamble, readCurrentComposerText(adapter));
+    if (!applied) {
+      console.warn('[DexEnhance] Semantic Clipboard inject failed: no composer detected.');
+    }
+  };
+
+  const runPopoutCanvasOpenLatest = async () => {
+    const response = await popoutCanvasController.openLatest();
+    if (!response?.ok) {
+      console.warn('[DexEnhance] Pop-Out Canvas open failed:', response?.error || 'unknown error');
+    }
+  };
+
+  const scheduleSemanticClipboardIngest = () => {
+    if (featureSettings.modules.semanticClipboard.enabled !== true) return;
+
+    if (semanticIngestTimer) {
+      window.clearTimeout(semanticIngestTimer);
+    }
+
+    semanticIngestTimer = window.setTimeout(() => {
+      const latestAssistantText = adapter.getLatestAssistantTurnText();
+      const currentComposerText = readCurrentComposerText(adapter);
+      const mergedText = [
+        latestAssistantText ? `ASSISTANT: ${latestAssistantText}` : '',
+        currentComposerText ? `USER_DRAFT: ${currentComposerText}` : '',
+      ].filter(Boolean).join('\n');
+      if (!mergedText.trim()) return;
+
+      void ingestSemanticClipboardContext({
+        sourceUrl: window.location.href,
+        title: document.title || 'Gemini Conversation',
+        fullText: mergedText,
+        maxTrackedTabs: featureSettings.modules.semanticClipboard.maxTrackedTabs,
+      });
+    }, 900);
+  };
+
+  adapter.onNewChat((payload) => {
+    console.log('[DexEnhance] Gemini chat-list mutation observed:', payload);
+    void popoutCanvasController.maybeAutoOpenFromLatestTurn();
+    scheduleSemanticClipboardIngest();
+  });
 
   const markTourSeen = async () => {
     const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
@@ -285,6 +371,12 @@ async function logStorageRoundTrip() {
               settingsOpen = true;
               renderUI();
             },
+            onRequestContext: () => {
+              void runSemanticClipboardInject();
+            },
+            onRequestLiveRender: () => {
+              void runPopoutCanvasOpenLatest();
+            },
           }),
         ]),
 
@@ -329,6 +421,12 @@ async function logStorageRoundTrip() {
             if (action === 'tour') openAnyModal('tour');
             else if (action === 'optimize') openAnyModal('optimizer');
             else if (action === 'prompts') openAnyModal('prompts');
+            else if (action === 'context') {
+              void runSemanticClipboardInject();
+            }
+            else if (action === 'liveRender') {
+              void runPopoutCanvasOpenLatest();
+            }
             else if (action === 'settings') {
               settingsOpen = true;
               renderUI();
@@ -482,7 +580,13 @@ async function logStorageRoundTrip() {
   if (hudRes.ok) {
     hudSettings = normalizeHudSettings(hudRes.data, getViewport());
   }
+  featureSettings = await fetchFeatureSettings();
   applyHudPalette();
+
+  watchFeatureSettings((nextSettings) => {
+    featureSettings = nextSettings;
+    renderUI();
+  });
 
   chrome.storage.onChanged.addListener((changes, areaName) => {
     if (areaName !== 'local') return;

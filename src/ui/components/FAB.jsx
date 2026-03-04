@@ -101,6 +101,30 @@ export function FAB({ site, onAction, iconUrl = '', panelState, onPanelStateChan
               type: 'button',
               class: 'dex-fab__action',
               onClick: () => {
+                onAction?.('context');
+                setOpen(false);
+              },
+            },
+            'Inject Context'
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'dex-fab__action',
+              onClick: () => {
+                onAction?.('liveRender');
+                setOpen(false);
+              },
+            },
+            'Live Render'
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'dex-fab__action',
+              onClick: () => {
                 onAction?.('settings');
                 setOpen(false);
               },

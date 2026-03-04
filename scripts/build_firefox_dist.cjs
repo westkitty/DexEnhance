@@ -23,7 +23,7 @@ const baseManifest = JSON.parse(fs.readFileSync(baseManifestPath, 'utf8'));
 const firefoxManifest = {
   ...baseManifest,
   permissions: Array.isArray(baseManifest.permissions)
-    ? baseManifest.permissions.filter((permission) => permission !== 'declarativeNetRequest')
+    ? baseManifest.permissions.filter((permission) => permission !== 'declarativeNetRequest' && permission !== 'offscreen')
     : [],
   browser_specific_settings: {
     gecko: {

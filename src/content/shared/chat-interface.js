@@ -32,6 +32,12 @@ export class ChatInterface {
   /** @returns {boolean} True if the AI is currently generating a response */
   isGenerating() { return false; }
 
+  /** @returns {string} Last assistant turn plain text, or empty string when unavailable */
+  getLatestAssistantTurnText() { return ''; }
+
+  /** @returns {string} Stable last assistant turn id, or empty string when unavailable */
+  getLatestAssistantTurnId() { return ''; }
+
   /**
    * Register callback for generating-start event.
    * @param {(payload: {isGenerating: true}) => void} callback
