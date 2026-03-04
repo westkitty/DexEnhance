@@ -23,7 +23,7 @@ export const DEFAULT_HUD_SETTINGS = Object.freeze({
   bgGlassHue: 214,
   bgGlassSaturation: 18,
   bgGlassLightness: 86,
-  bgGlassAlpha: 0.44,
+  bgGlassAlpha: 0.78,
   panels: {},
   visibility: {
     welcome: true,
@@ -62,7 +62,7 @@ function centerY(height, viewportHeight) {
 export function panelMinSize(panelId) {
   switch (panelId) {
     case 'welcome':
-      return { minWidth: 280, minHeight: 294 };
+      return { minWidth: 316, minHeight: 364 };
     case 'hub':
       return { minWidth: 340, minHeight: 260 };
     case 'sidebar':
@@ -91,14 +91,14 @@ export function defaultPanelState(panelId, viewport) {
 
   switch (panelId) {
     case 'welcome': {
-      const panelWidth = 280;
-      const panelHeight = 294;
+      const panelWidth = 316;
+      const panelHeight = 364;
       return {
         x: centerX(panelWidth, width),
-        y: Math.max(66, centerY(panelHeight, height) - 10),
+        y: Math.max(48, centerY(panelHeight, height) - 6),
         width: panelWidth,
         height: panelHeight,
-        opacity: 0.98,
+        opacity: 1,
         collapsed: false,
         pinned: false,
       };

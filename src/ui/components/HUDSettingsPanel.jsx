@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { PanelFrame } from './PanelFrame.jsx';
 
 const WINDOW_ROWS = [
@@ -26,7 +26,7 @@ export function HUDSettingsPanel({
   bgGlassHue = 214,
   bgGlassSaturation = 18,
   bgGlassLightness = 86,
-  bgGlassAlpha = 0.44,
+  bgGlassAlpha = 0.78,
   onBackgroundChange,
   panelVisibility = {},
   panelOpacities = {},
@@ -39,6 +39,11 @@ export function HUDSettingsPanel({
   onClose,
 }) {
   const [opacityModes, setOpacityModes] = useState({});
+
+  useEffect(() => {
+    if (visible) return;
+    setOpacityModes({});
+  }, [visible]);
 
   if (!visible) return null;
 
@@ -183,7 +188,11 @@ export function HUDSettingsPanel({
                   ]),
                 ]),
               ]),
-              h('div', { class: `dex-window-row__opacity${modeOn ? ' is-open' : ''}` }, [
+              h('div', {
+                class: `dex-window-row__opacity${modeOn ? ' is-open' : ''}`,
+                'aria-hidden': modeOn ? 'false' : 'true',
+                onPointerDown: (event) => event.stopPropagation(),
+              }, [
                 h('input', {
                   type: 'range',
                   min: 0.28,
@@ -191,6 +200,7 @@ export function HUDSettingsPanel({
                   step: 0.02,
                   value: Number.isFinite(Number(panelOpacities?.[panelId])) ? Number(panelOpacities[panelId]) : 0.96,
                   class: 'dex-panel-frame__slider',
+                  disabled: !modeOn,
                   onInput: (event) => onPanelOpacityChange?.(panelId, Number(event.currentTarget.value)),
                 }),
               ]),

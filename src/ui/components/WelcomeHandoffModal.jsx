@@ -13,8 +13,8 @@ export function WelcomeHandoffModal({
   onGetStarted,
   onZipTransitionEnd,
 }) {
-  const panelWidth = 280;
-  const panelHeight = 294;
+  const panelWidth = 316;
+  const panelHeight = 364;
 
   const drag = useDraggable({
     initialPosition: {
@@ -62,11 +62,13 @@ export function WelcomeHandoffModal({
 
   return h('section', {
     class: `dex-welcome${zipping ? ' is-zipping' : ''}`,
+    role: 'dialog',
+    'aria-label': 'DexEnhance welcome',
     style: {
       left: `${Math.round(drag.position.x)}px`,
       top: `${Math.round(drag.position.y)}px`,
       width: `${panelWidth}px`,
-      minHeight: `${panelHeight}px`,
+      height: `${panelHeight}px`,
       opacity: panelOpacityValue(panelState?.opacity ?? 0.98),
       transform: zipStyle || undefined,
       zIndex: 2147483647,
@@ -83,7 +85,7 @@ export function WelcomeHandoffModal({
         ? h('div', { class: 'dex-welcome__logo-circle' }, [
             h('img', {
               src: iconUrl,
-              alt: 'DexEnhance',
+              alt: 'DexEnhance logo',
               class: 'dex-welcome__logo',
             }),
           ])

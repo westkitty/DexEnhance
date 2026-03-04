@@ -116,6 +116,7 @@ async function logStorageRoundTrip() {
 
   let queueSizeState = 0;
   let welcomeZipping = false;
+  let welcomeZipFallbackTimer = null;
   let tokenModel = null;
   let tokenCount = null;
   let tokenSource = null;
@@ -123,6 +124,7 @@ async function logStorageRoundTrip() {
   let featureSettings = normalizeFeatureSettings({});
   let semanticIngestTimer = null;
   let onboardingCompleted = false;
+  let onboardingStage = 'welcome';
 
   let hudSettings = normalizeHudSettings({}, { width: window.innerWidth, height: window.innerHeight });
   let persistHudTimer = null;
@@ -132,6 +134,29 @@ async function logStorageRoundTrip() {
   const panelState = (panelId) => hudSettings.panels[panelId] || defaultPanelState(panelId, getViewport());
   const panelDefault = (panelId) => defaultPanelState(panelId, getViewport());
   const isPanelOpen = (panelId) => hudSettings.visibility?.[panelId] === true;
+
+  const enforceOnboardingVisibility = (settings) => {
+    let next = normalizeHudSettings(settings, getViewport());
+    if (onboardingStage === 'welcome') {
+      next = updatePanelVisibilityInSettings(next, 'welcome', true, getViewport());
+      next = updatePanelVisibilityInSettings(next, 'fab', false, getViewport());
+      next = updatePanelVisibilityInSettings(next, 'hub', false, getViewport());
+      next = updatePanelVisibilityInSettings(next, 'tour', false, getViewport());
+      return next;
+    }
+
+    if (onboardingStage === 'zipping' || onboardingStage === 'tour') {
+      next = updatePanelVisibilityInSettings(next, 'welcome', false, getViewport());
+      next = updatePanelVisibilityInSettings(next, 'fab', true, getViewport());
+      next = updatePanelVisibilityInSettings(next, 'hub', false, getViewport());
+      next = updatePanelVisibilityInSettings(next, 'tour', true, getViewport());
+      return next;
+    }
+
+    next = updatePanelVisibilityInSettings(next, 'welcome', false, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'fab', true, getViewport());
+    return next;
+  };
 
   const applyHudPalette = () => {
     const palette = hueToHudPalette(hudSettings.accentHue);
@@ -156,9 +181,7 @@ async function logStorageRoundTrip() {
 
   const setHudSettings = (nextSettings, { persist = true } = {}) => {
     let normalized = normalizeHudSettings(nextSettings, getViewport());
-    if (onboardingCompleted) {
-      normalized = updatePanelVisibilityInSettings(normalized, 'welcome', false, getViewport());
-    }
+    normalized = enforceOnboardingVisibility(normalized);
     hudSettings = normalized;
     applyHudPalette();
     if (persist) scheduleHudSettingsPersist();
@@ -298,9 +321,14 @@ async function logStorageRoundTrip() {
   };
 
   const applyPostOnboardingLayout = ({ openPromptLibrary = false } = {}) => {
+    onboardingStage = 'done';
     onboardingCompleted = true;
-    let next = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
-    next = updatePanelVisibilityInSettings(next, 'fab', true, getViewport());
+    if (welcomeZipFallbackTimer) {
+      window.clearTimeout(welcomeZipFallbackTimer);
+      welcomeZipFallbackTimer = null;
+    }
+    welcomeZipping = false;
+    let next = enforceOnboardingVisibility(hudSettings);
     next = updatePanelVisibilityInSettings(next, 'hub', false, getViewport());
     next = updatePanelVisibilityInSettings(next, 'tour', false, getViewport());
     if (openPromptLibrary) {
@@ -310,19 +338,28 @@ async function logStorageRoundTrip() {
   };
 
   const beginWelcomeZip = () => {
+    if (onboardingStage !== 'welcome') return;
+    onboardingStage = 'zipping';
     onboardingCompleted = true;
     welcomeZipping = true;
+    if (welcomeZipFallbackTimer) window.clearTimeout(welcomeZipFallbackTimer);
+    welcomeZipFallbackTimer = window.setTimeout(() => {
+      completeWelcomeZip();
+    }, 620);
     void markOnboardingSeen();
     renderUI();
   };
 
   const completeWelcomeZip = () => {
     if (!welcomeZipping) return;
+    if (welcomeZipFallbackTimer) {
+      window.clearTimeout(welcomeZipFallbackTimer);
+      welcomeZipFallbackTimer = null;
+    }
     welcomeZipping = false;
-    const afterWelcome = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
-    const afterFab = updatePanelVisibilityInSettings(afterWelcome, 'fab', true, getViewport());
-    const afterTour = updatePanelVisibilityInSettings(afterFab, 'tour', true, getViewport());
-    setHudSettings(afterTour);
+    onboardingStage = 'tour';
+    onboardingCompleted = true;
+    setHudSettings(enforceOnboardingVisibility(hudSettings));
   };
 
   const handleExport = async (format) => {
@@ -701,18 +738,13 @@ async function logStorageRoundTrip() {
   const shouldShowWelcome = !(hasSeenTour || hasSeenOnboarding);
 
   if (shouldShowWelcome) {
+    onboardingStage = 'welcome';
     onboardingCompleted = false;
-    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'welcome', true, getViewport());
-    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'fab', false, getViewport());
-    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'hub', false, getViewport());
-    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tour', false, getViewport());
   } else {
+    onboardingStage = 'done';
     onboardingCompleted = true;
-    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
-    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'fab', true, getViewport());
-    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'hub', false, getViewport());
-    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tour', false, getViewport());
   }
+  hudSettings = enforceOnboardingVisibility(hudSettings);
   applyHudPalette();
 
   watchFeatureSettings((nextSettings) => {
@@ -724,9 +756,7 @@ async function logStorageRoundTrip() {
     if (areaName !== 'local') return;
     if (!changes[HUD_SETTINGS_KEY]) return;
     hudSettings = normalizeHudSettings(changes[HUD_SETTINGS_KEY].newValue, getViewport());
-    if (onboardingCompleted) {
-      hudSettings = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
-    }
+    hudSettings = enforceOnboardingVisibility(hudSettings);
     applyHudPalette();
     renderUI();
   });

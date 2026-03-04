@@ -1346,6 +1346,21 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Added high-resolution logo asset path for welcome (`icon1024.png`) plus circular SVG (`dex-logo-circle.svg`) and updated manifest exposure.
   Stabilized window-transparency settings interactions via keyed render strategy and completed readability/opacity contrast hardening.
   Revalidated build after all UI/state/asset changes.
+
+[2026-03-04] v1.13 — Phase 10 universal UI readability + onboarding hardening landed.
+  Increased default glass opacity and strengthened foreground/border contrast tokens for higher legibility on host-page overlays.
+  Refined welcome handoff geometry to strict circle-first composition with CTA below and no surrounding panel chrome.
+  Replaced oversized inline-logo SVG payload with a lightweight circle-clipped local asset wrapper for sharper scaling.
+  Added deterministic onboarding stage enforcement (`welcome` → `zipping` → `tour` → `done`) across ChatGPT/Gemini to prevent welcome reappearance after tour completion.
+  Added zip fallback completion timer and tour-finish close-path cleanup to eliminate stuck/inconsistent onboarding states.
+  Hardened Window Management transparency rows for stable slider interaction and collapsed-state reset on panel close.
+  Revalidated full multi-bundle build after UI/state/asset updates.
+
+[2026-03-04] v1.14 — Phase 10 onboarding-flow regression correction landed.
+  Corrected onboarding visibility enforcement so post-onboarding `hub`/`tour` can still be opened manually from Quick Action/Hub.
+  Kept forced visibility constraints only for onboarding-critical panels (`welcome`, `fab`) outside active onboarding.
+  Aligned HUD settings panel fallback `bgGlassAlpha` with new readability baseline.
+  Revalidated ChatGPT/Gemini content bundle builds after the correction.
 ```
 
 ---
