@@ -22,6 +22,7 @@ import {
 } from './semantic-clipboard-db.js';
 
 const storage = chrome.storage.local;
+const HUD_SETTINGS_KEY = 'hudUiSettingsV1';
 const STORAGE_KEYS = Object.freeze({
   FOLDERS: 'folders',
   CHAT_FOLDER_MAP: 'chatFolderMap',
@@ -1107,6 +1108,29 @@ chrome.runtime.onInstalled.addListener((details) => {
         [STORAGE_KEYS.PROMPTS]: seededPrompts,
         [STORAGE_KEYS.PROMPT_CATALOG_VERSION]: PROMPT_CATALOG_VERSION,
         [STORAGE_KEYS.FEATURE_SETTINGS]: normalizeFeatureSettings({}),
+        [HUD_SETTINGS_KEY]: {
+          accentHue: 202,
+          bgBaseHue: 214,
+          bgBaseSaturation: 24,
+          bgBaseLightness: 93,
+          bgGlassHue: 214,
+          bgGlassSaturation: 18,
+          bgGlassLightness: 86,
+          bgGlassAlpha: 0.34,
+          panels: {},
+          visibility: {
+            welcome: true,
+            hub: false,
+            sidebar: false,
+            tokens: false,
+            fab: true,
+            promptLibrary: false,
+            optimizer: false,
+            tour: false,
+            export: false,
+            settings: false,
+          },
+        },
       })
       .catch((error) => {
         console.error('[DexEnhance] Failed to write default install settings:', error);

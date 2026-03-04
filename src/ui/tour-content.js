@@ -2,6 +2,15 @@ export const TOUR_VERSION = '2026-03-04-tour-v1';
 
 export const TOUR_STEPS = [
   {
+    id: 'anchor',
+    title: 'Quick Action Is Your Anchor',
+    description:
+      'DexEnhance starts minimized by design. Use the Quick Action button in the bottom-right to open the central Quick Hub and reveal additional windows only when needed.',
+    example:
+      'Example: Click Quick Action, open Side Panel for folder work, then close it again to return to a clean page.',
+    accent: 'linear-gradient(135deg, rgba(40,122,255,0.24), rgba(19,170,255,0.2))',
+  },
+  {
     id: 'folders',
     title: 'Organize Chats with Smart Folders',
     description:

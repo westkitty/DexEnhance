@@ -52,12 +52,13 @@ export function FeatureTourModal({
       defaultState: defaultWindowState,
       onPanelStateChange: onWindowStateChange,
       onClose,
-      minWidth: 560,
-      minHeight: 320,
+      minWidth: 620,
+      minHeight: 360,
       zIndex: 2147483647,
-      showPin: true,
+      showPin: false,
       showClose: true,
-      allowResize: true,
+      allowResize: false,
+      className: 'dex-tour-frame',
     },
     [
       h('div', { class: 'dex-tour__layout' }, [
@@ -82,6 +83,7 @@ export function FeatureTourModal({
         ),
 
         h('div', { class: 'dex-tour__panel' }, [
+          h('p', { class: 'dex-tour__anchor-note' }, 'Quick Action in the bottom-right is your persistent anchor. Re-open this tour any time from the Quick Hub.'),
           h('div', {
             class: 'dex-tour__accent',
             style: `background:${step.accent};`,

@@ -15,7 +15,6 @@ import { parseConversation } from '../shared/parser.js';
 import { exportToDocx, exportToPdf } from '../shared/exporter.js';
 import { injectApiBridge, subscribeToApiBridge } from '../shared/api-bridge.js';
 import { TokenOverlay } from '../../ui/components/TokenOverlay.jsx';
-import { BrandBadge } from '../../ui/components/BrandBadge.jsx';
 import { FeatureTourModal } from '../../ui/components/FeatureTourModal.jsx';
 import { TOUR_VERSION } from '../../ui/tour-content.js';
 import {
@@ -28,6 +27,8 @@ import {
 import { PromptOptimizerModal } from '../../ui/components/PromptOptimizerModal.jsx';
 import { PanelFrame } from '../../ui/components/PanelFrame.jsx';
 import { HUDSettingsPanel } from '../../ui/components/HUDSettingsPanel.jsx';
+import { QuickHubPanel } from '../../ui/components/QuickHubPanel.jsx';
+import { WelcomeHandoffModal } from '../../ui/components/WelcomeHandoffModal.jsx';
 import { normalizeFeatureSettings } from '../../lib/feature-settings.js';
 import { fetchFeatureSettings, watchFeatureSettings } from '../shared/feature-flags.js';
 import { createPopoutCanvasController } from '../shared/popout-canvas-controller.js';
@@ -40,9 +41,12 @@ import {
   DEFAULT_HUD_SETTINGS,
   HUD_SETTINGS_KEY,
   defaultPanelState,
+  hudBackgroundPalette,
   hueToHudPalette,
   normalizeHudSettings,
   updatePanelInSettings,
+  updatePanelVisibilityInSettings,
+  updateThemeInSettings,
 } from '../../lib/ui-settings.js';
 
 async function getEnabledFlag() {
@@ -107,11 +111,7 @@ async function logStorageRoundTrip() {
   const iconUrl = chrome.runtime.getURL('icons/icon128.png');
 
   let queueSizeState = 0;
-  let promptLibraryOpen = false;
-  let exportDialogOpen = false;
-  let tourModalOpen = false;
-  let optimizerOpen = false;
-  let settingsOpen = false;
+  let welcomeZipping = false;
   let tokenModel = null;
   let tokenCount = null;
   let tokenSource = null;
@@ -126,12 +126,16 @@ async function logStorageRoundTrip() {
 
   const panelState = (panelId) => hudSettings.panels[panelId] || defaultPanelState(panelId, getViewport());
   const panelDefault = (panelId) => defaultPanelState(panelId, getViewport());
+  const isPanelOpen = (panelId) => hudSettings.visibility?.[panelId] === true;
 
   const applyHudPalette = () => {
     const palette = hueToHudPalette(hudSettings.accentHue);
+    const bgPalette = hudBackgroundPalette(hudSettings);
     ui.mountPoint.style.setProperty('--dex-accent', palette.accent);
     ui.mountPoint.style.setProperty('--dex-accent-2', palette.accent2);
     ui.mountPoint.style.setProperty('--dex-cta', palette.cta);
+    ui.mountPoint.style.setProperty('--dex-bg-base', bgPalette.bgBase);
+    ui.mountPoint.style.setProperty('--dex-bg-glass', bgPalette.bgGlass);
   };
 
   const scheduleHudSettingsPersist = () => {
@@ -156,20 +160,28 @@ async function logStorageRoundTrip() {
     setHudSettings(updatePanelInSettings(hudSettings, panelId, nextPanel, getViewport()));
   };
 
-  const openAnyModal = (panelName) => {
-    if (panelName === 'prompts') promptLibraryOpen = true;
-    if (panelName === 'export') exportDialogOpen = true;
-    if (panelName === 'optimizer') optimizerOpen = true;
-    if (panelName === 'tour') tourModalOpen = true;
-    setPanel('tokens', {
-      ...panelState('tokens'),
-      collapsed: true,
-      pinned: false,
-      x: Math.max(8, window.innerWidth - 250),
-      y: Math.max(8, window.innerHeight - 62),
-      width: 220,
-      height: 48,
-    });
+  const setPanelVisibility = (panelId, nextOpen) => {
+    setHudSettings(updatePanelVisibilityInSettings(hudSettings, panelId, nextOpen, getViewport()));
+  };
+
+  const openWindow = (panelId) => setPanelVisibility(panelId, true);
+  const closeWindow = (panelId) => setPanelVisibility(panelId, false);
+  const toggleWindow = (panelId) => setPanelVisibility(panelId, !isPanelOpen(panelId));
+
+  const openHubAction = (action) => {
+    if (action === 'sidebar') openWindow('sidebar');
+    else if (action === 'tokens') openWindow('tokens');
+    else if (action === 'prompts') openWindow('promptLibrary');
+    else if (action === 'optimize') openWindow('optimizer');
+    else if (action === 'settings') openWindow('settings');
+    else if (action === 'tour') openWindow('tour');
+    else if (action === 'export') openWindow('export');
+    else if (action === 'context') {
+      void runSemanticClipboardInject();
+    }
+    else if (action === 'liveRender') {
+      void runPopoutCanvasOpenLatest();
+    }
   };
 
   const popoutCanvasController = createPopoutCanvasController({
@@ -260,6 +272,20 @@ async function logStorageRoundTrip() {
     }
   };
 
+  const beginWelcomeZip = () => {
+    welcomeZipping = true;
+    renderUI();
+  };
+
+  const completeWelcomeZip = () => {
+    if (!welcomeZipping) return;
+    welcomeZipping = false;
+    const afterWelcome = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
+    const afterFab = updatePanelVisibilityInSettings(afterWelcome, 'fab', true, getViewport());
+    const afterTour = updatePanelVisibilityInSettings(afterFab, 'tour', true, getViewport());
+    setHudSettings(afterTour);
+  };
+
   const handleExport = async (format) => {
     const turns = parseConversation();
     if (turns.length === 0) {
@@ -344,102 +370,122 @@ async function logStorageRoundTrip() {
 
     render(
       h('div', null, [
-        h(PanelFrame, {
-          panelId: 'sidebar',
-          title: 'DexEnhance • Gemini',
+        h(WelcomeHandoffModal, {
+          visible: isPanelOpen('welcome'),
+          zipping: welcomeZipping,
           iconUrl,
-          panelState: panelState('sidebar'),
-          defaultState: panelDefault('sidebar'),
-          onPanelStateChange: (next) => setPanel('sidebar', next),
-          minWidth: 280,
-          minHeight: 280,
-          zIndex: 2147483645,
-          showClose: false,
-          showPin: true,
-          allowResize: true,
-        }, [
-          h(Sidebar, {
-            site: 'Gemini',
-            currentChatUrl: window.location.href,
-            queueSize: queueSizeState,
-            iconUrl,
-            onRequestTour: () => openAnyModal('tour'),
-            onRequestPrompts: () => openAnyModal('prompts'),
-            onRequestOptimizer: () => openAnyModal('optimizer'),
-            onRequestExport: () => openAnyModal('export'),
-            onRequestSettings: () => {
-              settingsOpen = true;
-              renderUI();
-            },
-            onRequestContext: () => {
-              void runSemanticClipboardInject();
-            },
-            onRequestLiveRender: () => {
-              void runPopoutCanvasOpenLatest();
-            },
-          }),
-        ]),
-
-        h(PanelFrame, {
-          panelId: 'tokens',
-          title: tokenTitle,
-          iconUrl,
-          panelState: panelState('tokens'),
-          defaultState: panelDefault('tokens'),
-          onPanelStateChange: (next) => setPanel('tokens', next),
-          minWidth: 180,
-          minHeight: 48,
-          zIndex: 2147483644,
-          showClose: false,
-          showPin: false,
-          showOptions: false,
-          allowResize: true,
-          compactCollapsed: true,
-        }, [
-          h(TokenOverlay, {
-            site: 'Gemini',
-            model: tokenModel,
-            tokens: tokenCount,
-            source: tokenSource,
-            updatedAt: tokenUpdatedAt,
-            iconUrl,
-            compact: panelState('tokens').collapsed,
-          }),
-        ]),
-
-        h(BrandBadge, {
-          site: 'Gemini',
-          iconUrl,
-          onClick: () => openAnyModal('tour'),
-        }),
-        h(FAB, {
-          site: 'Gemini',
-          iconUrl,
-          panelState: panelState('fab'),
-          onPanelStateChange: (next) => setPanel('fab', next),
-          onAction: (action) => {
-            if (action === 'tour') openAnyModal('tour');
-            else if (action === 'optimize') openAnyModal('optimizer');
-            else if (action === 'prompts') openAnyModal('prompts');
-            else if (action === 'context') {
-              void runSemanticClipboardInject();
-            }
-            else if (action === 'liveRender') {
-              void runPopoutCanvasOpenLatest();
-            }
-            else if (action === 'settings') {
-              settingsOpen = true;
-              renderUI();
-            } else if (action === 'export') openAnyModal('export');
-            else renderUI();
+          panelState: panelState('welcome'),
+          zipTarget: {
+            x: panelState('fab').x,
+            y: panelState('fab').y,
+            size: panelState('fab').width,
           },
+          onPanelStateCommit: (next) => setPanel('welcome', next),
+          onGetStarted: beginWelcomeZip,
+          onZipTransitionEnd: completeWelcomeZip,
         }),
+
+        isPanelOpen('hub')
+          ? h(QuickHubPanel, {
+              visible: true,
+              iconUrl,
+              panelState: panelState('hub'),
+              defaultPanelState: panelDefault('hub'),
+              onPanelStateChange: (next) => setPanel('hub', next),
+              onClose: () => closeWindow('hub'),
+              onAction: (action) => {
+                openHubAction(action);
+                if (action !== 'context' && action !== 'liveRender') {
+                  closeWindow('hub');
+                }
+              },
+            })
+          : null,
+
+        isPanelOpen('sidebar')
+          ? h(PanelFrame, {
+              panelId: 'sidebar',
+              title: 'DexEnhance • Gemini',
+              iconUrl,
+              panelState: panelState('sidebar'),
+              defaultState: panelDefault('sidebar'),
+              onPanelStateChange: (next) => setPanel('sidebar', next),
+              minWidth: 280,
+              minHeight: 280,
+              zIndex: 2147483645,
+              showClose: true,
+              showPin: true,
+              allowResize: true,
+              onClose: () => closeWindow('sidebar'),
+            }, [
+              h(Sidebar, {
+                site: 'Gemini',
+                currentChatUrl: window.location.href,
+                queueSize: queueSizeState,
+                iconUrl,
+                onRequestTour: () => openWindow('tour'),
+                onRequestPrompts: () => openWindow('promptLibrary'),
+                onRequestOptimizer: () => openWindow('optimizer'),
+                onRequestExport: () => openWindow('export'),
+                onRequestSettings: () => openWindow('settings'),
+                onRequestContext: () => {
+                  void runSemanticClipboardInject();
+                },
+                onRequestLiveRender: () => {
+                  void runPopoutCanvasOpenLatest();
+                },
+              }),
+            ])
+          : null,
+
+        isPanelOpen('tokens')
+          ? h(PanelFrame, {
+              panelId: 'tokens',
+              title: tokenTitle,
+              iconUrl,
+              panelState: panelState('tokens'),
+              defaultState: panelDefault('tokens'),
+              onPanelStateChange: (next) => setPanel('tokens', next),
+              minWidth: 180,
+              minHeight: 48,
+              zIndex: 2147483644,
+              showClose: true,
+              onClose: () => closeWindow('tokens'),
+              showPin: false,
+              showOptions: false,
+              allowResize: true,
+              compactCollapsed: true,
+            }, [
+              h(TokenOverlay, {
+                site: 'Gemini',
+                model: tokenModel,
+                tokens: tokenCount,
+                source: tokenSource,
+                updatedAt: tokenUpdatedAt,
+                iconUrl,
+                compact: panelState('tokens').collapsed,
+              }),
+            ])
+          : null,
+
+        isPanelOpen('fab')
+          ? h(FAB, {
+              site: 'Gemini',
+              iconUrl,
+              panelState: panelState('fab'),
+              onPanelStateChange: (next) => setPanel('fab', next),
+              onAction: (action) => {
+                if (action === 'hub') {
+                  toggleWindow('hub');
+                }
+              },
+            })
+          : null,
         h(PromptLibrary, {
-          visible: promptLibraryOpen,
+          visible: isPanelOpen('promptLibrary'),
           iconUrl,
           onClose: () => {
-            promptLibraryOpen = false;
-            renderUI();
+            closeWindow('promptLibrary');
           },
           onInsert: (text) => {
             const inserted = insertTextThroughAdapter(adapter, text);
@@ -452,11 +498,10 @@ async function logStorageRoundTrip() {
           onWindowStateChange: (next) => setPanel('promptLibrary', next),
         }),
         h(ExportDialog, {
-          visible: exportDialogOpen,
+          visible: isPanelOpen('export'),
           iconUrl,
           onClose: () => {
-            exportDialogOpen = false;
-            renderUI();
+            closeWindow('export');
           },
           onExport: handleExport,
           windowState: panelState('export'),
@@ -464,13 +509,12 @@ async function logStorageRoundTrip() {
           onWindowStateChange: (next) => setPanel('export', next),
         }),
         h(PromptOptimizerModal, {
-          visible: optimizerOpen,
+          visible: isPanelOpen('optimizer'),
           site: 'Gemini',
           iconUrl,
           initialPrompt: readCurrentComposerText(adapter),
           onClose: () => {
-            optimizerOpen = false;
-            renderUI();
+            closeWindow('optimizer');
           },
           onOptimize: runHybridOptimization,
           onApply: (text) => {
@@ -484,23 +528,20 @@ async function logStorageRoundTrip() {
           onWindowStateChange: (next) => setPanel('optimizer', next),
         }),
         h(FeatureTourModal, {
-          visible: tourModalOpen,
+          visible: isPanelOpen('tour'),
           site: 'Gemini',
           iconUrl,
           onOpenPrompts: () => {
-            tourModalOpen = false;
-            promptLibraryOpen = true;
-            renderUI();
+            closeWindow('tour');
+            openWindow('promptLibrary');
             void markTourSeen();
           },
           onClose: () => {
-            tourModalOpen = false;
-            renderUI();
+            closeWindow('tour');
             void markTourSeen();
           },
           onComplete: () => {
-            tourModalOpen = false;
-            renderUI();
+            closeWindow('tour');
             void markTourSeen();
           },
           windowState: panelState('tour'),
@@ -508,7 +549,7 @@ async function logStorageRoundTrip() {
           onWindowStateChange: (next) => setPanel('tour', next),
         }),
         h(HUDSettingsPanel, {
-          visible: settingsOpen,
+          visible: isPanelOpen('settings'),
           iconUrl,
           panelState: panelState('settings'),
           defaultPanelState: panelDefault('settings'),
@@ -520,7 +561,19 @@ async function logStorageRoundTrip() {
               accentHue: hue,
             });
           },
+          bgBaseHue: hudSettings.bgBaseHue,
+          bgBaseSaturation: hudSettings.bgBaseSaturation,
+          bgBaseLightness: hudSettings.bgBaseLightness,
+          bgGlassHue: hudSettings.bgGlassHue,
+          bgGlassSaturation: hudSettings.bgGlassSaturation,
+          bgGlassLightness: hudSettings.bgGlassLightness,
+          bgGlassAlpha: hudSettings.bgGlassAlpha,
+          onBackgroundChange: (patch) => {
+            setHudSettings(updateThemeInSettings(hudSettings, patch, getViewport()));
+          },
+          panelVisibility: hudSettings.visibility,
           panelOpacities: {
+            hub: panelState('hub').opacity,
             sidebar: panelState('sidebar').opacity,
             tokens: panelState('tokens').opacity,
             fab: panelState('fab').opacity,
@@ -528,6 +581,9 @@ async function logStorageRoundTrip() {
             optimizer: panelState('optimizer').opacity,
             tour: panelState('tour').opacity,
             export: panelState('export').opacity,
+          },
+          onPanelVisibilityChange: (panelId, nextOpen) => {
+            setPanelVisibility(panelId, nextOpen);
           },
           onPanelOpacityChange: (panelId, opacity) => {
             setPanel(panelId, {
@@ -553,12 +609,18 @@ async function logStorageRoundTrip() {
           onResetTheme: () => {
             setHudSettings({
               accentHue: DEFAULT_HUD_SETTINGS.accentHue,
+              bgBaseHue: DEFAULT_HUD_SETTINGS.bgBaseHue,
+              bgBaseSaturation: DEFAULT_HUD_SETTINGS.bgBaseSaturation,
+              bgBaseLightness: DEFAULT_HUD_SETTINGS.bgBaseLightness,
+              bgGlassHue: DEFAULT_HUD_SETTINGS.bgGlassHue,
+              bgGlassSaturation: DEFAULT_HUD_SETTINGS.bgGlassSaturation,
+              bgGlassLightness: DEFAULT_HUD_SETTINGS.bgGlassLightness,
+              bgGlassAlpha: DEFAULT_HUD_SETTINGS.bgGlassAlpha,
               panels: {},
             });
           },
           onClose: () => {
-            settingsOpen = false;
-            renderUI();
+            closeWindow('settings');
           },
         }),
       ]),
@@ -580,7 +642,20 @@ async function logStorageRoundTrip() {
   if (hudRes.ok) {
     hudSettings = normalizeHudSettings(hudRes.data, getViewport());
   }
+  hudSettings = updatePanelVisibilityInSettings(hudSettings, 'sidebar', false, getViewport());
+  hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tokens', false, getViewport());
   featureSettings = await fetchFeatureSettings();
+
+  const tourState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'tourSeenVersion' });
+  if (!tourState.ok || tourState.data !== TOUR_VERSION) {
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'welcome', true, getViewport());
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'fab', false, getViewport());
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'hub', false, getViewport());
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tour', false, getViewport());
+  } else {
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'welcome', false, getViewport());
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'fab', true, getViewport());
+  }
   applyHudPalette();
 
   watchFeatureSettings((nextSettings) => {
@@ -601,11 +676,6 @@ async function logStorageRoundTrip() {
     applyHudPalette();
     renderUI();
   });
-
-  const tourState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'tourSeenVersion' });
-  if (!tourState.ok || tourState.data !== TOUR_VERSION) {
-    tourModalOpen = true;
-  }
 
   renderUI();
   const queueController = setupQueueController({

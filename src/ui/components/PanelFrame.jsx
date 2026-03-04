@@ -1,6 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { clampPanelState, panelOpacityValue } from '../../lib/ui-settings.js';
+import { useDraggable } from '../hooks/useDraggable.js';
 
 function isPrimaryPointer(event) {
   return event.button === 0 || event.buttons === 1;
@@ -30,7 +31,6 @@ export function PanelFrame({
     [panelState, minHeight, minWidth]
   );
 
-  const dragRef = useRef(null);
   const resizeRef = useRef(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
 
@@ -50,37 +50,32 @@ export function PanelFrame({
     onPanelStateChange?.(clamped);
   }
 
+  const drag = useDraggable({
+    initialPosition: { x: state.x, y: state.y },
+    getBounds: () => {
+      const viewport = { width: window.innerWidth, height: window.innerHeight };
+      const headerHeight = state.collapsed ? 44 : state.height;
+      return {
+        minX: 8,
+        maxX: Math.max(8, viewport.width - state.width - 8),
+        minY: 8,
+        maxY: Math.max(8, viewport.height - headerHeight - 8),
+      };
+    },
+    onPositionCommit: (nextPosition) => {
+      updatePanel({
+        ...state,
+        pinned: false,
+        x: nextPosition.x,
+        y: nextPosition.y,
+      });
+    },
+  });
+
   function startDrag(event) {
     if (!isPrimaryPointer(event)) return;
     if (event.target instanceof Element && event.target.closest('button, input, select, textarea, a')) return;
-
-    event.preventDefault();
-    const startX = event.clientX;
-    const startY = event.clientY;
-    const initial = { ...state };
-
-    dragRef.current = true;
-
-    const onMove = (moveEvent) => {
-      if (!dragRef.current) return;
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-      updatePanel({
-        ...initial,
-        pinned: false,
-        x: initial.x + dx,
-        y: initial.y + dy,
-      });
-    };
-
-    const onUp = () => {
-      dragRef.current = false;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+    drag.startDrag(event);
   }
 
   function startResize(event) {
@@ -89,7 +84,11 @@ export function PanelFrame({
 
     const startX = event.clientX;
     const startY = event.clientY;
-    const initial = { ...state };
+    const initial = {
+      ...state,
+      x: drag.position.x,
+      y: drag.position.y,
+    };
     resizeRef.current = true;
 
     const onMove = (moveEvent) => {
@@ -115,8 +114,8 @@ export function PanelFrame({
   }
 
   const style = {
-    left: `${state.x}px`,
-    top: `${state.y}px`,
+    left: `${drag.position.x}px`,
+    top: `${drag.position.y}px`,
     width: `${state.width}px`,
     height: state.collapsed ? undefined : `${state.height}px`,
     opacity: panelOpacityValue(state.opacity),
