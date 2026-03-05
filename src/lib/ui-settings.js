@@ -26,7 +26,7 @@ export const DEFAULT_HUD_SETTINGS = Object.freeze({
   bgGlassAlpha: 0.78,
   panels: {},
   visibility: {
-    welcome: true,
+    welcome: false,
     hub: false,
     sidebar: false,
     tokens: false,
@@ -64,23 +64,23 @@ export function panelMinSize(panelId) {
     case 'welcome':
       return { minWidth: 316, minHeight: 364 };
     case 'hub':
-      return { minWidth: 340, minHeight: 260 };
+      return { minWidth: 300, minHeight: 220 };
     case 'sidebar':
-      return { minWidth: 280, minHeight: 280 };
+      return { minWidth: 240, minHeight: 220 };
     case 'tokens':
       return { minWidth: 160, minHeight: 44 };
     case 'fab':
-      return { minWidth: 52, minHeight: 52 };
+      return { minWidth: 46, minHeight: 46 };
     case 'promptLibrary':
-      return { minWidth: 520, minHeight: 320 };
+      return { minWidth: 460, minHeight: 280 };
     case 'optimizer':
-      return { minWidth: 520, minHeight: 300 };
+      return { minWidth: 460, minHeight: 280 };
     case 'tour':
-      return { minWidth: 560, minHeight: 320 };
+      return { minWidth: 500, minHeight: 300 };
     case 'export':
-      return { minWidth: 340, minHeight: 220 };
+      return { minWidth: 320, minHeight: 200 };
     case 'settings':
-      return { minWidth: 400, minHeight: 320 };
+      return { minWidth: 360, minHeight: 280 };
     default:
       return { minWidth: 180, minHeight: 80 };
   }
@@ -104,8 +104,8 @@ export function defaultPanelState(panelId, viewport) {
       };
     }
     case 'hub': {
-      const panelWidth = Math.min(520, Math.max(380, Math.round(width * 0.35)));
-      const panelHeight = Math.min(620, Math.max(360, Math.round(height * 0.58)));
+      const panelWidth = Math.min(440, Math.max(320, Math.round(width * 0.3)));
+      const panelHeight = Math.min(520, Math.max(300, Math.round(height * 0.48)));
       return {
         x: centerX(panelWidth, width),
         y: Math.max(38, centerY(panelHeight, height)),
@@ -113,12 +113,12 @@ export function defaultPanelState(panelId, viewport) {
         height: panelHeight,
         opacity: 0.98,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     }
     case 'sidebar': {
-      const panelWidth = Math.min(360, Math.round(width * 0.32));
-      const panelHeight = Math.min(640, Math.max(340, height - 140));
+      const panelWidth = Math.min(300, Math.max(240, Math.round(width * 0.24)));
+      const panelHeight = Math.min(560, Math.max(300, Math.round(height * 0.6)));
       return {
         x: 14,
         y: 74,
@@ -126,58 +126,58 @@ export function defaultPanelState(panelId, viewport) {
         height: panelHeight,
         opacity: 0.96,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     }
     case 'tokens':
       return {
-        x: Math.max(SAFE_MARGIN, width - 250),
-        y: Math.max(SAFE_MARGIN, height - 62),
-        width: 220,
+        x: Math.max(SAFE_MARGIN, width - 206),
+        y: Math.max(SAFE_MARGIN, height - 60),
+        width: 176,
         height: 48,
         opacity: 0.94,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     case 'fab':
       return {
-        x: Math.max(SAFE_MARGIN, width - 78),
-        y: Math.max(SAFE_MARGIN, height - 78),
-        width: 62,
-        height: 62,
+        x: Math.max(SAFE_MARGIN, width - 72),
+        y: Math.max(SAFE_MARGIN, height - 72),
+        width: 56,
+        height: 56,
         opacity: 1,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     case 'promptLibrary': {
-      const panelWidth = Math.min(900, Math.max(560, Math.round(width * 0.66)));
-      const panelHeight = Math.min(760, Math.max(420, Math.round(height * 0.8)));
+      const panelWidth = Math.min(760, Math.max(500, Math.round(width * 0.56)));
+      const panelHeight = Math.min(620, Math.max(360, Math.round(height * 0.68)));
       return {
         x: centerX(panelWidth, width),
-        y: 36,
+        y: Math.max(26, centerY(panelHeight, height)),
         width: panelWidth,
         height: panelHeight,
         opacity: 0.97,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     }
     case 'optimizer': {
-      const panelWidth = Math.min(980, Math.max(620, Math.round(width * 0.72)));
-      const panelHeight = Math.min(780, Math.max(420, Math.round(height * 0.82)));
+      const panelWidth = Math.min(780, Math.max(500, Math.round(width * 0.58)));
+      const panelHeight = Math.min(620, Math.max(360, Math.round(height * 0.68)));
       return {
         x: centerX(panelWidth, width),
-        y: 34,
+        y: Math.max(24, centerY(panelHeight, height)),
         width: panelWidth,
         height: panelHeight,
         opacity: 0.97,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     }
     case 'tour': {
-      const panelWidth = Math.min(800, Math.max(620, Math.round(width * 0.72)));
-      const panelHeight = Math.min(560, Math.max(380, Math.round(panelWidth * 0.62)));
+      const panelWidth = Math.min(700, Math.max(500, Math.round(width * 0.58)));
+      const panelHeight = Math.min(500, Math.max(320, Math.round(panelWidth * 0.56)));
       return {
         x: centerX(panelWidth, width),
         y: Math.max(30, centerY(panelHeight, height)),
@@ -185,12 +185,12 @@ export function defaultPanelState(panelId, viewport) {
         height: panelHeight,
         opacity: 0.98,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     }
     case 'export': {
-      const panelWidth = Math.min(560, Math.max(360, Math.round(width * 0.38)));
-      const panelHeight = Math.min(420, Math.max(250, Math.round(height * 0.42)));
+      const panelWidth = Math.min(460, Math.max(320, Math.round(width * 0.32)));
+      const panelHeight = Math.min(340, Math.max(210, Math.round(height * 0.32)));
       return {
         x: centerX(panelWidth, width),
         y: centerY(panelHeight, height),
@@ -198,12 +198,12 @@ export function defaultPanelState(panelId, viewport) {
         height: panelHeight,
         opacity: 0.97,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     }
     case 'settings': {
-      const panelWidth = Math.min(560, Math.max(420, Math.round(width * 0.42)));
-      const panelHeight = Math.min(760, Math.max(460, Math.round(height * 0.74)));
+      const panelWidth = Math.min(500, Math.max(380, Math.round(width * 0.36)));
+      const panelHeight = Math.min(680, Math.max(420, Math.round(height * 0.65)));
       return {
         x: centerX(panelWidth, width),
         y: Math.max(24, centerY(panelHeight, height)),
@@ -211,7 +211,7 @@ export function defaultPanelState(panelId, viewport) {
         height: panelHeight,
         opacity: 0.98,
         collapsed: false,
-        pinned: true,
+        pinned: false,
       };
     }
     default:

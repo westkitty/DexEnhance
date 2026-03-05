@@ -53,6 +53,7 @@
         "icons/icon48.png",
         "icons/icon128.png",
         "icons/icon1024.png",
+        "icons/icon1024-welcome.png",
         "icons/dex-logo-circle.svg"
       ],
       "matches": ["https://chatgpt.com/*", "https://gemini.google.com/*"]

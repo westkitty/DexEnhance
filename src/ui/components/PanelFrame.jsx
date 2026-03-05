@@ -75,12 +75,14 @@ export function PanelFrame({
   function startDrag(event) {
     if (!isPrimaryPointer(event)) return;
     if (event.target instanceof Element && event.target.closest('button, input, select, textarea, a')) return;
+    event.stopPropagation();
     drag.startDrag(event);
   }
 
   function startResize(event) {
     if (!allowResize || !isPrimaryPointer(event) || state.collapsed) return;
     event.preventDefault();
+    event.stopPropagation();
 
     const startX = event.clientX;
     const startY = event.clientY;
@@ -137,6 +139,7 @@ export function PanelFrame({
           class: 'dex-panel-frame__header',
           onPointerDown: startDrag,
           title: 'Drag to move',
+          style: 'touch-action:none;',
         },
         [
           h('div', { class: 'dex-panel-frame__title' }, [
@@ -261,6 +264,7 @@ export function PanelFrame({
             class: 'dex-panel-frame__resize',
             onPointerDown: startResize,
             title: 'Resize panel',
+            style: 'touch-action:none;',
           })
         : null,
     ]

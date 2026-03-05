@@ -112,19 +112,17 @@ async function logStorageRoundTrip() {
 
   const ui = createShadowRenderer({ site: 'chatgpt' });
   const iconUrl = chrome.runtime.getURL('icons/icon128.png');
-  const welcomeIconUrl = chrome.runtime.getURL('icons/icon1024.png');
+  const welcomeIconUrl = chrome.runtime.getURL('icons/icon1024-welcome.png');
 
   let queueSizeState = 0;
-  let welcomeZipping = false;
-  let welcomeZipFallbackTimer = null;
+  let welcomeVisible = false;
+  let quickTourPromptVisible = false;
   let tokenModel = null;
   let tokenCount = null;
   let tokenSource = null;
   let tokenUpdatedAt = null;
   let featureSettings = normalizeFeatureSettings({});
   let semanticIngestTimer = null;
-  let onboardingCompleted = false;
-  let onboardingStage = 'welcome';
 
   let hudSettings = normalizeHudSettings({}, { width: window.innerWidth, height: window.innerHeight });
   let persistHudTimer = null;
@@ -137,24 +135,7 @@ async function logStorageRoundTrip() {
 
   const enforceOnboardingVisibility = (settings) => {
     let next = normalizeHudSettings(settings, getViewport());
-    if (onboardingStage === 'welcome') {
-      next = updatePanelVisibilityInSettings(next, 'welcome', true, getViewport());
-      next = updatePanelVisibilityInSettings(next, 'fab', false, getViewport());
-      next = updatePanelVisibilityInSettings(next, 'hub', false, getViewport());
-      next = updatePanelVisibilityInSettings(next, 'tour', false, getViewport());
-      return next;
-    }
-
-    if (onboardingStage === 'zipping' || onboardingStage === 'tour') {
-      next = updatePanelVisibilityInSettings(next, 'welcome', false, getViewport());
-      next = updatePanelVisibilityInSettings(next, 'fab', true, getViewport());
-      next = updatePanelVisibilityInSettings(next, 'hub', false, getViewport());
-      next = updatePanelVisibilityInSettings(next, 'tour', true, getViewport());
-      return next;
-    }
-
     next = updatePanelVisibilityInSettings(next, 'welcome', false, getViewport());
-    next = updatePanelVisibilityInSettings(next, 'fab', true, getViewport());
     return next;
   };
 
@@ -296,7 +277,8 @@ async function logStorageRoundTrip() {
   });
 
   const markTourSeen = async () => {
-    onboardingCompleted = true;
+    welcomeVisible = false;
+    quickTourPromptVisible = false;
     const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
       items: {
         tourSeenVersion: TOUR_VERSION,
@@ -306,10 +288,12 @@ async function logStorageRoundTrip() {
     if (!setRes.ok) {
       console.warn('[DexEnhance] ChatGPT failed to persist tour seen state:', setRes.error);
     }
+    renderUI();
   };
 
-  const markOnboardingSeen = async () => {
-    onboardingCompleted = true;
+  const markOnboardingSeen = async ({ hideQuickTour = true } = {}) => {
+    welcomeVisible = false;
+    if (hideQuickTour) quickTourPromptVisible = false;
     const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
       items: {
         [ONBOARDING_SEEN_KEY]: ONBOARDING_VERSION,
@@ -318,16 +302,19 @@ async function logStorageRoundTrip() {
     if (!setRes.ok) {
       console.warn('[DexEnhance] ChatGPT failed to persist onboarding seen state:', setRes.error);
     }
+    renderUI();
   };
 
-  const applyPostOnboardingLayout = ({ openPromptLibrary = false } = {}) => {
-    onboardingStage = 'done';
-    onboardingCompleted = true;
-    if (welcomeZipFallbackTimer) {
-      window.clearTimeout(welcomeZipFallbackTimer);
-      welcomeZipFallbackTimer = null;
-    }
-    welcomeZipping = false;
+  const handleWelcomeGetStarted = () => {
+    welcomeVisible = false;
+    quickTourPromptVisible = true;
+    let next = updatePanelVisibilityInSettings(hudSettings, 'fab', true, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'welcome', false, getViewport());
+    setHudSettings(next);
+    void markOnboardingSeen({ hideQuickTour: false });
+  };
+
+  const applyPostTourLayout = ({ openPromptLibrary = false } = {}) => {
     let next = enforceOnboardingVisibility(hudSettings);
     next = updatePanelVisibilityInSettings(next, 'hub', false, getViewport());
     next = updatePanelVisibilityInSettings(next, 'tour', false, getViewport());
@@ -337,29 +324,11 @@ async function logStorageRoundTrip() {
     setHudSettings(next);
   };
 
-  const beginWelcomeZip = () => {
-    if (onboardingStage !== 'welcome') return;
-    onboardingStage = 'zipping';
-    onboardingCompleted = true;
-    welcomeZipping = true;
-    if (welcomeZipFallbackTimer) window.clearTimeout(welcomeZipFallbackTimer);
-    welcomeZipFallbackTimer = window.setTimeout(() => {
-      completeWelcomeZip();
-    }, 620);
+  const startQuickTour = () => {
+    quickTourPromptVisible = false;
+    openWindow('tour');
     void markOnboardingSeen();
     renderUI();
-  };
-
-  const completeWelcomeZip = () => {
-    if (!welcomeZipping) return;
-    if (welcomeZipFallbackTimer) {
-      window.clearTimeout(welcomeZipFallbackTimer);
-      welcomeZipFallbackTimer = null;
-    }
-    welcomeZipping = false;
-    onboardingStage = 'tour';
-    onboardingCompleted = true;
-    setHudSettings(enforceOnboardingVisibility(hudSettings));
   };
 
   const handleExport = async (format) => {
@@ -448,8 +417,8 @@ async function logStorageRoundTrip() {
       h('div', null, [
         h(WelcomeHandoffModal, {
           key: 'welcome',
-          visible: isPanelOpen('welcome'),
-          zipping: welcomeZipping,
+          visible: welcomeVisible,
+          zipping: false,
           iconUrl: welcomeIconUrl,
           panelState: panelState('welcome'),
           zipTarget: {
@@ -458,8 +427,8 @@ async function logStorageRoundTrip() {
             size: panelState('fab').width,
           },
           onPanelStateCommit: (next) => setPanel('welcome', next),
-          onGetStarted: beginWelcomeZip,
-          onZipTransitionEnd: completeWelcomeZip,
+          onGetStarted: handleWelcomeGetStarted,
+          onZipTransitionEnd: () => {},
         }),
 
         isPanelOpen('hub')
@@ -489,8 +458,8 @@ async function logStorageRoundTrip() {
               panelState: panelState('sidebar'),
               defaultState: panelDefault('sidebar'),
               onPanelStateChange: (next) => setPanel('sidebar', next),
-              minWidth: 280,
-              minHeight: 280,
+              minWidth: 240,
+              minHeight: 220,
               zIndex: 2147483645,
               showClose: true,
               showPin: true,
@@ -555,6 +524,8 @@ async function logStorageRoundTrip() {
               iconUrl,
               panelState: panelState('fab'),
               onPanelStateChange: (next) => setPanel('fab', next),
+              showQuickTourButton: quickTourPromptVisible,
+              onStartQuickTour: startQuickTour,
               onAction: (action) => {
                 if (action === 'hub') {
                   toggleWindow('hub');
@@ -617,15 +588,15 @@ async function logStorageRoundTrip() {
           site: 'ChatGPT',
           iconUrl,
           onOpenPrompts: () => {
-            applyPostOnboardingLayout({ openPromptLibrary: true });
+            applyPostTourLayout({ openPromptLibrary: true });
             void markTourSeen();
           },
           onClose: () => {
-            applyPostOnboardingLayout();
+            applyPostTourLayout();
             void markTourSeen();
           },
           onComplete: () => {
-            applyPostOnboardingLayout();
+            applyPostTourLayout();
             void markTourSeen();
           },
           windowState: panelState('tour'),
@@ -678,13 +649,14 @@ async function logStorageRoundTrip() {
           },
           fabSize: panelState('fab').width,
           onFabSizeChange: (size) => {
-            const safeSize = Math.max(52, Math.min(96, Number(size) || 62));
+            const safeSize = Math.max(46, Math.min(84, Number(size) || 56));
             setPanel('fab', {
               ...panelState('fab'),
               width: safeSize,
               height: safeSize,
             });
           },
+          onStartQuickTour: startQuickTour,
           onResetLayout: () => {
             setHudSettings({
               ...hudSettings,
@@ -731,19 +703,10 @@ async function logStorageRoundTrip() {
   hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tokens', false, getViewport());
   featureSettings = await fetchFeatureSettings();
 
-  const tourState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'tourSeenVersion' });
   const onboardingState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: ONBOARDING_SEEN_KEY });
-  const hasSeenTour = tourState.ok && tourState.data === TOUR_VERSION;
   const hasSeenOnboarding = onboardingState.ok && onboardingState.data === ONBOARDING_VERSION;
-  const shouldShowWelcome = !(hasSeenTour || hasSeenOnboarding);
-
-  if (shouldShowWelcome) {
-    onboardingStage = 'welcome';
-    onboardingCompleted = false;
-  } else {
-    onboardingStage = 'done';
-    onboardingCompleted = true;
-  }
+  welcomeVisible = !hasSeenOnboarding;
+  quickTourPromptVisible = false;
   hudSettings = enforceOnboardingVisibility(hudSettings);
   applyHudPalette();
 

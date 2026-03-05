@@ -269,6 +269,5 @@ document.addEventListener('keydown', (event) => {
 });
 
 renderStep();
-void maybeAutoOpenTour();
 
 console.log('[DexEnhance] Popup loaded');

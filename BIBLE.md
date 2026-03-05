@@ -432,6 +432,70 @@ For current execution truth, use:
 - Re-validated:
   - `bun run build`
 
+### State Update (2026-03-05, additive #19)
+
+- Completed HUD usability and onboarding-entrypoint rework for ChatGPT and Gemini.
+- Removed automatic in-page welcome modal flow and replaced it with explicit first-run Quick Tour CTA near the FAB:
+  - added `Start Quick Tour` companion button adjacent to Quick Action
+  - CTA visibility now depends on `tourSeenVersion` / `onboardingSeenVersion`
+  - CTA remains re-triggerable from Window Management controls + existing Hub tour action
+- Reduced default panel + control scale to better match target chat UI density:
+  - lowered default/min dimensions across hub/sidebar/prompt/export/optimizer/tour/settings/fab surfaces
+  - reduced global button sizing and FAB defaults for less visual obstruction
+- Added accordion-style collapse behavior to reduce HUD clutter while preserving action parity:
+  - Quick Hub category groups (`AI Tools`, `Panels`, `Utilities`) now collapsible
+  - Window Management sections now collapsible with full control parity retained
+- Hardened panel move/resize affordances:
+  - improved drag propagation on panel headers
+  - enlarged/tuned resize handle hit area and feedback
+- Popup immediate tour auto-open disabled; tour remains manually launchable from popup controls.
+- Added artifact:
+  - `.planning/phases/phase-10/phase-10-12-HUD-SCALE-QUICK-TOUR-ACCORDIONS.md`
+- Re-validated:
+  - `bun run build`
+  - feature checksum sweep (28/28 checks pass)
+
+### State Update (2026-03-05, additive #20)
+
+- Follow-up first-impression correction applied after #19:
+  - restored first-run `Get Started` welcome surface (ChatGPT + Gemini) to preserve branded first impression
+  - kept no-auto-tour behavior; `Get Started` now reveals explicit `Start Quick Tour` CTA near FAB
+- Welcome-logo geometry and sharpness hardened:
+  - confirmed `public/icons/icon1024.png` is square (`1024x1024`)
+  - updated circle treatment to avoid clipping risk (inner pad + `object-fit: contain` + solid bright backing)
+- Updated `ChatGPT + Gemini` tagline treatment under logo:
+  - replaced transparent style with brighter non-transparent chip background
+  - added subtle border/radius for readability and surface cohesion
+- Updated Playwright verifier expectation for popup onboarding behavior:
+  - popup tour is now expected to remain closed on initial open
+- Added artifact:
+  - `.planning/phases/phase-10/phase-10-13-WELCOME-FIRST-IMPRESSION-REFINEMENT.md`
+- Re-validated:
+  - `bun run build`
+  - `bun run verify:playwright` (`pass: true`)
+
+### State Update (2026-03-05, additive #21)
+
+- Welcome logo ring cleanup applied per first-impression visual feedback:
+  - removed extra white backing ring/container fill around central circle mark
+  - kept only circular logo presentation (no outer white surround)
+- Adjusted welcome logo fit to keep circle dominant (`object-fit: cover`) while preserving circular clipping.
+- Added artifact:
+  - `.planning/phases/phase-10/phase-10-14-WELCOME-CIRCLE-CLEANUP.md`
+- Re-validated:
+  - `bun run build`
+
+### State Update (2026-03-05, additive #22)
+
+- Applied welcome-logo crop tune to remove residual outer pad perception:
+  - scaled centered welcome logo render (`transform: scale(1.14)`) within circle clip
+  - retained circle-only surface treatment from #21 (no white backing ring)
+- Added artifact:
+  - `.planning/phases/phase-10/phase-10-15-WELCOME-LOGO-CROP-TUNE.md`
+- Re-validated:
+  - `bun run build`
+  - `bun run verify:playwright` (`pass: true`)
+
 ---
 
 ## 4. COMPLETE REQUIREMENTS REGISTER
@@ -1218,6 +1282,48 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Updated manifest web-accessible resources for the new logo assets.
   Re-validated:
   - `bun run build`
+
+[2026-03-05] PHASE 10 HUD SCALE + QUICK TOUR CTA REWORK — Panel usability and onboarding entrypoint simplification completed.
+  Removed automatic in-page welcome modal surface and switched to explicit first-run Quick Tour CTA near FAB.
+  Added `Start Quick Tour` button adjacent to Quick Action; CTA now keyed by onboarding/tour seen-state and remains manually launchable from settings/hub.
+  Converted Quick Hub category groups and Window Management sections to collapsible accordion style to reduce visual clutter.
+  Reduced default/min panel dimensions and core button/FAB sizing to align with denser host-page UI expectations.
+  Hardened panel drag/resize interaction reliability (header drag propagation + larger resize affordance).
+  Disabled popup immediate tour auto-open while preserving manual tour launch controls.
+  Re-validated:
+  - `bun run build`
+  - feature checksum script (28/28 controls/features present)
+  Artifact:
+  - .planning/phases/phase-10/phase-10-12-HUD-SCALE-QUICK-TOUR-ACCORDIONS.md
+
+[2026-03-05] PHASE 10 WELCOME FIRST-IMPRESSION REFINEMENT — Logo geometry + tagline surface correction completed.
+  Superseded part of prior rework by restoring first-run `Get Started` welcome surface on ChatGPT/Gemini.
+  Preserved explicit-tour behavior: no auto-tour launch; `Get Started` now hands off to visible `Start Quick Tour` CTA near FAB.
+  Verified welcome logo source geometry (`icon1024.png` is 1024x1024) and hardened circle treatment against clipping.
+  Re-styled `AI workflow assistant for ChatGPT + Gemini` line to brighter non-transparent chip background.
+  Updated Playwright verifier popup expectation to enforce no auto-open on popup tour.
+  Re-validated:
+  - `bun run build`
+  - `bun run verify:playwright`
+  Artifact:
+  - .planning/phases/phase-10/phase-10-13-WELCOME-FIRST-IMPRESSION-REFINEMENT.md
+
+[2026-03-05] PHASE 10 WELCOME CIRCLE CLEANUP — Central mark de-ringed for cleaner first impression.
+  Removed extra white backing around the welcome logo so only the circular mark remains visible.
+  Updated welcome logo fit strategy back to `object-fit: cover` for full-circle dominance.
+  Re-validated:
+  - `bun run build`
+  Artifact:
+  - .planning/phases/phase-10/phase-10-14-WELCOME-CIRCLE-CLEANUP.md
+
+[2026-03-05] PHASE 10 WELCOME LOGO CROP TUNE — Residual outer-pad perception reduced.
+  Tuned welcome logo framing with centered scale (`1.14`) to keep circle mark visually dominant.
+  Preserved prior ring-removal styling (no extra white backing).
+  Re-validated:
+  - `bun run build`
+  - `bun run verify:playwright`
+  Artifact:
+  - .planning/phases/phase-10/phase-10-15-WELCOME-LOGO-CROP-TUNE.md
 ```
 
 ---
@@ -1366,6 +1472,32 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Replaced welcome-logo source on ChatGPT/Gemini from `dex-logo-circle.svg` to direct `icon1024.png` URL in content scripts.
   Corrected runtime rendering path for welcome logo in extension `<img>` usage where nested SVG image references can fail.
   Revalidated ChatGPT/Gemini content builds after logo-source correction.
+
+[2026-03-05] v1.16 — Phase 10 HUD scale/tour-entry rework landed.
+  Replaced automatic welcome-first onboarding behavior with explicit first-run Quick Tour CTA adjacent to FAB.
+  Added reusable tour launch control inside Window Management while retaining existing Quick Hub tour action.
+  Reduced default panel and control sizing across HUD surfaces to improve parity with host-page control density.
+  Converted Quick Hub and HUD settings sections to accordion groups to reduce clutter without removing controls.
+  Hardened panel movement/resize interaction affordances and disabled popup immediate tour auto-open.
+  Revalidated full build and executed feature-presence checksum sweep.
+
+[2026-03-05] v1.17 — Phase 10 welcome-first-impression refinement landed.
+  Restored first-run `Get Started` welcome surface for branded first-impression continuity on ChatGPT/Gemini.
+  Preserved no-auto-tour policy by handing off from welcome to explicit `Start Quick Tour` CTA.
+  Hardened welcome logo circle rendering to eliminate clipping risk and preserve sharp scaling.
+  Re-styled `ChatGPT + Gemini` tagline block with brighter non-transparent surface treatment.
+  Updated Playwright verifier popup expectation to align with deliberate non-auto-open tour behavior.
+  Revalidated build and Playwright verification pass.
+
+[2026-03-05] v1.18 — Phase 10 welcome circle cleanup landed.
+  Removed extra white ring/backing around welcome logo to keep central first-impression mark circle-only.
+  Updated welcome image fit/backing treatment to preserve circular mark prominence without outer white surround.
+  Revalidated full build.
+
+[2026-03-05] v1.19 — Phase 10 welcome logo crop tuning landed.
+  Applied centered logo scale tune to reduce residual outer-pad/halo perception on welcome surface.
+  Retained ringless circle-only logo surface treatment from prior pass.
+  Revalidated build and Playwright verification pass.
 ```
 
 ---

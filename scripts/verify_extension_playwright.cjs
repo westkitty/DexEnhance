@@ -257,8 +257,8 @@ async function verifyPopup(context, extensionId) {
     if (!result.popup?.settingsState?.modalOpen || !result.popup?.settingsState?.hueControlPresent) {
       result.errors.push('Popup settings modal did not open correctly.');
     }
-    if (!result.popup?.initial?.modalOpen) {
-      result.errors.push('Popup tour did not auto-open on first launch.');
+    if (result.popup?.initial?.modalOpen) {
+      result.errors.push('Popup tour should not auto-open on launch.');
     }
     if (result.popup?.closed?.modalOpen) {
       result.errors.push('Popup tour did not close when requested.');

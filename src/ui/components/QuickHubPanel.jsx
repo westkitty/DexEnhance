@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { useEffect, useState } from 'preact/hooks';
 import { PanelFrame } from './PanelFrame.jsx';
 
 // Simple inline SVG icons — no emoji, no external CDN
@@ -44,6 +45,7 @@ const ICONS = {
 
 const ACTION_GROUPS = [
   {
+    id: 'ai',
     label: 'AI Tools',
     actions: [
       { id: 'prompts',    label: 'Prompt Library',       icon: 'prompts',  accent: true },
@@ -53,6 +55,7 @@ const ACTION_GROUPS = [
     ],
   },
   {
+    id: 'panels',
     label: 'Panels',
     actions: [
       { id: 'sidebar', label: 'Side Panel',    icon: 'sidebar' },
@@ -60,6 +63,7 @@ const ACTION_GROUPS = [
     ],
   },
   {
+    id: 'utilities',
     label: 'Utilities',
     actions: [
       { id: 'export',    label: 'Export Conversation',  icon: 'export'   },
@@ -78,6 +82,21 @@ export function QuickHubPanel({
   onClose,
   onAction,
 }) {
+  const [openGroups, setOpenGroups] = useState({
+    ai: true,
+    panels: false,
+    utilities: false,
+  });
+
+  useEffect(() => {
+    if (!visible) return;
+    setOpenGroups({
+      ai: true,
+      panels: false,
+      utilities: false,
+    });
+  }, [visible]);
+
   if (!visible) return null;
 
   return h(
@@ -89,8 +108,8 @@ export function QuickHubPanel({
       panelState,
       defaultState: defaultPanelState,
       onPanelStateChange,
-      minWidth: 340,
-      minHeight: 260,
+      minWidth: 300,
+      minHeight: 220,
       zIndex: 2147483646,
       onClose,
       showClose: true,
@@ -102,20 +121,36 @@ export function QuickHubPanel({
         h('p', { class: 'dex-form__desc' }, 'Quick Action is your anchor. Open only what you need.'),
         ...ACTION_GROUPS.map((group) =>
           h('div', { key: group.label, class: 'dex-hub__group' }, [
-            h('div', { class: 'dex-hub__group-label' }, group.label),
-            h('div', { class: 'dex-hub__actions' },
-              group.actions.map((action) =>
-                h('button', {
-                  key: action.id,
-                  type: 'button',
-                  class: `dex-link-btn dex-hub__action-btn${action.accent ? ' dex-hub__action-btn--primary' : ''}`,
-                  onClick: () => onAction?.(action.id),
-                }, [
-                  ICONS[action.icon]?.(),
-                  h('span', null, action.label),
-                ])
-              )
+            h(
+              'button',
+              {
+                type: 'button',
+                class: `dex-hub__group-toggle${openGroups[group.id] ? ' is-open' : ''}`,
+                onClick: () => {
+                  setOpenGroups((current) => ({ ...current, [group.id]: !current[group.id] }));
+                },
+                'aria-expanded': openGroups[group.id] ? 'true' : 'false',
+              },
+              [
+                h('span', { class: 'dex-hub__group-label' }, group.label),
+                h('span', { class: 'dex-hub__group-caret', 'aria-hidden': 'true' }, openGroups[group.id] ? '▾' : '▸'),
+              ]
             ),
+            h('div', { class: `dex-hub__group-body${openGroups[group.id] ? ' is-open' : ''}` }, [
+              h('div', { class: 'dex-hub__actions' },
+                group.actions.map((action) =>
+                  h('button', {
+                    key: action.id,
+                    type: 'button',
+                    class: `dex-link-btn dex-hub__action-btn${action.accent ? ' dex-hub__action-btn--primary' : ''}`,
+                    onClick: () => onAction?.(action.id),
+                  }, [
+                    ICONS[action.icon]?.(),
+                    h('span', null, action.label),
+                  ])
+                )
+              ),
+            ]),
           ])
         ),
       ]),

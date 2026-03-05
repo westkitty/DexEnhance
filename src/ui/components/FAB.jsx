@@ -19,8 +19,16 @@ function GripIcon() {
   ]);
 }
 
-export function FAB({ site, onAction, iconUrl = '', panelState, onPanelStateChange }) {
-  const buttonSize = Math.max(52, Math.min(96, Number(panelState?.width || 62)));
+export function FAB({
+  site,
+  onAction,
+  iconUrl = '',
+  panelState,
+  onPanelStateChange,
+  showQuickTourButton = false,
+  onStartQuickTour,
+}) {
+  const buttonSize = Math.max(46, Math.min(84, Number(panelState?.width || 56)));
 
   const drag = useDraggable({
     initialPosition: {
@@ -61,30 +69,44 @@ export function FAB({ site, onAction, iconUrl = '', panelState, onPanelStateChan
       },
       h(GripIcon, null)
     ),
-    h(
-      'button',
-      {
-        type: 'button',
-        class: 'dex-fab__button',
-        style: `width:${buttonSize}px;height:${buttonSize}px;`,
-        onClick: () => onAction?.('hub'),
-        'aria-label': `Open DexEnhance quick hub on ${site}`,
-      },
-      iconUrl
-        ? h('img', {
-            src: iconUrl,
-            alt: `${site} quick action`,
-            class: 'dex-fab__icon',
-            style: `width:${Math.max(24, Math.round(buttonSize * 0.5))}px;height:${Math.max(24, Math.round(buttonSize * 0.5))}px;`,
-          })
-        : h('svg', {
-            width: '24', height: '24', viewBox: '0 0 24 24',
-            fill: 'none', stroke: '#fff', 'stroke-width': '2.5',
-            'stroke-linecap': 'round', 'aria-hidden': 'true',
-          }, [
-            h('line', { x1: '12', y1: '5', x2: '12', y2: '19' }),
-            h('line', { x1: '5', y1: '12', x2: '19', y2: '12' }),
-          ])
-    ),
+    h('div', { class: 'dex-fab__dock' }, [
+      showQuickTourButton
+        ? h(
+            'button',
+            {
+              type: 'button',
+              class: 'dex-fab__quick-tour',
+              onClick: () => onStartQuickTour?.(),
+              'aria-label': `Start quick tour for ${site}`,
+            },
+            'Start Quick Tour'
+          )
+        : null,
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'dex-fab__button',
+          style: `width:${buttonSize}px;height:${buttonSize}px;`,
+          onClick: () => onAction?.('hub'),
+          'aria-label': `Open DexEnhance quick hub on ${site}`,
+        },
+        iconUrl
+          ? h('img', {
+              src: iconUrl,
+              alt: `${site} quick action`,
+              class: 'dex-fab__icon',
+              style: `width:${Math.max(20, Math.round(buttonSize * 0.48))}px;height:${Math.max(20, Math.round(buttonSize * 0.48))}px;`,
+            })
+          : h('svg', {
+              width: '22', height: '22', viewBox: '0 0 24 24',
+              fill: 'none', stroke: '#fff', 'stroke-width': '2.5',
+              'stroke-linecap': 'round', 'aria-hidden': 'true',
+            }, [
+              h('line', { x1: '12', y1: '5', x2: '12', y2: '19' }),
+              h('line', { x1: '5', y1: '12', x2: '19', y2: '12' }),
+            ])
+      ),
+    ]),
   ]);
 }

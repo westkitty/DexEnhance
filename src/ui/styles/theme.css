@@ -286,19 +286,19 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--dex-shell-strong) 94%, transparent);
   color: var(--dex-fg);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   line-height: 1;
-  padding: 8px 10px;
-  min-height: 40px;
+  padding: 7px 9px;
+  min-height: 34px;
   cursor: pointer;
   backdrop-filter: blur(10px) saturate(115%);
   transition: transform var(--dex-transition-fast), border-color var(--dex-transition-fast), box-shadow var(--dex-transition-fast);
 }
 
 .dex-link-btn--panel {
-  min-height: 30px;
-  padding: 6px 8px;
+  min-height: 26px;
+  padding: 4px 7px;
   font-size: 11px;
 }
 
@@ -337,10 +337,16 @@
   position: fixed;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
   pointer-events: auto;
   animation: dex-fade-up var(--dex-transition-med);
+}
+
+.dex-fab__dock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .dex-fab__drag {
@@ -350,8 +356,8 @@
   color: var(--dex-fg-soft);
   font-size: 11px;
   line-height: 1;
-  min-height: 24px;
-  padding: 6px 10px;
+  min-height: 22px;
+  padding: 5px 9px;
   cursor: grab;
 }
 
@@ -362,13 +368,13 @@
 }
 
 .dex-fab__button {
-  width: 58px;
-  height: 58px;
+  width: 56px;
+  height: 56px;
   border: 0;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--dex-accent), var(--dex-cta));
   color: #ffffff;
-  font-size: 24px;
+  font-size: 22px;
   box-shadow: var(--dex-shadow-md);
   cursor: pointer;
   display: inline-flex;
@@ -403,9 +409,33 @@
 }
 
 .dex-fab__icon {
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 10px;
+}
+
+.dex-fab__quick-tour {
+  border: 1px solid color-mix(in srgb, var(--dex-cta) 54%, var(--dex-border));
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--dex-cta) 84%, #ffffff 10%),
+    color-mix(in srgb, var(--dex-accent) 72%, #ffffff 15%)
+  );
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 34px;
+  padding: 7px 12px;
+  box-shadow: var(--dex-shadow-sm);
+  cursor: pointer;
+  transition: transform var(--dex-transition-fast), filter var(--dex-transition-fast), box-shadow var(--dex-transition-fast);
+}
+
+.dex-fab__quick-tour:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: var(--dex-shadow-md);
 }
 
 .dex-token-overlay {
@@ -569,10 +599,14 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 9px 10px;
+  padding: 8px 9px;
   border-bottom: 1px solid var(--dex-border);
   cursor: grab;
   user-select: none;
+}
+
+.dex-panel-frame__header:active {
+  cursor: grabbing;
 }
 
 .dex-panel-frame__title {
@@ -642,11 +676,13 @@
 
 .dex-panel-frame__resize {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 18px;
-  height: 18px;
+  right: 1px;
+  bottom: 1px;
+  width: 22px;
+  height: 22px;
   cursor: nwse-resize;
+  z-index: 3;
+  background: linear-gradient(135deg, transparent 52%, color-mix(in srgb, var(--dex-accent) 28%, transparent));
   border-right: 2px solid color-mix(in srgb, var(--dex-border-strong) 75%, transparent);
   border-bottom: 2px solid color-mix(in srgb, var(--dex-border-strong) 75%, transparent);
   border-bottom-right-radius: 8px;
@@ -738,7 +774,10 @@
   border-radius: 999px;
   overflow: hidden;
   margin: 0;
-  box-shadow: 0 20px 48px rgba(4, 20, 37, 0.34);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .dex-welcome__logo {
@@ -746,11 +785,12 @@
   height: 100%;
   border-radius: 999px;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
+  background: transparent;
   transform: none;
   filter: none;
-  image-rendering: -webkit-optimize-contrast;
+  image-rendering: auto;
 }
 
 .dex-welcome__cta {
@@ -1331,13 +1371,41 @@ select.dex-input:focus-visible {
   gap: 6px;
 }
 
+.dex-hub__group-toggle {
+  border: 1px solid var(--dex-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--dex-shell-strong) 92%, transparent);
+  padding: 7px 9px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.dex-hub__group-toggle.is-open {
+  border-color: var(--dex-border-strong);
+}
+
 .dex-hub__group-label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--dex-muted);
-  padding: 2px 0 0;
+  padding: 0;
+}
+
+.dex-hub__group-caret {
+  font-size: 12px;
+  color: var(--dex-muted);
+}
+
+.dex-hub__group-body {
+  display: none;
+}
+
+.dex-hub__group-body.is-open {
+  display: block;
 }
 
 .dex-hub__action-btn {
@@ -1375,9 +1443,14 @@ select.dex-input:focus-visible {
 
 .dex-welcome__tagline {
   font-size: 11px;
-  color: var(--dex-muted);
+  color: var(--dex-fg-soft);
   line-height: 1.4;
-  max-width: 220px;
+  max-width: 240px;
+  margin-top: 2px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--dex-border-strong) 42%, #ffffff 58%);
+  background: color-mix(in srgb, var(--dex-shell-strong) 94%, #ffffff 6%);
 }
 
 /* ── HUDSettingsPanel labeled slider rows ────────────────────── */
@@ -1415,6 +1488,36 @@ select.dex-input:focus-visible {
   color: var(--dex-fg-soft);
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.dex-settings-accordion__toggle {
+  width: 100%;
+  border: 1px solid var(--dex-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--dex-shell-strong) 92%, transparent);
+  color: var(--dex-fg);
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.dex-settings-accordion__toggle.is-open {
+  border-color: var(--dex-border-strong);
+}
+
+.dex-settings-accordion__caret {
+  font-size: 12px;
+  color: var(--dex-muted);
+}
+
+.dex-settings-accordion__body {
+  display: grid;
+  gap: 8px;
 }
 
 /* ── BrandBadge hover ────────────────────────────────────────── */
