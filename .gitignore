@@ -7,6 +7,8 @@ bun.lock
 
 # Playwright runtime/browser profile artifacts (volatile)
 output/playwright/session/
+test-results/
+playwright-report/
 
 # Generated Firefox package artifact
 DexEnhance-v1-firefox.zip
