@@ -2,6 +2,8 @@ import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.js';
 import { PanelFrame } from './PanelFrame.jsx';
+import { ContextualHint } from './ContextualHint.jsx';
+import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
 
 const SETTINGS_KEY = 'optimizerSettings';
 const DEFAULT_SETTINGS = Object.freeze({
@@ -70,7 +72,18 @@ export function PromptOptimizerModal({
       },
     });
     if (!response.ok) {
-      console.warn('[DexEnhance] Failed to persist optimizer settings:', response.error);
+      showDexToast({
+        type: 'error',
+        title: 'Optimizer settings not saved',
+        message: response.error || 'Storage write failed.',
+        diagnostics: buildDiagnostics({
+          module: 'ui/PromptOptimizerModal',
+          operation: 'optimizer_settings.persist',
+          host: window.location.hostname,
+          url: window.location.href,
+          error: new Error(response.error || 'Storage write failed'),
+        }),
+      });
     }
   }
 
@@ -96,6 +109,18 @@ export function PromptOptimizerModal({
       setMethodUsed(result?.methodUsed || 'local_only');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      showDexToast({
+        type: 'error',
+        title: 'Prompt optimization failed',
+        message: err instanceof Error ? err.message : String(err),
+        diagnostics: buildDiagnostics({
+          module: 'ui/PromptOptimizerModal',
+          operation: 'optimizer.run',
+          host: window.location.hostname,
+          url: window.location.href,
+          error: err,
+        }),
+      });
     } finally {
       setBusy(false);
     }
@@ -138,6 +163,12 @@ export function PromptOptimizerModal({
     },
     [
       h('div', { class: 'dex-form' }, [
+        h(ContextualHint, {
+          hintId: 'prompt-optimizer',
+          visible: true,
+          title: 'Optimizer hint',
+          message: 'Start with local optimization first. Enable AI refinement only when you need model-specific wording.',
+        }),
         h('label', { class: 'dex-sidebar__label' }, 'Source Prompt'),
         h('textarea', {
           class: 'dex-textarea',

@@ -1,27 +1,18 @@
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../lib/message-protocol.js';
 import { DEFAULT_HUD_SETTINGS, HUD_SETTINGS_KEY } from '../lib/ui-settings.js';
 import { normalizeFeatureSettings } from '../lib/feature-settings.js';
-import { TOUR_STEPS, TOUR_VERSION } from '../ui/tour-content.js';
 
-const POPUP_TOUR_KEY = 'popupTourSeenVersion';
-
-const modalEl = document.getElementById('tour-modal');
-const openTourButton = document.getElementById('open-tour');
-const closeTourButton = document.getElementById('tour-close');
-const backButton = document.getElementById('tour-back');
-const nextButton = document.getElementById('tour-next');
-const progressEl = document.getElementById('tour-progress');
-const titleEl = document.getElementById('tour-title');
-const descEl = document.getElementById('tour-desc');
-const exampleEl = document.getElementById('tour-example');
 const settingsModalEl = document.getElementById('settings-modal');
 const openSettingsButton = document.getElementById('open-settings');
+const openHomeButton = document.getElementById('open-home');
 const closeSettingsButton = document.getElementById('settings-close');
 const hueInput = document.getElementById('hud-hue');
 const hueValueEl = document.getElementById('hud-hue-value');
 const resetLayoutButton = document.getElementById('reset-layout');
 const resetThemeButton = document.getElementById('reset-theme');
 const settingsStatusEl = document.getElementById('settings-status');
+const popupStatusSummaryEl = document.getElementById('popup-status-summary');
+
 const featureToggleEls = {
   ghostOverlay: document.getElementById('feature-ghostOverlay'),
   observerAgent: document.getElementById('feature-observerAgent'),
@@ -32,25 +23,11 @@ const featureToggleEls = {
   promptUnitTesting: document.getElementById('feature-promptUnitTesting'),
 };
 
-let stepIndex = 0;
 let hudSettings = {};
 let featureSettings = normalizeFeatureSettings({});
 let hueSaveTimer = null;
 
 document.documentElement.style.setProperty('--dex-popup-logo-url', 'url("../icons/icon128.png")');
-
-function renderStep() {
-  const step = TOUR_STEPS[stepIndex] || TOUR_STEPS[0];
-  if (!step) return;
-
-  progressEl.textContent = `Step ${stepIndex + 1} of ${TOUR_STEPS.length}`;
-  titleEl.textContent = step.title;
-  descEl.textContent = step.description;
-  exampleEl.textContent = step.example;
-
-  backButton.disabled = stepIndex === 0;
-  nextButton.textContent = stepIndex === TOUR_STEPS.length - 1 ? 'Finish' : 'Next';
-}
 
 function setModalOpen(target, isOpen) {
   if (!(target instanceof HTMLElement)) return;
@@ -61,6 +38,11 @@ function setModalOpen(target, isOpen) {
 function setStatus(message) {
   if (!settingsStatusEl) return;
   settingsStatusEl.textContent = message;
+}
+
+function setPopupSummary(message) {
+  if (!popupStatusSummaryEl) return;
+  popupStatusSummaryEl.textContent = message;
 }
 
 function applyHueValue(value) {
@@ -141,65 +123,45 @@ async function updateFeatureToggle(moduleId, enabled) {
   setStatus(`Saved feature toggle: ${moduleId}`);
 }
 
-async function markTourSeen() {
-  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
-    items: {
-      [POPUP_TOUR_KEY]: TOUR_VERSION,
-    },
-  });
-  if (!response.ok) {
-    console.warn('[DexEnhance] Popup tour state save failed:', response.error);
-  }
+async function refreshPopupStatus() {
+  const enabledRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'enabled' });
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabUrl = String(activeTab?.url || '');
+  const host = tabUrl.includes('chatgpt.com')
+    ? 'ChatGPT'
+    : tabUrl.includes('gemini.google.com')
+      ? 'Gemini'
+      : 'Unsupported tab';
+  const enabledLabel = enabledRes.ok ? (enabledRes.data === false ? 'disabled' : 'enabled') : 'unknown';
+  const version = chrome.runtime.getManifest()?.version || 'unknown';
+  setPopupSummary(`DexEnhance ${enabledLabel} • Host: ${host} • v${version}`);
 }
 
-async function maybeAutoOpenTour() {
-  const state = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, {
-    key: POPUP_TOUR_KEY,
-  });
+async function openHomeInActiveTab() {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabId = Number(activeTab?.id);
+  const tabUrl = String(activeTab?.url || '');
+  const supported = tabUrl.includes('chatgpt.com') || tabUrl.includes('gemini.google.com');
 
-  if (!state.ok || state.data !== TOUR_VERSION) {
-    stepIndex = 0;
-    renderStep();
-    setModalOpen(modalEl, true);
-  }
-}
-
-openTourButton?.addEventListener('click', () => {
-  setModalOpen(settingsModalEl, false);
-  stepIndex = 0;
-  renderStep();
-  setModalOpen(modalEl, true);
-});
-
-closeTourButton?.addEventListener('click', () => {
-  setModalOpen(modalEl, false);
-  void markTourSeen();
-});
-
-backButton?.addEventListener('click', () => {
-  stepIndex = Math.max(stepIndex - 1, 0);
-  renderStep();
-});
-
-nextButton?.addEventListener('click', () => {
-  if (stepIndex >= TOUR_STEPS.length - 1) {
-    setModalOpen(modalEl, false);
-    void markTourSeen();
+  if (!Number.isFinite(tabId) || !supported) {
+    setPopupSummary('Open ChatGPT or Gemini in the active tab, then try again.');
     return;
   }
-  stepIndex = Math.min(stepIndex + 1, TOUR_STEPS.length - 1);
-  renderStep();
-});
 
-modalEl?.addEventListener('click', (event) => {
-  if (event.target === modalEl) {
-    setModalOpen(modalEl, false);
-    void markTourSeen();
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.UI_OPEN_HOME, { tabId });
+  if (!response.ok) {
+    setPopupSummary(`Open Home failed: ${response.error || 'unknown error'}`);
+    return;
   }
+  setPopupSummary('Opening DexEnhance Home in active tab...');
+  window.close();
+}
+
+openHomeButton?.addEventListener('click', () => {
+  void openHomeInActiveTab();
 });
 
 openSettingsButton?.addEventListener('click', () => {
-  setModalOpen(modalEl, false);
   setModalOpen(settingsModalEl, true);
   void Promise.all([loadHudSettings(), loadFeatureSettings()]);
 });
@@ -259,15 +221,10 @@ settingsModalEl?.addEventListener('click', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && modalEl?.classList.contains('is-open')) {
-    setModalOpen(modalEl, false);
-    void markTourSeen();
-  }
   if (event.key === 'Escape' && settingsModalEl?.classList.contains('is-open')) {
     setModalOpen(settingsModalEl, false);
   }
 });
 
-renderStep();
-
+void refreshPopupStatus();
 console.log('[DexEnhance] Popup loaded');

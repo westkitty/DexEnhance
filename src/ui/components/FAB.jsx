@@ -25,8 +25,6 @@ export function FAB({
   iconUrl = '',
   panelState,
   onPanelStateChange,
-  showQuickTourButton = false,
-  onStartQuickTour,
 }) {
   const buttonSize = Math.max(46, Math.min(84, Number(panelState?.width || 56)));
 
@@ -70,26 +68,14 @@ export function FAB({
       h(GripIcon, null)
     ),
     h('div', { class: 'dex-fab__dock' }, [
-      showQuickTourButton
-        ? h(
-            'button',
-            {
-              type: 'button',
-              class: 'dex-fab__quick-tour',
-              onClick: () => onStartQuickTour?.(),
-              'aria-label': `Start quick tour for ${site}`,
-            },
-            'Start Quick Tour'
-          )
-        : null,
       h(
         'button',
         {
           type: 'button',
           class: 'dex-fab__button',
           style: `width:${buttonSize}px;height:${buttonSize}px;`,
-          onClick: () => onAction?.('hub'),
-          'aria-label': `Open DexEnhance quick hub on ${site}`,
+          onClick: () => onAction?.('home'),
+          'aria-label': `Open DexEnhance Home on ${site}`,
         },
         iconUrl
           ? h('img', {

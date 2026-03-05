@@ -15,8 +15,6 @@ import { parseConversation } from '../shared/parser.js';
 import { exportToDocx, exportToPdf } from '../shared/exporter.js';
 import { injectApiBridge, subscribeToApiBridge } from '../shared/api-bridge.js';
 import { TokenOverlay } from '../../ui/components/TokenOverlay.jsx';
-import { FeatureTourModal } from '../../ui/components/FeatureTourModal.jsx';
-import { TOUR_VERSION } from '../../ui/tour-content.js';
 import {
   deterministicRewritePrompt,
   readCurrentComposerText,
@@ -27,11 +25,17 @@ import {
 import { PromptOptimizerModal } from '../../ui/components/PromptOptimizerModal.jsx';
 import { PanelFrame } from '../../ui/components/PanelFrame.jsx';
 import { HUDSettingsPanel } from '../../ui/components/HUDSettingsPanel.jsx';
-import { QuickHubPanel } from '../../ui/components/QuickHubPanel.jsx';
 import { WelcomeHandoffModal } from '../../ui/components/WelcomeHandoffModal.jsx';
+import { DexToastViewport } from '../../ui/components/DexToastViewport.jsx';
 import { normalizeFeatureSettings } from '../../lib/feature-settings.js';
 import { fetchFeatureSettings, watchFeatureSettings } from '../shared/feature-flags.js';
 import { createPopoutCanvasController } from '../shared/popout-canvas-controller.js';
+import {
+  buildDiagnostics,
+  copyDiagnosticsToClipboard,
+  relayToastFromRuntimeMessage,
+  showDexToast,
+} from '../../ui/runtime/dex-toast-controller.js';
 import {
   buildSemanticClipboardPreamble,
   ingestSemanticClipboardContext,
@@ -116,18 +120,189 @@ async function logStorageRoundTrip() {
 
   let queueSizeState = 0;
   let welcomeVisible = false;
-  let quickTourPromptVisible = false;
   let tokenModel = null;
   let tokenCount = null;
   let tokenSource = null;
   let tokenUpdatedAt = null;
   let featureSettings = normalizeFeatureSettings({});
   let semanticIngestTimer = null;
+  let queueController = null;
+  let queueRuntimeState = null;
+  let adapterHealthState = {
+    healthy: true,
+    uiInjected: true,
+    hasTextarea: false,
+    hasSubmitButton: false,
+    hasChatList: false,
+    lastCheckedAt: 0,
+    reason: '',
+  };
+  let workerHealthState = {
+    lastPingAt: 0,
+    lastFailureAt: 0,
+    lastError: '',
+  };
+  let lastAdapterHealthToastAt = 0;
+  let healthCheckTimer = null;
 
   let hudSettings = normalizeHudSettings({}, { width: window.innerWidth, height: window.innerHeight });
   let persistHudTimer = null;
 
   const getViewport = () => ({ width: window.innerWidth, height: window.innerHeight });
+
+  const toastFailure = ({
+    operation,
+    title = 'DexEnhance action failed',
+    message,
+    error,
+    details = '',
+    actions = [],
+    type = 'error',
+  }) => {
+    showDexToast({
+      type,
+      title,
+      message: message || (error instanceof Error ? error.message : String(error || 'Unknown error')),
+      details,
+      actions,
+      diagnostics: buildDiagnostics({
+        module: 'content/chatgpt',
+        operation,
+        host: window.location.hostname,
+        url: window.location.href,
+        error,
+      }),
+    });
+  };
+
+  const statusDiagnosticsPayload = (operation, error) => ({
+    ...buildDiagnostics({
+      module: 'content/chatgpt',
+      operation,
+      host: window.location.hostname,
+      url: window.location.href,
+      error,
+    }),
+    adapterHealth: adapterHealthState,
+    workerHealth: workerHealthState,
+    queue: {
+      paused: queueRuntimeState?.paused === true,
+      count: queueRuntimeState?.items?.length || 0,
+      lastError: queueRuntimeState?.lastError || null,
+    },
+    token: {
+      source: tokenSource || '',
+      updatedAt: tokenUpdatedAt || 0,
+    },
+  });
+
+  const copyStatusDiagnostics = async () => {
+    const payload = statusDiagnosticsPayload('status.copy_diagnostics', null);
+    const copied = await copyDiagnosticsToClipboard(payload).catch(() => false);
+    if (copied) {
+      showDexToast({
+        type: 'success',
+        title: 'Diagnostics copied',
+        message: 'Status diagnostics copied to your clipboard.',
+      });
+    } else {
+      showDexToast({
+        type: 'warning',
+        title: 'Clipboard unavailable',
+        message: 'DexEnhance could not access the clipboard.',
+      });
+    }
+  };
+
+  const runAdapterHealthCheck = ({ notify = false } = {}) => {
+    const next = {
+      uiInjected: ui.host?.isConnected === true,
+      hasTextarea: Boolean(adapter.getTextarea()),
+      hasSubmitButton: Boolean(adapter.getSubmitButton()),
+      hasChatList: Boolean(adapter.getChatListContainer()),
+      lastCheckedAt: Date.now(),
+      reason: '',
+      healthy: true,
+    };
+    next.healthy = next.uiInjected && next.hasTextarea && next.hasSubmitButton && next.hasChatList;
+    if (!next.healthy) {
+      next.reason = 'Selector mismatch or host UI drift detected.';
+    }
+
+    const becameUnhealthy = adapterHealthState.healthy !== false && next.healthy === false;
+    adapterHealthState = next;
+    renderUI();
+
+    if (notify && !next.healthy) {
+      const ts = Date.now();
+      if (becameUnhealthy || ts - lastAdapterHealthToastAt > 60000) {
+        lastAdapterHealthToastAt = ts;
+        showDexToast({
+          type: 'error',
+          title: 'Host adapter health check failed',
+          message: 'DexEnhance could not find one or more required host selectors.',
+          details: `uiInjected=${next.uiInjected}, textarea=${next.hasTextarea}, submit=${next.hasSubmitButton}, chatList=${next.hasChatList}`,
+          diagnostics: statusDiagnosticsPayload('adapter.health_check', new Error(next.reason || 'Adapter unhealthy')),
+          actions: [
+            {
+              label: 'Run diagnostics',
+              onSelect: () => { void copyStatusDiagnostics(); },
+            },
+            {
+              label: 'Attempt re-inject',
+              onSelect: () => {
+                const reinjected = injectApiBridge();
+                adapter.startObservers();
+                runAdapterHealthCheck({ notify: false });
+                showDexToast({
+                  type: reinjected ? 'info' : 'warning',
+                  title: reinjected ? 'Re-inject attempted' : 'Re-inject skipped',
+                  message: reinjected
+                    ? 'UI re-injection attempted. Re-checking adapter health.'
+                    : 'Could not re-inject API bridge script.',
+                });
+              },
+            },
+          ],
+          durationMs: 12000,
+        });
+      }
+    }
+  };
+
+  const scheduleAdapterHealthCheck = ({ notify = false } = {}) => {
+    if (healthCheckTimer) window.clearTimeout(healthCheckTimer);
+    healthCheckTimer = window.setTimeout(() => runAdapterHealthCheck({ notify }), 220);
+  };
+
+  const pingServiceWorker = async ({ notifyOnFailure = false } = {}) => {
+    const ping = await sendRuntimeMessage(MESSAGE_ACTIONS.PING, {}, { timeoutMs: 3600 });
+    if (ping.ok) {
+      workerHealthState = {
+        ...workerHealthState,
+        lastPingAt: Date.now(),
+        lastError: '',
+      };
+      renderUI();
+      return;
+    }
+
+    workerHealthState = {
+      ...workerHealthState,
+      lastFailureAt: Date.now(),
+      lastError: ping.error || 'Service worker ping failed.',
+    };
+    renderUI();
+
+    if (notifyOnFailure) {
+      showDexToast({
+        type: 'warning',
+        title: 'Service worker connection issue',
+        message: workerHealthState.lastError,
+        diagnostics: statusDiagnosticsPayload('service_worker.ping', new Error(workerHealthState.lastError)),
+      });
+    }
+  };
 
   const panelState = (panelId) => hudSettings.panels[panelId] || defaultPanelState(panelId, getViewport());
   const panelDefault = (panelId) => defaultPanelState(panelId, getViewport());
@@ -145,6 +320,7 @@ async function logStorageRoundTrip() {
     ui.mountPoint.style.setProperty('--dex-accent', palette.accent);
     ui.mountPoint.style.setProperty('--dex-accent-2', palette.accent2);
     ui.mountPoint.style.setProperty('--dex-cta', palette.cta);
+    ui.mountPoint.style.setProperty('--dex-watermark-opacity', String(hudSettings.watermarkOpacity ?? 0.30));
     ui.mountPoint.style.setProperty('--dex-bg-base', bgPalette.bgBase);
     ui.mountPoint.style.setProperty('--dex-bg-glass', bgPalette.bgGlass);
   };
@@ -156,6 +332,14 @@ async function logStorageRoundTrip() {
         items: {
           [HUD_SETTINGS_KEY]: hudSettings,
         },
+      }).then((response) => {
+        if (!response.ok) {
+          toastFailure({
+            operation: 'hud_settings.persist',
+            title: 'Could not save HUD settings',
+            error: new Error(response.error || 'Storage write failed'),
+          });
+        }
       });
     }, 220);
   };
@@ -179,23 +363,6 @@ async function logStorageRoundTrip() {
 
   const openWindow = (panelId) => setPanelVisibility(panelId, true);
   const closeWindow = (panelId) => setPanelVisibility(panelId, false);
-  const toggleWindow = (panelId) => setPanelVisibility(panelId, !isPanelOpen(panelId));
-
-  const openHubAction = (action) => {
-    if (action === 'sidebar') openWindow('sidebar');
-    else if (action === 'tokens') openWindow('tokens');
-    else if (action === 'prompts') openWindow('promptLibrary');
-    else if (action === 'optimize') openWindow('optimizer');
-    else if (action === 'settings') openWindow('settings');
-    else if (action === 'tour') openWindow('tour');
-    else if (action === 'export') openWindow('export');
-    else if (action === 'context') {
-      void runSemanticClipboardInject();
-    }
-    else if (action === 'liveRender') {
-      void runPopoutCanvasOpenLatest();
-    }
-  };
 
   const popoutCanvasController = createPopoutCanvasController({
     adapter,
@@ -205,13 +372,23 @@ async function logStorageRoundTrip() {
 
   const runSemanticClipboardInject = async () => {
     if (featureSettings.modules.semanticClipboard.enabled !== true) {
-      console.warn('[DexEnhance] Semantic Clipboard is disabled in settings.');
+      toastFailure({
+        operation: 'semantic_clipboard.inject',
+        title: 'Semantic Clipboard disabled',
+        type: 'warning',
+        message: 'Enable Semantic Clipboard in Settings to inject context.',
+      });
       return;
     }
 
     const queryText = readCurrentComposerText(adapter) || adapter.getLatestAssistantTurnText();
     if (!queryText.trim()) {
-      console.warn('[DexEnhance] Semantic Clipboard inject skipped: no prompt text detected.');
+      toastFailure({
+        operation: 'semantic_clipboard.inject',
+        title: 'No prompt text found',
+        type: 'warning',
+        message: 'DexEnhance could not find text in the current composer.',
+      });
       return;
     }
 
@@ -222,26 +399,43 @@ async function logStorageRoundTrip() {
     });
 
     if (!response.ok) {
-      console.warn('[DexEnhance] Semantic Clipboard preamble request failed:', response.error);
+      toastFailure({
+        operation: 'semantic_clipboard.build_preamble',
+        title: 'Context preamble failed',
+        error: new Error(response.error || 'Preamble request failed'),
+      });
       return;
     }
 
     const preamble = typeof response.data?.preamble === 'string' ? response.data.preamble : '';
     if (!preamble.trim()) {
-      console.warn('[DexEnhance] Semantic Clipboard has no relevant context yet.');
+      toastFailure({
+        operation: 'semantic_clipboard.inject',
+        title: 'No relevant context yet',
+        type: 'info',
+        message: 'Semantic Clipboard has not collected relevant context for this prompt yet.',
+      });
       return;
     }
 
     const applied = prependPreambleToComposer(adapter, preamble, readCurrentComposerText(adapter));
     if (!applied) {
-      console.warn('[DexEnhance] Semantic Clipboard inject failed: no composer detected.');
+      toastFailure({
+        operation: 'semantic_clipboard.inject',
+        title: 'Prompt insertion failed',
+        error: new Error('No composer detected'),
+      });
     }
   };
 
   const runPopoutCanvasOpenLatest = async () => {
     const response = await popoutCanvasController.openLatest();
     if (!response?.ok) {
-      console.warn('[DexEnhance] Pop-Out Canvas open failed:', response?.error || 'unknown error');
+      toastFailure({
+        operation: 'popout_canvas.open_latest',
+        title: 'Pop-out canvas failed',
+        error: new Error(response?.error || 'Unknown error'),
+      });
     }
   };
 
@@ -276,59 +470,30 @@ async function logStorageRoundTrip() {
     scheduleSemanticClipboardIngest();
   });
 
-  const markTourSeen = async () => {
+  const markOnboardingSeen = async () => {
     welcomeVisible = false;
-    quickTourPromptVisible = false;
-    const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
-      items: {
-        tourSeenVersion: TOUR_VERSION,
-        [ONBOARDING_SEEN_KEY]: ONBOARDING_VERSION,
-      },
-    });
-    if (!setRes.ok) {
-      console.warn('[DexEnhance] ChatGPT failed to persist tour seen state:', setRes.error);
-    }
-    renderUI();
-  };
-
-  const markOnboardingSeen = async ({ hideQuickTour = true } = {}) => {
-    welcomeVisible = false;
-    if (hideQuickTour) quickTourPromptVisible = false;
     const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
       items: {
         [ONBOARDING_SEEN_KEY]: ONBOARDING_VERSION,
       },
     });
     if (!setRes.ok) {
-      console.warn('[DexEnhance] ChatGPT failed to persist onboarding seen state:', setRes.error);
+      toastFailure({
+        operation: 'onboarding.persist_seen',
+        title: 'Could not save onboarding state',
+        error: new Error(setRes.error || 'Storage write failed'),
+      });
     }
     renderUI();
   };
 
   const handleWelcomeGetStarted = () => {
     welcomeVisible = false;
-    quickTourPromptVisible = true;
     let next = updatePanelVisibilityInSettings(hudSettings, 'fab', true, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'sidebar', true, getViewport());
     next = updatePanelVisibilityInSettings(next, 'welcome', false, getViewport());
     setHudSettings(next);
-    void markOnboardingSeen({ hideQuickTour: false });
-  };
-
-  const applyPostTourLayout = ({ openPromptLibrary = false } = {}) => {
-    let next = enforceOnboardingVisibility(hudSettings);
-    next = updatePanelVisibilityInSettings(next, 'hub', false, getViewport());
-    next = updatePanelVisibilityInSettings(next, 'tour', false, getViewport());
-    if (openPromptLibrary) {
-      next = updatePanelVisibilityInSettings(next, 'promptLibrary', true, getViewport());
-    }
-    setHudSettings(next);
-  };
-
-  const startQuickTour = () => {
-    quickTourPromptVisible = false;
-    openWindow('tour');
     void markOnboardingSeen();
-    renderUI();
   };
 
   const handleExport = async (format) => {
@@ -431,24 +596,6 @@ async function logStorageRoundTrip() {
           onZipTransitionEnd: () => {},
         }),
 
-        isPanelOpen('hub')
-          ? h(QuickHubPanel, {
-              key: 'hub',
-              visible: true,
-              iconUrl,
-              panelState: panelState('hub'),
-              defaultPanelState: panelDefault('hub'),
-              onPanelStateChange: (next) => setPanel('hub', next),
-              onClose: () => closeWindow('hub'),
-              onAction: (action) => {
-                openHubAction(action);
-                if (action !== 'context' && action !== 'liveRender') {
-                  closeWindow('hub');
-                }
-              },
-            })
-          : null,
-
         isPanelOpen('sidebar')
           ? h(PanelFrame, {
               key: 'sidebar',
@@ -471,7 +618,43 @@ async function logStorageRoundTrip() {
                 currentChatUrl: window.location.href,
                 queueSize: queueSizeState,
                 iconUrl,
-                onRequestTour: () => openWindow('tour'),
+                watermarkOpacity: hudSettings.watermarkOpacity,
+                queueController,
+                statusSnapshot: {
+                  hostLabel: 'ChatGPT',
+                  adapterHealth: adapterHealthState,
+                  workerHealth: workerHealthState,
+                  queueState: queueRuntimeState || queueController?.getState?.() || { paused: false, items: [] },
+                  tokenState: {
+                    source: tokenSource,
+                    updatedAt: tokenUpdatedAt,
+                  },
+                  featureSettings,
+                },
+                onCopyDiagnostics: () => {
+                  void copyStatusDiagnostics();
+                },
+                onReinjectUi: () => {
+                  const reinjected = injectApiBridge();
+                  adapter.startObservers();
+                  scheduleAdapterHealthCheck({ notify: true });
+                  showDexToast({
+                    type: reinjected ? 'info' : 'warning',
+                    title: reinjected ? 'Re-inject attempted' : 'Re-inject failed',
+                    message: reinjected
+                      ? 'DexEnhance requested a fresh bridge injection.'
+                      : 'Could not inject API bridge script.',
+                  });
+                },
+                onReloadAdapter: () => {
+                  adapter.startObservers();
+                  scheduleAdapterHealthCheck({ notify: true });
+                  showDexToast({
+                    type: 'info',
+                    title: 'Adapter reload requested',
+                    message: 'Adapter observers restarted and health check queued.',
+                  });
+                },
                 onRequestPrompts: () => openWindow('promptLibrary'),
                 onRequestOptimizer: () => openWindow('optimizer'),
                 onRequestExport: () => openWindow('export'),
@@ -524,11 +707,9 @@ async function logStorageRoundTrip() {
               iconUrl,
               panelState: panelState('fab'),
               onPanelStateChange: (next) => setPanel('fab', next),
-              showQuickTourButton: quickTourPromptVisible,
-              onStartQuickTour: startQuickTour,
               onAction: (action) => {
-                if (action === 'hub') {
-                  toggleWindow('hub');
+                if (action === 'home') {
+                  openWindow('sidebar');
                 }
               },
             })
@@ -543,7 +724,11 @@ async function logStorageRoundTrip() {
           onInsert: (text) => {
             const inserted = insertTextThroughAdapter(adapter, text);
             if (!inserted) {
-              console.warn('[DexEnhance] ChatGPT prompt insert failed: no textarea found');
+              toastFailure({
+                operation: 'prompt_library.insert',
+                title: 'Prompt insertion failed',
+                error: new Error('No composer textarea detected'),
+              });
             }
           },
           windowState: panelState('promptLibrary'),
@@ -575,33 +760,16 @@ async function logStorageRoundTrip() {
           onApply: (text) => {
             const applied = writeOptimizedComposerText(adapter, text);
             if (!applied) {
-              console.warn('[DexEnhance] ChatGPT optimizer apply failed: no textarea found');
+              toastFailure({
+                operation: 'optimizer.apply',
+                title: 'Could not apply optimized prompt',
+                error: new Error('No composer textarea detected'),
+              });
             }
           },
           windowState: panelState('optimizer'),
           defaultWindowState: panelDefault('optimizer'),
           onWindowStateChange: (next) => setPanel('optimizer', next),
-        }),
-        h(FeatureTourModal, {
-          key: 'tour',
-          visible: isPanelOpen('tour'),
-          site: 'ChatGPT',
-          iconUrl,
-          onOpenPrompts: () => {
-            applyPostTourLayout({ openPromptLibrary: true });
-            void markTourSeen();
-          },
-          onClose: () => {
-            applyPostTourLayout();
-            void markTourSeen();
-          },
-          onComplete: () => {
-            applyPostTourLayout();
-            void markTourSeen();
-          },
-          windowState: panelState('tour'),
-          defaultWindowState: panelDefault('tour'),
-          onWindowStateChange: (next) => setPanel('tour', next),
         }),
         h(HUDSettingsPanel, {
           key: 'settings',
@@ -617,6 +785,13 @@ async function logStorageRoundTrip() {
               accentHue: hue,
             });
           },
+          watermarkOpacity: hudSettings.watermarkOpacity,
+          onWatermarkOpacityChange: (opacity) => {
+            setHudSettings({
+              ...hudSettings,
+              watermarkOpacity: opacity,
+            });
+          },
           bgBaseHue: hudSettings.bgBaseHue,
           bgBaseSaturation: hudSettings.bgBaseSaturation,
           bgBaseLightness: hudSettings.bgBaseLightness,
@@ -629,13 +804,11 @@ async function logStorageRoundTrip() {
           },
           panelVisibility: hudSettings.visibility,
           panelOpacities: {
-            hub: panelState('hub').opacity,
             sidebar: panelState('sidebar').opacity,
             tokens: panelState('tokens').opacity,
             fab: panelState('fab').opacity,
             promptLibrary: panelState('promptLibrary').opacity,
             optimizer: panelState('optimizer').opacity,
-            tour: panelState('tour').opacity,
             export: panelState('export').opacity,
           },
           onPanelVisibilityChange: (panelId, nextOpen) => {
@@ -656,7 +829,6 @@ async function logStorageRoundTrip() {
               height: safeSize,
             });
           },
-          onStartQuickTour: startQuickTour,
           onResetLayout: () => {
             setHudSettings({
               ...hudSettings,
@@ -664,11 +836,12 @@ async function logStorageRoundTrip() {
             });
           },
           onResetTheme: () => {
-            setHudSettings({
-              accentHue: DEFAULT_HUD_SETTINGS.accentHue,
-              bgBaseHue: DEFAULT_HUD_SETTINGS.bgBaseHue,
-              bgBaseSaturation: DEFAULT_HUD_SETTINGS.bgBaseSaturation,
-              bgBaseLightness: DEFAULT_HUD_SETTINGS.bgBaseLightness,
+              setHudSettings({
+                accentHue: DEFAULT_HUD_SETTINGS.accentHue,
+                watermarkOpacity: DEFAULT_HUD_SETTINGS.watermarkOpacity,
+                bgBaseHue: DEFAULT_HUD_SETTINGS.bgBaseHue,
+                bgBaseSaturation: DEFAULT_HUD_SETTINGS.bgBaseSaturation,
+                bgBaseLightness: DEFAULT_HUD_SETTINGS.bgBaseLightness,
               bgGlassHue: DEFAULT_HUD_SETTINGS.bgGlassHue,
               bgGlassSaturation: DEFAULT_HUD_SETTINGS.bgGlassSaturation,
               bgGlassLightness: DEFAULT_HUD_SETTINGS.bgGlassLightness,
@@ -680,13 +853,35 @@ async function logStorageRoundTrip() {
             closeWindow('settings');
           },
         }),
+        h(DexToastViewport, {
+          key: 'dex-toast-viewport',
+        }),
       ]),
       ui.mountPoint
     );
   };
 
-  injectApiBridge();
+  const bridgeInjected = injectApiBridge();
+  if (!bridgeInjected) {
+    toastFailure({
+      operation: 'api_bridge.inject',
+      title: 'Token bridge injection failed',
+      error: new Error('Could not inject API bridge script.'),
+    });
+  }
   registerOptimizerWorkerListener({ adapter });
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message?.action === MESSAGE_ACTIONS.UI_TOAST) {
+      relayToastFromRuntimeMessage(message.payload);
+      return false;
+    }
+    if (message?.action === MESSAGE_ACTIONS.UI_OPEN_HOME) {
+      openWindow('sidebar');
+      renderUI();
+      return false;
+    }
+    return false;
+  });
   subscribeToApiBridge((payload) => {
     tokenModel = payload?.model || tokenModel;
     tokenCount = Number.isFinite(Number(payload?.tokens)) ? Number(payload.tokens) : tokenCount;
@@ -706,7 +901,6 @@ async function logStorageRoundTrip() {
   const onboardingState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: ONBOARDING_SEEN_KEY });
   const hasSeenOnboarding = onboardingState.ok && onboardingState.data === ONBOARDING_VERSION;
   welcomeVisible = !hasSeenOnboarding;
-  quickTourPromptVisible = false;
   hudSettings = enforceOnboardingVisibility(hudSettings);
   applyHudPalette();
 
@@ -727,18 +921,54 @@ async function logStorageRoundTrip() {
   window.addEventListener('resize', () => {
     hudSettings = normalizeHudSettings(hudSettings, getViewport());
     applyHudPalette();
+    scheduleAdapterHealthCheck({ notify: false });
     renderUI();
   });
 
-  renderUI();
-  const queueController = setupQueueController({
+  queueController = setupQueueController({
     adapter,
     siteLabel: 'ChatGPT',
     onQueueSizeChange: (size) => {
       queueSizeState = size;
       renderUI();
     },
+    onStateChange: (nextState) => {
+      queueRuntimeState = nextState;
+      renderUI();
+    },
+    onQueueError: (queueError) => {
+      toastFailure({
+        operation: 'queue.processing',
+        title: 'Queued prompt failed',
+        message: queueError.message,
+        error: new Error(queueError.message),
+        details: `Operation: ${queueError.operation}\\nItem: ${queueError.itemId || 'n/a'}`,
+        actions: queueError.itemId
+          ? [{
+              label: 'Retry',
+              onSelect: () => {
+                queueController?.retryItem(queueError.itemId);
+                queueController?.sendNow(queueError.itemId);
+              },
+            }]
+          : [],
+      });
+    },
   });
   queueSizeState = queueController.getQueueSize();
+  queueRuntimeState = queueController.getState();
+
+  if (document.body) {
+    const observer = new MutationObserver(() => {
+      scheduleAdapterHealthCheck({ notify: false });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+  window.setInterval(() => {
+    void pingServiceWorker({ notifyOnFailure: false });
+  }, 20000);
+  void pingServiceWorker({ notifyOnFailure: true });
+  runAdapterHealthCheck({ notify: true });
+
   renderUI();
 })();

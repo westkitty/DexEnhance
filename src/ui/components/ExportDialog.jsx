@@ -1,6 +1,8 @@
 import { h } from 'preact';
 import { useState } from 'preact/hooks';
 import { PanelFrame } from './PanelFrame.jsx';
+import { ContextualHint } from './ContextualHint.jsx';
+import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
 
 export function ExportDialog({
   visible,
@@ -23,6 +25,18 @@ export function ExportDialog({
       onClose?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      showDexToast({
+        type: 'error',
+        title: 'Export failed',
+        message: err instanceof Error ? err.message : String(err),
+        diagnostics: buildDiagnostics({
+          module: 'ui/ExportDialog',
+          operation: 'conversation_export',
+          host: window.location.hostname,
+          url: window.location.href,
+          error: err,
+        }),
+      });
     } finally {
       setBusy(false);
     }
@@ -49,6 +63,12 @@ export function ExportDialog({
     },
     [
       h('div', { class: 'dex-form' }, [
+        h(ContextualHint, {
+          hintId: 'export-module',
+          visible: true,
+          title: 'Export hint',
+          message: 'PDF is best for fixed snapshots. DOCX is best when you plan to annotate or edit later.',
+        }),
         h('p', { class: 'dex-form__desc' }, 'Export this conversation for docs, sharing, or decision logs.'),
         h('label', { class: 'dex-sidebar__label' }, 'Format'),
         h(

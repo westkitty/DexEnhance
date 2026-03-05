@@ -62,6 +62,21 @@ function fail(error) {
   return { ok: false, error };
 }
 
+async function relayToastToTab(tabId, payload) {
+  const safeTabId = Number(tabId);
+  if (!Number.isFinite(safeTabId)) return;
+  await chrome.tabs.sendMessage(safeTabId, {
+    action: MESSAGE_ACTIONS.UI_TOAST,
+    payload: typeof payload === 'object' && payload !== null ? payload : {},
+  }).catch(() => {});
+}
+
+async function relayToastToSender(sender, payload) {
+  const tabId = Number(sender?.tab?.id);
+  if (!Number.isFinite(tabId)) return;
+  await relayToastToTab(tabId, payload);
+}
+
 /**
  * @param {unknown} value
  * @returns {value is Record<string, any>}
@@ -1079,6 +1094,23 @@ async function handleMessage(message, sender) {
       await clearRules();
       return ok();
 
+    case MESSAGE_ACTIONS.UI_TOAST: {
+      const tabId = Number(message.tabId ?? sender?.tab?.id);
+      await relayToastToTab(tabId, message.payload);
+      return ok();
+    }
+
+    case MESSAGE_ACTIONS.UI_OPEN_HOME: {
+      const tabId = Number(message.tabId ?? sender?.tab?.id);
+      if (!Number.isFinite(tabId)) {
+        return fail('UI_OPEN_HOME requires a valid tabId.');
+      }
+      await chrome.tabs.sendMessage(tabId, {
+        action: MESSAGE_ACTIONS.UI_OPEN_HOME,
+      }).catch(() => {});
+      return ok();
+    }
+
     default:
       return fail(`Unsupported action: ${String(action)}`);
   }
@@ -1110,6 +1142,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         [STORAGE_KEYS.FEATURE_SETTINGS]: normalizeFeatureSettings({}),
         [HUD_SETTINGS_KEY]: {
           accentHue: 202,
+          watermarkOpacity: 0.30,
           bgBaseHue: 214,
           bgBaseSaturation: 24,
           bgBaseLightness: 93,
@@ -1197,6 +1230,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
     .catch((error) => {
       console.error('[DexEnhance] Message handling error:', error, 'tab:', sender.tab?.id);
+      void relayToastToSender(sender, {
+        type: 'error',
+        title: 'DexEnhance background error',
+        message: error instanceof Error ? error.message : String(error),
+        diagnostics: {
+          module: 'background/service_worker',
+          operation: String(message?.action || 'unknown'),
+          host: sender?.tab?.url || sender?.url || '',
+          url: sender?.tab?.url || sender?.url || '',
+          version: chrome.runtime.getManifest()?.version || 'unknown',
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? (error.stack || '') : '',
+        },
+      });
       sendResponse(fail(error instanceof Error ? error.message : String(error)));
     });
 

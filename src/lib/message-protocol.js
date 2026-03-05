@@ -38,17 +38,29 @@ export const MESSAGE_ACTIONS = Object.freeze({
   SEMANTIC_CLIPBOARD_STATS: 'SEMANTIC_CLIPBOARD_STATS',
   API_RULES_UPDATE: 'API_RULES_UPDATE',
   API_RULES_CLEAR: 'API_RULES_CLEAR',
+  UI_TOAST: 'UI_TOAST',
+  UI_OPEN_HOME: 'UI_OPEN_HOME',
 });
 
 /**
  * Send a message to the background service worker.
  * @param {string} action
  * @param {Record<string, any>} [payload={}]
+ * @param {{timeoutMs?: number}} [options]
  * @returns {Promise<{ok: boolean, data?: any, error?: string}>}
  */
-export async function sendRuntimeMessage(action, payload = {}) {
+export async function sendRuntimeMessage(action, payload = {}, options = {}) {
   try {
-    const response = await chrome.runtime.sendMessage({ action, ...payload });
+    const timeoutMs = Number.isFinite(Number(options.timeoutMs))
+      ? Math.max(1500, Math.min(30000, Number(options.timeoutMs)))
+      : 9000;
+
+    const response = await Promise.race([
+      chrome.runtime.sendMessage({ action, ...payload }),
+      new Promise((_, reject) => {
+        globalThis.setTimeout(() => reject(new Error(`Runtime message timed out after ${timeoutMs}ms.`)), timeoutMs);
+      }),
+    ]);
     if (!response || typeof response !== 'object') {
       return { ok: false, error: 'Invalid response from background service worker.' };
     }

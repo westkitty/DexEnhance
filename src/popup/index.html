@@ -544,7 +544,7 @@
       </div>
       <div class="brand-actions">
         <button id="open-settings" class="tour-btn settings-btn" type="button">Settings</button>
-        <button id="open-tour" class="tour-btn" type="button">Tour</button>
+        <button id="open-home" class="tour-btn" type="button">Open Home</button>
       </div>
     </div>
 
@@ -568,32 +568,10 @@
     </div>
 
     <div class="tips">
-      <strong>Quick start</strong>
-      <p>Open ChatGPT or Gemini, click the DexEnhance floating icon, then run the tour for guided examples.</p>
+      <strong>Status snapshot</strong>
+      <p id="popup-status-summary">Checking extension status...</p>
     </div>
   </section>
-
-  <div id="tour-modal" class="modal-backdrop" aria-hidden="true">
-    <section class="tour-modal" aria-label="DexEnhance Popup Tour">
-      <div class="tour-modal__brand">
-        <img src="../icons/icon128.png" alt="DexEnhance logo" />
-        <h2>Welcome to DexEnhance</h2>
-      </div>
-      <p class="tour-sub">Practical feature walkthrough with examples.</p>
-      <div id="tour-progress" class="step-pill">Step 1</div>
-      <h3 id="tour-title" class="tour-title"></h3>
-      <p id="tour-desc" class="tour-desc"></p>
-      <p id="tour-example" class="tour-example"></p>
-
-      <div class="tour-actions">
-        <button id="tour-back" class="btn" type="button">Back</button>
-        <button id="tour-next" class="btn primary" type="button">Next</button>
-      </div>
-      <div class="tour-actions">
-        <button id="tour-close" class="btn ghost" type="button">Close</button>
-      </div>
-    </section>
-  </div>
 
   <div id="settings-modal" class="modal-backdrop" aria-hidden="true">
     <section class="tour-modal" aria-label="DexEnhance Popup Settings">

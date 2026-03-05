@@ -7,9 +7,7 @@ const WINDOW_ROWS = [
   ['tokens', 'Tokens Panel'],
   ['promptLibrary', 'Prompt Library'],
   ['optimizer', 'Prompt Optimizer'],
-  ['tour', 'Feature Tour'],
   ['export', 'Export Dialog'],
-  ['hub', 'Quick Hub'],
 ];
 
 export function HUDSettingsPanel({
@@ -20,6 +18,8 @@ export function HUDSettingsPanel({
   onPanelStateChange,
   accentHue = 202,
   onAccentHueChange,
+  watermarkOpacity = 0.30,
+  onWatermarkOpacityChange,
   bgBaseHue = 214,
   bgBaseSaturation = 24,
   bgBaseLightness = 93,
@@ -34,7 +34,6 @@ export function HUDSettingsPanel({
   onPanelOpacityChange,
   fabSize = 62,
   onFabSizeChange,
-  onStartQuickTour,
   onResetLayout,
   onResetTheme,
   onClose,
@@ -111,6 +110,18 @@ export function HUDSettingsPanel({
                   onInput: (event) => onAccentHueChange?.(Number(event.currentTarget.value)),
                 }),
                 h('div', { class: 'dex-folder-state' }, `Hue: ${Math.round(Number(accentHue) || 202)}°`),
+                h('label', { class: 'dex-sidebar__label' }, `Brand Watermark Opacity (${Math.round((Number(watermarkOpacity) || 0) * 100)}%)`),
+                h('input', {
+                  type: 'range',
+                  min: 0,
+                  max: 0.3,
+                  step: 0.01,
+                  value: Number.isFinite(Number(watermarkOpacity)) ? Number(watermarkOpacity) : 0.3,
+                  class: 'dex-panel-frame__slider',
+                  'aria-label': 'Brand watermark opacity',
+                  onInput: (event) => onWatermarkOpacityChange?.(Number(event.currentTarget.value)),
+                }),
+                h('div', { class: 'dex-folder-state' }, 'Set to 0 for high-contrast mode. Default is 30%.'),
               ])
             : null,
         ]),
@@ -324,15 +335,6 @@ export function HUDSettingsPanel({
                   class: 'dex-panel-frame__slider',
                   onInput: (event) => onFabSizeChange?.(Number(event.currentTarget.value)),
                 }),
-                h(
-                  'button',
-                  {
-                    type: 'button',
-                    class: 'dex-link-btn dex-link-btn--accent',
-                    onClick: () => onStartQuickTour?.(),
-                  },
-                  'Start Quick Tour'
-                ),
               ])
             : null,
         ]),

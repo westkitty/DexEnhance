@@ -1504,3 +1504,116 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
 
 *Document version: 0.1 | Created: 2026-03-03 | Next update: After next stabilization pass*
 *This is a living document. All AI instances working on this project MUST update the Completion Log (Section 13) and Change Log (Section 14) as work progresses.*
+
+[2026-03-05] v1.20 — Refactor Phase 0 reconnaissance + inventory baseline added.
+  Completed host/content/background reconnaissance for the MV3 + Preact + Shadow DOM architecture.
+  Mapped all active UI surfaces and entrypoints (Welcome, FAB, Quick Hub, Sidebar, Prompt Library,
+  Optimizer, Export, Tour, Settings, Token panel, popup tour/settings).
+  Located queue runtime (`src/content/shared/queue-controller.js`, `src/content/shared/queue.js`) and
+  confirmed current in-memory FIFO + count-only UI exposure.
+  Located onboarding/tour flow (`src/ui/components/FeatureTourModal.jsx`, popup tour in `src/popup/index.js`)
+  and identified global key handlers requiring scoped routing replacement.
+  Documented current notification/dialog gaps (console + inline errors, no global toast primitive).
+  Added phase artifacts:
+    - `docs/phase0-recon-map.md`
+    - `docs/feature-function-inventory.md`
+
+[2026-03-05] v1.21 — Refactor Phase 1 foundations (toast/dialog/keyboard/brand) landed.
+  Added global in-page DexToast primitive and controller runtime:
+    - `src/ui/runtime/dex-toast-controller.js`
+    - `src/ui/components/DexToastViewport.jsx`
+  Added background-to-content toast relay support via protocol + service worker:
+    - `MESSAGE_ACTIONS.UI_TOAST` in `src/lib/message-protocol.js`
+    - relay helpers and `UI_TOAST` handling in `src/background/service_worker.js`
+  Added `MESSAGE_ACTIONS.UI_OPEN_HOME` relay path for future home-launch routing.
+  Replaced multiple UI-facing console-only failures with DexToast-based in-UI feedback
+  in ChatGPT/Gemini content scripts and PromptLibrary/FolderTree/Export/Optimizer modules.
+  Added structured local diagnostics payload support + local clipboard copy path (no telemetry).
+
+  Added accessible modal dialog primitive:
+    - `src/ui/components/DexDialog.jsx`
+  Integrated DexDialog into Prompt Library delete confirmation path (focus trap + focus restore).
+
+  Added centralized escape-key router runtime:
+    - `src/ui/runtime/keyboard-router.js`
+  Removed global keydown hijack in Feature Tour by scoping arrow/escape handling to modal focus root.
+
+  Added branding scaffolding + accessibility watermark controls:
+    - `src/ui/components/DexBrandMark.jsx`
+    - Sidebar now renders prominent brand mark in header + watermark layer behind interactive menus.
+    - Watermark default raised to 30% and made user-adjustable locally via HUD settings.
+    - Added `watermarkOpacity` to HUD settings normalization/defaults and install seed defaults.
+
+  Added CSS support for:
+    - cross-component focus-visible consistency
+    - DexToast viewport/cards
+    - DexDialog overlay
+    - DexBrandMark header/watermark visuals
+
+  Verification run:
+    - `bun test tests/unit/` (pass)
+    - `bun run build` (pass)
+
+[2026-03-05] v1.22 — Refactor Phase 2 transparency/safety pass landed.
+  Rebuilt queue runtime controller with explicit item metadata/state and operational controls:
+    - `src/content/shared/queue-controller.js`
+    - Added item fields (type/origin/target/timestamp/status/attempts/error)
+    - Added operations (pause/resume/toggle, edit, duplicate, reorder up/down, remove, clear, retry, send-now)
+    - Added subscription/state API for real-time UI synchronization and queue error publication.
+
+  Added `QueueManager` UI panel section inside Sidebar Home:
+    - `src/ui/components/QueueManager.jsx`
+    - Exposes queue list/details/edit/reorder/pause-clear-send flows.
+    - Added DexToast mutation feedback + Undo for remove/clear actions.
+    - Added queue-failure toasts with Retry + Details + Copy diagnostics.
+
+  Added constructive deletion with timed commit + rollback safety:
+    - Prompt delete now optimistic with 5-second undo window in `PromptLibrary`.
+    - Folder soft-delete now optimistic with 5-second undo window in `FolderTree`.
+    - On persistence failure, UI state is rolled back and DexToast.error explicitly reports rollback.
+
+  Added irreversible confirm hardening with `DexDialog`:
+    - Prompt delete confirm uses `DexDialog`.
+    - Folder permanent-delete confirm uses `DexDialog` with explicit irreversible copy.
+    - Queue clear-all confirm uses `DexDialog`.
+
+  Added runtime timeout guard to message protocol to eliminate silent hangs:
+    - `sendRuntimeMessage` now enforces bounded timeout and returns structured timeout errors.
+
+  Verification run:
+    - `bun test tests/unit/` (pass)
+    - `bun run build` (pass)
+
+[2026-03-05] v1.23 — Refactor Phase 3/4/5 completion + stabilization pass landed.
+  Implemented in-Home Status transparency surface and host adapter health reporting:
+    - Added `StatusPanel` with host, adapter health, worker connectivity, queue runtime,
+      token refresh metadata, module enablement snapshot, local diagnostics copy, and
+      safe actions (`Re-inject UI`, `Reload adapter`).
+    - Added debounced host adapter health-check pipeline (observer-driven + scheduled checks)
+      with persistent in-Home warning banner and single-actionable DexToast on unhealthy state.
+
+  Consolidated navigation to a single Home router surface:
+    - Sidebar established as primary Home.
+    - FAB repointed to `Open Home` behavior only.
+    - Quick Hub removed as competing in-page home surface from content-script mounting path.
+    - Popup converted to launcher/status snapshot surface with `Open Home in active tab` action;
+      removed popup tour routing to avoid dual navigation systems.
+
+  Replaced coercive onboarding with contextual disclosure:
+    - Removed linear tour implementation (`FeatureTourModal.jsx`, `src/ui/tour-content.js`) and
+      quick-tour CTA dependencies from in-page navigation.
+    - Added `ContextualHint` first-use helper with dismiss/don't-show-again local persistence.
+    - Added explicit user-triggered Home Help section for optional guidance.
+
+  Added required verification artifact:
+    - `docs/verification.md` manual QA checklist for ChatGPT/Gemini hosts,
+      queue safety/error flows, status/health behavior, branding, and accessibility.
+
+  Stabilization fix:
+    - Hardened `dex-toast-controller` and `queue-controller` against non-browser test/runtime
+      environments by replacing direct `window`/`HTMLElement` assumptions with safe global
+      adapters and element guards.
+
+  Verification run:
+    - `bun test tests/unit/` (pass)
+    - `bun run build` (pass)

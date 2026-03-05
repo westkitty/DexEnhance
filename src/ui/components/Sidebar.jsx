@@ -1,6 +1,10 @@
 import { h } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { FolderTree } from './FolderTree.jsx';
+import { DexBrandMark } from './DexBrandMark.jsx';
+import { QueueManager } from './QueueManager.jsx';
+import { StatusPanel } from './StatusPanel.jsx';
+import { ContextualHint } from './ContextualHint.jsx';
 
 // ── Icon set (filled/stroked, 14×14 viewBox) ─────────────────────
 const ICONS = {
@@ -28,9 +32,10 @@ const ICONS = {
     h('circle', { cx: '7', cy: '7', r: '2' }),
     h('path', { d: 'M7 1.5v1.2M7 11.3v1.2M1.5 7h1.2M11.3 7h1.2M3.4 3.4l.85.85M9.75 9.75l.85.85M3.4 10.6l.85-.85M9.75 4.25l.85-.85' }),
   ]),
-  tour: (size = 14) => h('svg', { width: size, height: size, viewBox: '0 0 14 14', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linecap': 'round', 'aria-hidden': 'true' }, [
+  help: (size = 14) => h('svg', { width: size, height: size, viewBox: '0 0 14 14', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.4', 'stroke-linecap': 'round', 'aria-hidden': 'true' }, [
     h('circle', { cx: '7', cy: '7', r: '5.5' }),
-    h('path', { d: 'M7 4v3l2 2' }),
+    h('path', { d: 'M5.6 5.4a1.6 1.6 0 113 1c0 .9-.9 1.2-1.3 1.6-.3.2-.4.4-.4.8' }),
+    h('circle', { cx: '7', cy: '10.2', r: '.6', fill: 'currentColor', stroke: 'none' }),
   ]),
 };
 
@@ -44,6 +49,7 @@ const AI_ACTIONS = [
 const UTIL_ACTIONS = [
   { id: 'export',    label: 'Export Chat',       icon: 'export' },
   { id: 'settings',  label: 'HUD Settings',      icon: 'settings' },
+  { id: 'help',      label: 'Help',              icon: 'help' },
 ];
 
 export function Sidebar({
@@ -51,15 +57,21 @@ export function Sidebar({
   currentChatUrl,
   queueSize = 0,
   onRequestExport,
-  onRequestTour,
   onRequestPrompts,
   onRequestOptimizer,
   onRequestSettings,
   onRequestContext,
   onRequestLiveRender,
   iconUrl = '',
+  watermarkOpacity = 0.3,
+  queueController = null,
+  statusSnapshot = null,
+  onCopyDiagnostics,
+  onReinjectUi,
+  onReloadAdapter,
 }) {
   const [liveUrl, setLiveUrl] = useState(currentChatUrl || window.location.href);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     setLiveUrl(currentChatUrl || window.location.href);
@@ -79,6 +91,7 @@ export function Sidebar({
     liveRender: () => onRequestLiveRender?.(),
     export:     () => onRequestExport?.(),
     settings:   () => onRequestSettings?.(),
+    help:       () => setHelpOpen((value) => !value),
   };
 
   function renderActionGroup(label, actions) {
@@ -101,19 +114,22 @@ export function Sidebar({
   }
 
   return h('aside', { class: 'dex-sidebar dex-sidebar--embedded', 'aria-label': 'DexEnhance Sidebar' }, [
+    h(DexBrandMark, {
+      mode: 'watermark',
+      iconUrl,
+      opacity: watermarkOpacity,
+    }),
     h('header', { class: 'dex-sidebar__header' }, [
       h('h2', { class: 'dex-sidebar__title' }, [
-        iconUrl
-          ? h('img', {
-              src: iconUrl,
-              alt: 'DexEnhance',
-              class: 'dex-sidebar__icon',
-            })
-          : null,
-        h('span', null, `DexEnhance • ${site}`),
+        h(DexBrandMark, {
+          iconUrl,
+          mode: 'header',
+          label: 'DexEnhance',
+        }),
+        h('span', null, `Home • ${site}`),
       ]),
     ]),
-    h('div', { class: 'dex-sidebar__body' }, [
+    h('div', { class: 'dex-sidebar__body', style: 'position:relative;z-index:1;' }, [
       h('div', { class: 'dex-sidebar__meta' }, [
         h('span', { class: 'dex-sidebar__label' }, 'Current Chat'),
         h('span', { class: 'dex-sidebar__url', title: liveUrl || 'Unknown' }, liveUrl || 'Unknown'),
@@ -125,17 +141,45 @@ export function Sidebar({
           : h('span', { class: 'dex-sidebar__url' }, '0'),
       ]),
 
+      statusSnapshot
+        ? h(StatusPanel, {
+            hostLabel: statusSnapshot.hostLabel,
+            adapterHealth: statusSnapshot.adapterHealth,
+            workerHealth: statusSnapshot.workerHealth,
+            queueState: statusSnapshot.queueState,
+            tokenState: statusSnapshot.tokenState,
+            featureSettings: statusSnapshot.featureSettings,
+            onCopyDiagnostics,
+            onReinjectUi,
+            onReloadAdapter,
+          })
+        : null,
+
+      h(ContextualHint, {
+        hintId: 'semantic-clipboard',
+        visible: true,
+        title: 'Semantic Clipboard hint',
+        message: 'Use Inject Context when your draft needs references from recent conversation state.',
+      }),
+
       renderActionGroup('AI Tools', AI_ACTIONS),
       renderActionGroup('Utilities', UTIL_ACTIONS),
 
-      h('div', { class: 'dex-sidebar__section' }, [
-        h('button', {
-          type: 'button',
-          class: 'dex-link-btn dex-link-btn--accent dex-hub__action-btn',
-          style: 'width: 100%;',
-          onClick: () => onRequestTour?.(),
-        }, [ICONS.tour(), h('span', null, 'Feature Tour')]),
-      ]),
+      helpOpen
+        ? h('section', { class: 'dex-status-panel', 'aria-label': 'Help' }, [
+            h('strong', null, 'Help'),
+            h('p', { class: 'dex-folder-state' }, 'Prompt Library stores reusable templates. Prompt Optimizer restructures prompts before send.'),
+            h('p', { class: 'dex-folder-state' }, 'Queue Manager controls queued prompts while hosts are generating. Export supports PDF and DOCX output.'),
+            h('p', { class: 'dex-folder-state' }, 'Status shows adapter health, worker connectivity, queue state, and token refresh metadata.'),
+          ])
+        : null,
+
+      queueController
+        ? h(QueueManager, {
+            queueController,
+            siteLabel: site,
+          })
+        : null,
 
       h(FolderTree, { currentChatUrl: liveUrl }),
     ]),

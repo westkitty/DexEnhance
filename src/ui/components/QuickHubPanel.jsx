@@ -37,10 +37,6 @@ const ICONS = {
     h('circle', { cx: '7', cy: '7', r: '2' }),
     h('path', { d: 'M7 1.5v1.2M7 11.3v1.2M1.5 7h1.2M11.3 7h1.2M3.4 3.4l.85.85M9.75 9.75l.85.85M3.4 10.6l.85-.85M9.75 4.25l.85-.85' }),
   ]),
-  tour: (size = 14) => h('svg', { width: size, height: size, viewBox: '0 0 14 14', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linecap': 'round', 'aria-hidden': 'true' }, [
-    h('circle', { cx: '7', cy: '7', r: '5.5' }),
-    h('path', { d: 'M7 4v3l2 2' }),
-  ]),
 };
 
 const ACTION_GROUPS = [
@@ -68,7 +64,6 @@ const ACTION_GROUPS = [
     actions: [
       { id: 'export',    label: 'Export Conversation',  icon: 'export'   },
       { id: 'settings',  label: 'Window Management',    icon: 'settings' },
-      { id: 'tour',      label: 'Feature Tour',         icon: 'tour'     },
     ],
   },
 ];

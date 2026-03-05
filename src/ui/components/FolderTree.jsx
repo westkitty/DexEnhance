@@ -1,6 +1,8 @@
 import { h } from 'preact';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.js';
+import { DexDialog } from './DexDialog.jsx';
+import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
 
 async function callAction(action, payload = {}) {
   const response = await sendRuntimeMessage(action, payload);
@@ -29,6 +31,53 @@ export function FolderTree({ currentChatUrl }) {
   const [renamingName, setRenamingName] = useState('');
   const [confirmTrashId, setConfirmTrashId] = useState(null);
   const [confirmPermId, setConfirmPermId] = useState(null);
+  const pendingDeletesRef = useRef(new Map());
+
+  const notifyError = (operation, err) => {
+    showDexToast({
+      type: 'error',
+      title: 'Folder action failed',
+      message: err instanceof Error ? err.message : String(err),
+      diagnostics: buildDiagnostics({
+        module: 'ui/FolderTree',
+        operation,
+        host: window.location.hostname,
+        url: window.location.href,
+        error: err,
+      }),
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      for (const pending of pendingDeletesRef.current.values()) {
+        window.clearTimeout(pending.timerId);
+      }
+      pendingDeletesRef.current.clear();
+    };
+  }, []);
+
+  function collectDescendantIdsLocal(sourceFolders, rootId) {
+    const byParent = new Map();
+    for (const folder of sourceFolders) {
+      const parentId = folder.parentId || null;
+      if (!parentId) continue;
+      const bucket = byParent.get(parentId) || [];
+      bucket.push(folder.id);
+      byParent.set(parentId, bucket);
+    }
+
+    const visited = new Set();
+    const queue = [rootId];
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (!current || visited.has(current)) continue;
+      visited.add(current);
+      const children = byParent.get(current) || [];
+      for (const childId of children) queue.push(childId);
+    }
+    return visited;
+  }
 
   const visibleFolders = useMemo(() => {
     return folders
@@ -58,6 +107,7 @@ export function FolderTree({ currentChatUrl }) {
       setActiveFolderId(mappingData?.folderId || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError('folder_tree.refresh', err);
     } finally {
       setIsLoading(false);
     }
@@ -86,6 +136,7 @@ export function FolderTree({ currentChatUrl }) {
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError('folder_create', err);
     }
   }
 
@@ -103,17 +154,69 @@ export function FolderTree({ currentChatUrl }) {
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError('folder_rename', err);
     }
   }
 
-  async function deleteFolder(folder) {
-    try {
-      await callAction(MESSAGE_ACTIONS.FOLDER_DELETE, { id: folder.id });
-      resetInlineState();
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
+  function scheduleFolderDelete(folder) {
+    const source = folders.map((item) => ({ ...item, chatUrls: Array.isArray(item.chatUrls) ? [...item.chatUrls] : [] }));
+    const ids = collectDescendantIdsLocal(source, folder.id);
+    const now = Date.now();
+    setFolders((current) => current.map((item) => ids.has(item.id) ? { ...item, deletedAt: now } : item));
+    resetInlineState();
+
+    const timerId = window.setTimeout(async () => {
+      pendingDeletesRef.current.delete(folder.id);
+      try {
+        await callAction(MESSAGE_ACTIONS.FOLDER_DELETE, { id: folder.id });
+      } catch (err) {
+        setFolders(source);
+        setError(err instanceof Error ? err.message : String(err));
+        notifyError('folder_soft_delete.commit', err);
+        showDexToast({
+          type: 'error',
+          title: 'Delete rolled back',
+          message: 'Folder deletion failed and was restored.',
+          diagnostics: buildDiagnostics({
+            module: 'ui/FolderTree',
+            operation: 'folder_soft_delete.rollback',
+            host: window.location.hostname,
+            url: window.location.href,
+            error: err,
+          }),
+        });
+      }
+    }, 5000);
+
+    pendingDeletesRef.current.set(folder.id, { timerId, snapshot: source });
+
+    showDexToast({
+      type: 'action',
+      title: 'Folder scheduled for deletion',
+      message: `\"${folder.name}\" will be moved to trash in 5 seconds.`,
+      actions: [{
+        label: 'Undo',
+        onSelect: () => {
+          const pending = pendingDeletesRef.current.get(folder.id);
+          if (!pending) return;
+          window.clearTimeout(pending.timerId);
+          pendingDeletesRef.current.delete(folder.id);
+          setFolders(pending.snapshot);
+          showDexToast({
+            type: 'success',
+            title: 'Deletion undone',
+            message: 'Folder restored before deletion commit.',
+          });
+        },
+      }],
+      diagnostics: {
+        module: 'ui/FolderTree',
+        operation: 'folder_soft_delete.schedule',
+        folderId: folder.id,
+        at: Date.now(),
+      },
+      durationMs: 5500,
+    });
   }
 
   async function restoreFolder(folder) {
@@ -122,6 +225,7 @@ export function FolderTree({ currentChatUrl }) {
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError('folder_restore', err);
     }
   }
 
@@ -132,6 +236,7 @@ export function FolderTree({ currentChatUrl }) {
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError('folder_delete_permanent', err);
     }
   }
 
@@ -145,6 +250,7 @@ export function FolderTree({ currentChatUrl }) {
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError('folder_assign_chat', err);
     }
   }
 
@@ -155,6 +261,7 @@ export function FolderTree({ currentChatUrl }) {
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError('folder_unassign_chat', err);
     }
   }
 
@@ -194,7 +301,6 @@ export function FolderTree({ currentChatUrl }) {
     const menuOpen = activeMenuId === folder.id;
     const isRenaming = renamingId === folder.id;
     const confirmingTrash = confirmTrashId === folder.id;
-    const confirmingPerm = confirmPermId === folder.id;
 
     return h('div', { key: folder.id, class: 'dex-folder-node' }, [
       // Row: name | count | ⋯
@@ -251,31 +357,12 @@ export function FolderTree({ currentChatUrl }) {
               h('button', {
                 type: 'button',
                 class: 'dex-link-btn danger',
-                onClick: () => deleteFolder(folder),
+                onClick: () => scheduleFolderDelete(folder),
               }, 'Move to Trash'),
               h('button', {
                 type: 'button',
                 class: 'dex-link-btn',
                 onClick: () => setConfirmTrashId(null),
-              }, 'Cancel'),
-            ]),
-          ])
-        : null,
-
-      // Inline confirm: permanent delete
-      confirmingPerm
-        ? h('div', { class: 'dex-folder-confirm', style: `--depth:${depth};` }, [
-            h('span', { class: 'dex-folder-confirm__text' }, `Permanently delete "${folder.name}" and all nested folders?`),
-            h('div', { class: 'dex-folder-confirm__actions' }, [
-              h('button', {
-                type: 'button',
-                class: 'dex-link-btn danger',
-                onClick: () => permanentlyDeleteFolder(folder),
-              }, 'Delete Forever'),
-              h('button', {
-                type: 'button',
-                class: 'dex-link-btn',
-                onClick: () => setConfirmPermId(null),
               }, 'Cancel'),
             ]),
           ])
@@ -333,6 +420,8 @@ export function FolderTree({ currentChatUrl }) {
     ]);
   }
 
+  const confirmPermanentFolder = folders.find((item) => item.id === confirmPermId) || null;
+
   return h('div', { class: 'dex-folder-tree' }, [
     h('div', { class: 'dex-folder-toolbar' }, [
       h('button', {
@@ -365,5 +454,22 @@ export function FolderTree({ currentChatUrl }) {
     h('div', { class: 'dex-folder-list' },
       (childrenByParentId.get(null) || []).map((folder) => renderFolderNode(folder, 0))
     ),
+    h(DexDialog, {
+      open: Boolean(confirmPermanentFolder),
+      variant: 'alertdialog',
+      title: 'Permanently delete folder tree?',
+      description: confirmPermanentFolder
+        ? `This cannot be undone. Delete \"${confirmPermanentFolder.name}\" and all nested folders permanently?`
+        : '',
+      confirmText: 'Delete forever',
+      cancelText: 'Cancel',
+      danger: true,
+      onConfirm: () => {
+        if (!confirmPermanentFolder) return;
+        void permanentlyDeleteFolder(confirmPermanentFolder);
+        setConfirmPermId(null);
+      },
+      onCancel: () => setConfirmPermId(null),
+    }),
   ]);
 }

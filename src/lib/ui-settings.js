@@ -17,6 +17,7 @@ export const PANEL_IDS = Object.freeze([
 
 export const DEFAULT_HUD_SETTINGS = Object.freeze({
   accentHue: 202,
+  watermarkOpacity: 0.30,
   bgBaseHue: 214,
   bgBaseSaturation: 24,
   bgBaseLightness: 93,
@@ -277,6 +278,7 @@ export function normalizeHudSettings(rawSettings, viewport) {
   const sourcePanels = typeof source.panels === 'object' && source.panels !== null ? source.panels : {};
   const normalized = {
     accentHue: clamp(source.accentHue ?? DEFAULT_HUD_SETTINGS.accentHue, 0, 360),
+    watermarkOpacity: clamp(source.watermarkOpacity ?? DEFAULT_HUD_SETTINGS.watermarkOpacity, 0, 0.30),
     bgBaseHue: clamp(source.bgBaseHue ?? DEFAULT_HUD_SETTINGS.bgBaseHue, 0, 360),
     bgBaseSaturation: clamp(source.bgBaseSaturation ?? DEFAULT_HUD_SETTINGS.bgBaseSaturation, 0, 100),
     bgBaseLightness: clamp(source.bgBaseLightness ?? DEFAULT_HUD_SETTINGS.bgBaseLightness, 0, 100),

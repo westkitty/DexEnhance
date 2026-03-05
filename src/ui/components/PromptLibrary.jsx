@@ -1,7 +1,10 @@
 import { h } from 'preact';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.js';
 import { PanelFrame } from './PanelFrame.jsx';
+import { DexDialog } from './DexDialog.jsx';
+import { ContextualHint } from './ContextualHint.jsx';
+import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
 
 async function callAction(action, payload = {}) {
   const response = await sendRuntimeMessage(action, payload);
@@ -77,6 +80,31 @@ export function PromptLibrary({
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [varFormPrompt, setVarFormPrompt] = useState(null); // prompt object | null
+  const pendingDeletesRef = useRef(new Map());
+
+  const notifyError = (operation, err) => {
+    showDexToast({
+      type: 'error',
+      title: 'Prompt Library error',
+      message: err instanceof Error ? err.message : String(err),
+      diagnostics: buildDiagnostics({
+        module: 'ui/PromptLibrary',
+        operation,
+        host: window.location.hostname,
+        url: window.location.href,
+        error: err,
+      }),
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      for (const pending of pendingDeletesRef.current.values()) {
+        window.clearTimeout(pending.timerId);
+      }
+      pendingDeletesRef.current.clear();
+    };
+  }, []);
 
   async function refresh() {
     setLoading(true);
@@ -86,6 +114,7 @@ export function PromptLibrary({
       setPrompts(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError('prompt_list.refresh', err);
     } finally {
       setLoading(false);
     }
@@ -139,17 +168,71 @@ export function PromptLibrary({
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      notifyError(editingId ? 'prompt_update' : 'prompt_create', err);
     }
   }
 
-  async function removePrompt(id) {
-    try {
-      await callAction(MESSAGE_ACTIONS.PROMPT_DELETE, { id });
-      setConfirmDeleteId(null);
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
+  function schedulePromptDelete(id) {
+    const prompt = prompts.find((item) => item.id === id);
+    if (!prompt) return;
+    setConfirmDeleteId(null);
+    setPrompts((current) => current.filter((item) => item.id !== id));
+
+    const timerId = window.setTimeout(async () => {
+      pendingDeletesRef.current.delete(id);
+      try {
+        const response = await sendRuntimeMessage(MESSAGE_ACTIONS.PROMPT_DELETE, { id });
+        if (!response.ok) {
+          throw new Error(response.error || 'Delete request failed');
+        }
+      } catch (err) {
+        setPrompts((current) => [prompt, ...current].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
+        setError(err instanceof Error ? err.message : String(err));
+        notifyError('prompt_delete.commit', err);
+        showDexToast({
+          type: 'error',
+          title: 'Delete rolled back',
+          message: 'Prompt deletion failed and was restored.',
+          diagnostics: buildDiagnostics({
+            module: 'ui/PromptLibrary',
+            operation: 'prompt_delete.rollback',
+            host: window.location.hostname,
+            url: window.location.href,
+            error: err,
+          }),
+        });
+      }
+    }, 5000);
+
+    pendingDeletesRef.current.set(id, { timerId, prompt });
+
+    showDexToast({
+      type: 'action',
+      title: 'Prompt scheduled for deletion',
+      message: `\"${prompt.title}\" will be deleted in 5 seconds.`,
+      actions: [{
+        label: 'Undo',
+        onSelect: () => {
+          const pending = pendingDeletesRef.current.get(id);
+          if (!pending) return;
+          window.clearTimeout(pending.timerId);
+          pendingDeletesRef.current.delete(id);
+          setPrompts((current) => [pending.prompt, ...current].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
+          showDexToast({
+            type: 'success',
+            title: 'Deletion undone',
+            message: 'Prompt restored.',
+          });
+        },
+      }],
+      diagnostics: {
+        module: 'ui/PromptLibrary',
+        operation: 'prompt_delete.schedule',
+        promptId: id,
+        at: Date.now(),
+      },
+      durationMs: 5500,
+    });
   }
 
   function startEdit(prompt) {
@@ -172,6 +255,7 @@ export function PromptLibrary({
   }
 
   if (!visible) return null;
+  const confirmPrompt = prompts.find((item) => item.id === confirmDeleteId) || null;
 
   return h(
     PanelFrame,
@@ -203,6 +287,13 @@ export function PromptLibrary({
             onCancel: () => setVarFormPrompt(null),
           })
         : [
+            h(ContextualHint, {
+              key: 'hint-prompt-library',
+              hintId: 'prompt-library',
+              visible: true,
+              title: 'Prompt Library hint',
+              message: 'Insert uses current prompt text. Edit templates before deleting to avoid losing reusable variants.',
+            }),
             // Search — at top for quick access
             h('input', {
               class: 'dex-input',
@@ -296,44 +387,42 @@ export function PromptLibrary({
                       h('span', { class: 'dex-tag', key: `${prompt.id}-${tag}` }, tag)
                     )
                   ),
-
-                  // Inline delete confirm
-                  confirmDeleteId === prompt.id
-                    ? h('div', { class: 'dex-folder-confirm' }, [
-                        h('span', { class: 'dex-folder-confirm__text' }, 'Delete this prompt?'),
-                        h('div', { class: 'dex-folder-confirm__actions' }, [
-                          h('button', {
-                            type: 'button',
-                            class: 'dex-link-btn danger',
-                            onClick: () => removePrompt(prompt.id),
-                          }, 'Delete'),
-                          h('button', {
-                            type: 'button',
-                            class: 'dex-link-btn',
-                            onClick: () => setConfirmDeleteId(null),
-                          }, 'Cancel'),
-                        ]),
-                      ])
-                    : h('div', { class: 'dex-folder-actions' }, [
-                        h('button', {
-                          type: 'button',
-                          class: 'dex-link-btn dex-link-btn--accent',
-                          onClick: () => insertPrompt(prompt),
-                        }, 'Insert'),
-                        h('button', {
-                          type: 'button',
-                          class: 'dex-link-btn',
-                          onClick: () => startEdit(prompt),
-                        }, 'Edit'),
-                        h('button', {
-                          type: 'button',
-                          class: 'dex-link-btn danger',
-                          onClick: () => setConfirmDeleteId(prompt.id),
-                        }, 'Delete'),
-                      ]),
+                  h('div', { class: 'dex-folder-actions' }, [
+                    h('button', {
+                      type: 'button',
+                      class: 'dex-link-btn dex-link-btn--accent',
+                      onClick: () => insertPrompt(prompt),
+                    }, 'Insert'),
+                    h('button', {
+                      type: 'button',
+                      class: 'dex-link-btn',
+                      onClick: () => startEdit(prompt),
+                    }, 'Edit'),
+                    h('button', {
+                      type: 'button',
+                      class: 'dex-link-btn danger',
+                      onClick: () => setConfirmDeleteId(prompt.id),
+                    }, 'Delete'),
+                  ]),
                 ])
               )
             ),
+            h(DexDialog, {
+              open: Boolean(confirmPrompt),
+              title: 'Delete prompt?',
+              description: confirmPrompt
+                ? `Delete \"${confirmPrompt.title}\" from your prompt library?`
+                : '',
+              confirmText: 'Delete',
+              cancelText: 'Cancel',
+              variant: 'alertdialog',
+              danger: true,
+              onConfirm: () => {
+                if (!confirmPrompt?.id) return;
+                schedulePromptDelete(confirmPrompt.id);
+              },
+              onCancel: () => setConfirmDeleteId(null),
+            }),
           ],
     ]
   );
