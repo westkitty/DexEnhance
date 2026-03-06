@@ -140,16 +140,18 @@ export function defaultPanelState(panelId, viewport) {
         collapsed: false,
         pinned: false,
       };
-    case 'fab':
+    case 'fab': {
+      const size = 62;
       return {
-        x: Math.max(SAFE_MARGIN, width - 72),
-        y: Math.max(SAFE_MARGIN, height - 72),
-        width: 56,
-        height: 56,
+        x: Math.max(SAFE_MARGIN, width - size - 14),
+        y: Math.max(SAFE_MARGIN, height - size - 14),
+        width: size,
+        height: size,
         opacity: 1,
         collapsed: false,
         pinned: false,
       };
+    }
     case 'promptLibrary': {
       const panelWidth = Math.min(760, Math.max(500, Math.round(width * 0.56)));
       const panelHeight = Math.min(620, Math.max(360, Math.round(height * 0.68)));

@@ -120,6 +120,8 @@ async function logStorageRoundTrip() {
 
   let queueSizeState = 0;
   let welcomeVisible = false;
+  let welcomeZipping = false;
+  let welcomeZipFallbackTimer = null;
   let tokenModel = null;
   let tokenCount = null;
   let tokenSource = null;
@@ -395,6 +397,7 @@ async function logStorageRoundTrip() {
 
   const openWindow = (panelId) => setPanelVisibility(panelId, true);
   const closeWindow = (panelId) => setPanelVisibility(panelId, false);
+  const toggleWindow = (panelId) => setPanelVisibility(panelId, !isPanelOpen(panelId));
 
   const popoutCanvasController = createPopoutCanvasController({
     adapter,
@@ -503,7 +506,6 @@ async function logStorageRoundTrip() {
   });
 
   const markOnboardingSeen = async () => {
-    welcomeVisible = false;
     const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
       items: {
         [ONBOARDING_SEEN_KEY]: ONBOARDING_VERSION,
@@ -516,16 +518,74 @@ async function logStorageRoundTrip() {
         error: new Error(setRes.error || 'Storage write failed'),
       });
     }
-    renderUI();
+  };
+
+  const finalizeWelcomeHandoff = async () => {
+    if (welcomeZipFallbackTimer) {
+      window.clearTimeout(welcomeZipFallbackTimer);
+      welcomeZipFallbackTimer = null;
+    }
+    welcomeVisible = false;
+    welcomeZipping = false;
+    const fabDefault = panelDefault('fab');
+    const fabSize = Math.max(56, Math.min(84, Number(panelState('fab').width || fabDefault.width || 62)));
+    let next = updatePanelInSettings(hudSettings, 'fab', {
+      ...fabDefault,
+      width: fabSize,
+      height: fabSize,
+      opacity: 1,
+    }, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'fab', true, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'sidebar', false, getViewport());
+    next = updatePanelVisibilityInSettings(next, 'welcome', false, getViewport());
+    setHudSettings(next);
+    await markOnboardingSeen();
   };
 
   const handleWelcomeGetStarted = () => {
-    welcomeVisible = false;
-    let next = updatePanelVisibilityInSettings(hudSettings, 'fab', true, getViewport());
-    next = updatePanelVisibilityInSettings(next, 'sidebar', true, getViewport());
-    next = updatePanelVisibilityInSettings(next, 'welcome', false, getViewport());
-    setHudSettings(next);
-    void markOnboardingSeen();
+    if (welcomeZipping) return;
+    welcomeZipping = true;
+    renderUI();
+    welcomeZipFallbackTimer = window.setTimeout(() => {
+      if (welcomeZipping) {
+        void finalizeWelcomeHandoff();
+      }
+    }, 760);
+  };
+
+  const fabActions = [
+    { id: 'status', label: 'Home • Status & Queue' },
+    { id: 'promptLibrary', label: 'Prompt Library' },
+    { id: 'optimizer', label: 'Prompt Optimizer' },
+    { id: 'context', label: 'Inject Context' },
+    { id: 'export', label: 'Export Conversation' },
+    { id: 'settings', label: 'Settings' },
+  ];
+
+  const handleFabAction = (action) => {
+    if (action === 'status') {
+      toggleWindow('sidebar');
+      return;
+    }
+    if (action === 'promptLibrary') {
+      toggleWindow('promptLibrary');
+      return;
+    }
+    if (action === 'optimizer') {
+      toggleWindow('optimizer');
+      return;
+    }
+    if (action === 'context') {
+      void runSemanticClipboardInject();
+      return;
+    }
+    if (action === 'export') {
+      toggleWindow('export');
+      return;
+    }
+    if (action === 'settings') {
+      toggleWindow('settings');
+    }
   };
 
   const handleExport = async (format) => {
@@ -615,7 +675,7 @@ async function logStorageRoundTrip() {
         h(WelcomeHandoffModal, {
           key: 'welcome',
           visible: welcomeVisible,
-          zipping: false,
+          zipping: welcomeZipping,
           iconUrl: welcomeIconUrl,
           panelState: panelState('welcome'),
           zipTarget: {
@@ -625,7 +685,11 @@ async function logStorageRoundTrip() {
           },
           onPanelStateCommit: (next) => setPanel('welcome', next),
           onGetStarted: handleWelcomeGetStarted,
-          onZipTransitionEnd: () => {},
+          onZipTransitionEnd: () => {
+            if (welcomeZipping) {
+              void finalizeWelcomeHandoff();
+            }
+          },
         }),
 
         isPanelOpen('sidebar')
@@ -737,13 +801,9 @@ async function logStorageRoundTrip() {
               key: 'fab',
               site: 'ChatGPT',
               iconUrl,
+              actions: fabActions,
               panelState: panelState('fab'),
-              onPanelStateChange: (next) => setPanel('fab', next),
-              onAction: (action) => {
-                if (action === 'home') {
-                  openWindow('sidebar');
-                }
-              },
+              onAction: handleFabAction,
             })
           : null,
         h(PromptLibrary, {
@@ -908,7 +968,12 @@ async function logStorageRoundTrip() {
       return false;
     }
     if (message?.action === MESSAGE_ACTIONS.UI_OPEN_HOME) {
-      openWindow('sidebar');
+      openWindow('fab');
+      showDexToast({
+        type: 'info',
+        title: 'DexEnhance ready',
+        message: 'Use the corner icon to open tools.',
+      });
       renderUI();
       return false;
     }
@@ -933,6 +998,10 @@ async function logStorageRoundTrip() {
   const onboardingState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: ONBOARDING_SEEN_KEY });
   const hasSeenOnboarding = onboardingState.ok && onboardingState.data === ONBOARDING_VERSION;
   welcomeVisible = !hasSeenOnboarding;
+  welcomeZipping = false;
+  if (!hasSeenOnboarding) {
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'fab', false, getViewport());
+  }
   hudSettings = enforceOnboardingVisibility(hudSettings);
   applyHudPalette();
 

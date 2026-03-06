@@ -633,45 +633,35 @@
   position: fixed;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: flex-end;
+  gap: 10px;
   pointer-events: auto;
   animation: dex-fade-up var(--dex-transition-med);
 }
 
 .dex-fab__dock {
   display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dex-fab__drag {
-  border: 1px solid var(--dex-border);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--dex-shell-strong) 68%, transparent);
-  color: var(--dex-fg-soft);
-  font-size: 12px;
-  line-height: 1;
-  min-height: 22px;
-  padding: 5px 9px;
-  cursor: grab;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
 }
 
 .dex-fab__menu {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
   gap: 8px;
 }
 
 .dex-fab__button {
-  width: 56px;
-  height: 56px;
-  border: 0;
+  width: 62px;
+  height: 62px;
+  border: 1px solid color-mix(in srgb, var(--dex-accent) 28%, var(--dex-border));
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--dex-accent), var(--dex-cta));
+  background: color-mix(in srgb, var(--dex-shell-strong) 84%, transparent);
   color: #ffffff;
   font-size: 22px;
-  box-shadow: var(--dex-shadow-md);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--dex-glass-border) 80%, transparent), var(--dex-shadow-md);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -681,9 +671,9 @@
 }
 
 .dex-fab__button:hover {
-  transform: scale(1.06);
+  transform: scale(1.03);
   box-shadow: var(--dex-shadow-lg);
-  filter: brightness(1.08);
+  filter: brightness(1.04);
 }
 
 .dex-fab__action {
@@ -693,7 +683,9 @@
   color: var(--dex-fg);
   padding: 10px 14px;
   font-size: 13px;
+  text-align: right;
   min-height: 42px;
+  min-width: 182px;
   cursor: pointer;
   transition: border-color var(--dex-transition-fast), box-shadow var(--dex-transition-fast), transform var(--dex-transition-fast);
 }
@@ -705,9 +697,12 @@
 }
 
 .dex-fab__icon {
-  width: 24px;
-  height: 24px;
-  border-radius: 10px;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+  object-position: center;
+  filter: drop-shadow(0 10px 18px rgba(14, 22, 38, 0.32));
 }
 
 .dex-fab__quick-tour {

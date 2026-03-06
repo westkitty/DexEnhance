@@ -1805,3 +1805,37 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
       - E2E popup: 8 pass / 0 fail
     - `bun run build` (pass)
     - `bun run verify:playwright` (pass; report `pass: true`)
+
+[2026-03-06] v1.31 — Corner-first interaction model + onboarding handoff animation.
+  Reworked launch/navigation behavior to reduce immediate large-surface UI pressure and route interactions
+  through the bottom-right icon workflow requested by user feedback.
+
+  Onboarding and handoff behavior:
+    - FAB now stays hidden for first-time onboarding until user explicitly clicks `Get Started`.
+    - `Get Started` now triggers a real zip/handoff sequence:
+      welcome card enters zipping state, logo shrinks toward FAB target location, then onboarding completes.
+    - Post-handoff behavior now reveals FAB only and leaves sidebar closed by default.
+
+  Corner-first interaction model:
+    - Rebuilt FAB behavior so the logo is the entire button surface (no mini icon inside gradient chip).
+    - FAB click now opens a right-aligned quick-action stack anchored at the corner.
+    - Corner action menu now routes into modules:
+      Status/Queue (sidebar), Prompt Library, Prompt Optimizer, Inject Context, Export, Settings.
+    - Runtime `UI_OPEN_HOME` now reveals FAB and prompts corner usage instead of auto-opening sidebar.
+
+  FAB positioning defaults:
+    - Updated default FAB size/placement to a cleaner bottom-right anchor target, used by onboarding zip target.
+
+  Files touched:
+    - `src/content/chatgpt/index.js`
+    - `src/content/gemini/index.js`
+    - `src/lib/ui-settings.js`
+    - `src/ui/components/FAB.jsx`
+    - `src/ui/styles/theme.css`
+
+  Verification run:
+    - `bun run test:all` (pass)
+      - Unit: 56 pass / 0 fail
+      - E2E popup: 8 pass / 0 fail
+    - `bun run build` (pass)
+    - `bun run verify:playwright` (pass; report `pass: true`)
