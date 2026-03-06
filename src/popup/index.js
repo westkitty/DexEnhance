@@ -12,6 +12,9 @@ const resetLayoutButton = document.getElementById('reset-layout');
 const resetThemeButton = document.getElementById('reset-theme');
 const settingsStatusEl = document.getElementById('settings-status');
 const popupStatusSummaryEl = document.getElementById('popup-status-summary');
+const chromeApi = globalThis.chrome;
+const hasChromeRuntimeApi = Boolean(chromeApi?.runtime?.sendMessage && chromeApi?.runtime?.getManifest);
+const hasChromeTabsApi = Boolean(chromeApi?.tabs?.query);
 
 const featureToggleEls = {
   ghostOverlay: document.getElementById('feature-ghostOverlay'),
@@ -124,8 +127,13 @@ async function updateFeatureToggle(moduleId, enabled) {
 }
 
 async function refreshPopupStatus() {
+  if (!hasChromeRuntimeApi || !hasChromeTabsApi) {
+    setPopupSummary('Preview mode: extension APIs unavailable outside Chrome extension context.');
+    return;
+  }
+
   const enabledRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'enabled' });
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [activeTab] = await chromeApi.tabs.query({ active: true, currentWindow: true });
   const tabUrl = String(activeTab?.url || '');
   const host = tabUrl.includes('chatgpt.com')
     ? 'ChatGPT'
@@ -133,12 +141,17 @@ async function refreshPopupStatus() {
       ? 'Gemini'
       : 'Unsupported tab';
   const enabledLabel = enabledRes.ok ? (enabledRes.data === false ? 'disabled' : 'enabled') : 'unknown';
-  const version = chrome.runtime.getManifest()?.version || 'unknown';
+  const version = chromeApi.runtime.getManifest()?.version || 'unknown';
   setPopupSummary(`DexEnhance ${enabledLabel} • Host: ${host} • v${version}`);
 }
 
 async function openHomeInActiveTab() {
-  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!hasChromeRuntimeApi || !hasChromeTabsApi) {
+    setPopupSummary('Preview mode: Open Home is available only in extension context.');
+    return;
+  }
+
+  const [activeTab] = await chromeApi.tabs.query({ active: true, currentWindow: true });
   const tabId = Number(activeTab?.id);
   const tabUrl = String(activeTab?.url || '');
   const supported = tabUrl.includes('chatgpt.com') || tabUrl.includes('gemini.google.com');

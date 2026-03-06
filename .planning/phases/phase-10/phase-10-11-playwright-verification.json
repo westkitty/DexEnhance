@@ -1,8 +1,8 @@
 {
-  "at": "2026-03-05T03:39:45.226Z",
+  "at": "2026-03-06T00:08:08.339Z",
   "extensionPath": "/Users/andrew/Projects/DexEnhance/dist",
   "reportPath": "/Users/andrew/Projects/DexEnhance/.planning/phases/phase-10/phase-10-11-playwright-verification.json",
-  "userDataDir": "/var/folders/lm/f_zcrpb94bvg69m2y35klb8r0000gn/T/dexenhance-pw-XUJ62x",
+  "userDataDir": "/var/folders/lm/f_zcrpb94bvg69m2y35klb8r0000gn/T/dexenhance-pw-sE8ca3",
   "headless": false,
   "serviceWorkerFound": true,
   "storageRoundTrip": {
@@ -19,7 +19,7 @@
       "modalOpen": false,
       "iconPresent": true,
       "iconSource": "../icons/icon128.png",
-      "openTourButtonPresent": true,
+      "openTourButtonPresent": false,
       "openSettingsButtonPresent": true
     },
     "settingsState": {
@@ -28,7 +28,7 @@
     },
     "closed": {
       "modalOpen": false,
-      "progressText": "Step 1 of 7"
+      "progressText": ""
     }
   },
   "chatgpt": {
@@ -39,7 +39,6 @@
     "extensionInlineCspErrors": [],
     "extensionResourceDeniedErrors": [],
     "pageErrors": [
-      "RequestError: Something went wrong. If this issue persists please contact us through our help center at help.openai.com.",
       "RequestError: Something went wrong. If this issue persists please contact us through our help center at help.openai.com."
     ],
     "ui": {
@@ -69,7 +68,7 @@
       },
       {
         "type": "log",
-        "text": "[DexEnhance] ChatGPT storage message round-trip ok: ok-1772682022266"
+        "text": "[DexEnhance] ChatGPT storage message round-trip ok: ok-1772755725881"
       },
       {
         "type": "warning",
@@ -212,19 +211,19 @@
       },
       {
         "type": "log",
-        "text": "[DexEnhance] Gemini storage message round-trip ok: ok-1772682029366"
-      },
-      {
-        "type": "warning",
-        "text": "No ID or name found in config."
-      },
-      {
-        "type": "warning",
-        "text": "No ID or name found in config."
+        "text": "[DexEnhance] Gemini storage message round-trip ok: ok-1772755735204"
       },
       {
         "type": "error",
-        "text": "Connecting to 'https://stats.g.doubleclick.net/g/collect?v=2&tid=G-BF8Q35BMLM&cid=832482170.1772682029&gtm=45je6331v9229664005z89113054662za20gzb9113054662zd9113054662&aip=1&dma=0&gcd=13l3l3l3l1l1&npa=0&frm=0&tag_exp=103116026~103200004~115938465~115938469~116024733~117484252~117625638~117625642~117827222' violates the following Content Security Policy directive: \"connect-src 'self' https://*.google.com https://*.gstatic.com https://*.google-analytics.com https://csp.withgoogle.com/csp/proto/BardChatUi https://content-push.googleapis.com/upload/ https://*.googleusercontent.com https://ogads-pa.googleapis.com/ https://*.youtube.com https://*.youtube-nocookie.com https://*.googlevideo.com data: https://static.corp.google.com/external_content/scs_corp/bard/artifacts https://*.googleapis.com\". The action has been blocked."
+        "text": "Connecting to 'https://stats.g.doubleclick.net/g/collect?v=2&tid=G-BF8Q35BMLM&cid=1215164957.1772755735&gtm=45je6350h2v9229664005z89113054662za20gzb9113054662zd9113054662&aip=1&dma=0&gcd=13l3l3l3l1l1&npa=0&frm=0&tag_exp=103116026~103200004~115616985~115938465~115938469~116024733~117484252~117827222' violates the following Content Security Policy directive: \"connect-src 'self' https://*.google.com https://*.gstatic.com https://*.google-analytics.com https://csp.withgoogle.com/csp/proto/BardChatUi https://content-push.googleapis.com/upload/ https://*.googleusercontent.com https://ogads-pa.googleapis.com/ https://*.youtube.com https://*.youtube-nocookie.com https://*.googlevideo.com data: https://static.corp.google.com/external_content/scs_corp/bard/artifacts https://*.googleapis.com\". The action has been blocked."
+      },
+      {
+        "type": "warning",
+        "text": "No ID or name found in config."
+      },
+      {
+        "type": "warning",
+        "text": "No ID or name found in config."
       }
     ]
   },

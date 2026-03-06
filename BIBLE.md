@@ -1649,3 +1649,29 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Executed verification for v1.24 health severity + diagnostics cleanup patch:
     - `bun test tests/unit/` (pass)
     - `bun run build` (pass)
+
+[2026-03-06] v1.25 — Full-project QA sweep hardening + e2e integration repair landed.
+  Conducted end-to-end verification sweep across unit tests, popup e2e suite, extension Playwright verification,
+  and production builds.
+
+  Root-cause findings resolved:
+    1) Popup e2e harness could not connect to preview target (`ERR_CONNECTION_REFUSED`) because Playwright had
+       no web server bootstrap configured.
+    2) Popup e2e assertions were stale and still targeted removed Tour/onboarding UX, causing architectural mismatch
+       against the current Home-launch popup design.
+    3) Popup runtime assumed `chrome.*` APIs always existed, producing preview-context integration fragility in
+       non-extension runs.
+
+  Fixes applied:
+    - Added Playwright `webServer` bootstrap in `playwright.config.js` to build + serve preview automatically.
+    - Replaced legacy popup e2e spec with current-surface assertions in `tests/e2e/popup.spec.js`
+      (brand, feature cards, Settings/Open Home controls, no Tour controls, modal behavior, preview fallback).
+    - Hardened popup runtime in `src/popup/index.js` with explicit extension-context guards for runtime/tabs APIs,
+      including deterministic preview-mode status messaging and Open Home fallback behavior outside extension context.
+
+  Verification run:
+    - `bun run test:all` (pass)
+      - Unit: 56 pass / 0 fail
+      - E2E popup: 8 pass / 0 fail
+    - `bun run verify:playwright` (pass; report `pass: true`)
+    - `bun run build` (pass)
