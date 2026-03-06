@@ -24,7 +24,7 @@ export const DEFAULT_HUD_SETTINGS = Object.freeze({
   bgGlassHue: 214,
   bgGlassSaturation: 18,
   bgGlassLightness: 86,
-  bgGlassAlpha: 0.84,
+  bgGlassAlpha: 0.88,
   panels: {},
   visibility: {
     welcome: false,
@@ -241,7 +241,7 @@ export function clampPanelState(panelState, viewport, minWidth = 180, minHeight 
     y: clamp(panelState?.y, SAFE_MARGIN, maxY),
     width,
     height,
-    opacity: clamp(panelState?.opacity, 0.58, 1),
+    opacity: clamp(panelState?.opacity, 0.72, 1),
     collapsed: panelState?.collapsed === true,
     pinned: panelState?.pinned === true,
   };
@@ -285,7 +285,7 @@ export function normalizeHudSettings(rawSettings, viewport) {
     bgGlassHue: clamp(source.bgGlassHue ?? DEFAULT_HUD_SETTINGS.bgGlassHue, 0, 360),
     bgGlassSaturation: clamp(source.bgGlassSaturation ?? DEFAULT_HUD_SETTINGS.bgGlassSaturation, 0, 100),
     bgGlassLightness: clamp(source.bgGlassLightness ?? DEFAULT_HUD_SETTINGS.bgGlassLightness, 0, 100),
-    bgGlassAlpha: clamp(source.bgGlassAlpha ?? DEFAULT_HUD_SETTINGS.bgGlassAlpha, 0.18, 0.9),
+    bgGlassAlpha: clamp(source.bgGlassAlpha ?? DEFAULT_HUD_SETTINGS.bgGlassAlpha, 0.62, 0.9),
     panels: {},
     visibility: normalizeVisibility(source.visibility),
   };
@@ -352,7 +352,7 @@ export function resetPanelInSettings(settings, panelId, viewport) {
 }
 
 export function panelOpacityValue(value) {
-  return clamp(value, 0.58, 1);
+  return clamp(value, 0.72, 1);
 }
 
 export function hueToHudPalette(hue) {

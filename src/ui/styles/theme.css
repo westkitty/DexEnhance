@@ -7,6 +7,8 @@
   inset: 0;
   pointer-events: none;
   font-family: system-ui, -apple-system, "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
   --dex-radius: 16px;
   --dex-shadow-lg: 0 20px 44px rgba(8, 30, 49, 0.22);
   --dex-shadow-md: 0 12px 28px rgba(8, 30, 49, 0.18);
@@ -17,7 +19,7 @@
   --dex-outline: 0 0 0 3px color-mix(in srgb, var(--dex-accent) 25%, transparent);
   --dex-watermark-opacity: 0.30;
   --dex-bg-base: rgba(236, 239, 244, 0.985);
-  --dex-bg-glass: rgba(168, 175, 187, 0.72);
+  --dex-bg-glass: rgba(168, 175, 187, 0.82);
 }
 
 #dex-app * {
@@ -42,12 +44,12 @@
   --dex-accent: #1e8fda;
   --dex-accent-2: #12b8a1;
   --dex-cta: #f97316;
-  --dex-glass-bg: rgba(148, 157, 169, 0.78);
-  --dex-glass-surface: rgba(243, 246, 252, 0.98);
+  --dex-glass-bg: rgba(148, 157, 169, 0.9);
+  --dex-glass-surface: rgba(243, 246, 252, 1);
   --dex-glass-border: rgba(248, 251, 255, 0.42);
   --dex-glass-shadow: 0 24px 52px rgba(15, 24, 36, 0.24);
   --dex-bg-base: var(--dex-shell);
-  --dex-bg-glass: color-mix(in srgb, var(--dex-glass-bg) 86%, transparent);
+  --dex-bg-glass: color-mix(in srgb, var(--dex-glass-bg) 92%, transparent);
 }
 
 :host([data-theme="dark"]) #dex-app {
@@ -62,12 +64,12 @@
   --dex-accent: #45b2ff;
   --dex-accent-2: #26d3ba;
   --dex-cta: #ff9a4d;
-  --dex-glass-bg: rgba(79, 88, 102, 0.82);
-  --dex-glass-surface: rgba(39, 46, 56, 0.96);
+  --dex-glass-bg: rgba(79, 88, 102, 0.9);
+  --dex-glass-surface: rgba(39, 46, 56, 1);
   --dex-glass-border: rgba(226, 233, 246, 0.22);
   --dex-glass-shadow: 0 24px 56px rgba(4, 8, 13, 0.46);
   --dex-bg-base: var(--dex-shell);
-  --dex-bg-glass: color-mix(in srgb, var(--dex-glass-bg) 86%, transparent);
+  --dex-bg-glass: color-mix(in srgb, var(--dex-glass-bg) 92%, transparent);
 }
 
 .dex-brandmark-header {
@@ -183,7 +185,7 @@
   border: 1px solid var(--dex-border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--dex-shell) 92%, transparent);
-  font-size: 11px;
+  font-size: 12px;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -312,7 +314,7 @@
 
 .dex-sidebar__title {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   display: flex;
@@ -360,7 +362,7 @@
 
 .dex-sidebar__label {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.88;
@@ -370,7 +372,7 @@
 .dex-sidebar__url {
   display: block;
   margin-top: 4px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   word-break: break-all;
   color: var(--dex-fg-soft);
@@ -448,7 +450,7 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg-soft);
 }
 
@@ -468,7 +470,7 @@
   border: 1px solid color-mix(in srgb, #e64c5b 68%, var(--dex-border));
   background: color-mix(in srgb, #e64c5b 15%, var(--dex-shell-strong));
   color: color-mix(in srgb, #e64c5b 80%, var(--dex-fg));
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .dex-status-banner.warn {
@@ -487,13 +489,13 @@
 
 .dex-contextual-hint__title {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg);
 }
 
 .dex-contextual-hint__message {
   margin: 6px 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--dex-fg-soft);
 }
@@ -550,7 +552,7 @@
 .dex-folder-count {
   min-width: 22px;
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   border-radius: 999px;
   padding: 3px 6px;
   background: color-mix(in srgb, var(--dex-accent) 16%, transparent);
@@ -580,7 +582,7 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--dex-shell-strong) 94%, transparent);
   color: var(--dex-fg);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
   padding: 7px 9px;
@@ -593,7 +595,7 @@
 .dex-link-btn--panel {
   min-height: 26px;
   padding: 4px 7px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .dex-link-btn:hover {
@@ -648,7 +650,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--dex-shell-strong) 68%, transparent);
   color: var(--dex-fg-soft);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   min-height: 22px;
   padding: 5px 9px;
@@ -690,7 +692,7 @@
   background: var(--dex-bg-base);
   color: var(--dex-fg);
   padding: 10px 14px;
-  font-size: 12px;
+  font-size: 13px;
   min-height: 42px;
   cursor: pointer;
   transition: border-color var(--dex-transition-fast), box-shadow var(--dex-transition-fast), transform var(--dex-transition-fast);
@@ -717,7 +719,7 @@
     color-mix(in srgb, var(--dex-accent) 72%, #ffffff 15%)
   );
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   min-height: 34px;
   padding: 7px 12px;
@@ -757,7 +759,7 @@
 }
 
 .dex-token-overlay__title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   margin-bottom: 8px;
   display: flex;
@@ -805,7 +807,7 @@
 }
 
 .dex-token-overlay__value {
-  font-size: 12px;
+  font-size: 13px;
   max-width: 125px;
   text-align: right;
   word-break: break-word;
@@ -880,7 +882,7 @@
 }
 
 .dex-panel-frame.is-compact .dex-panel-frame__title {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.02em;
 }
 
@@ -992,11 +994,11 @@
   grid-template-columns: minmax(0, 1fr) minmax(120px, 1.3fr) auto;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .dex-hud-opacity-row strong {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dex-muted);
 }
 
@@ -1041,14 +1043,14 @@
 }
 
 .dex-welcome__title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .dex-welcome__drag {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dex-muted);
 }
 
@@ -1175,7 +1177,7 @@
   border: 1px solid var(--dex-border);
   border-radius: 999px;
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg);
   background: color-mix(in srgb, var(--dex-shell-strong) 92%, transparent);
 }
@@ -1289,7 +1291,7 @@ select.dex-input {
   border-radius: 12px;
   background: var(--dex-shell);
   color: var(--dex-fg);
-  font-size: 12px;
+  font-size: 13px;
   padding: 10px 11px;
   min-height: 42px;
 }
@@ -1313,7 +1315,7 @@ select.dex-input {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg);
 }
 
@@ -1333,7 +1335,7 @@ select.dex-input {
 .dex-optimizer__result strong {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg);
 }
 
@@ -1342,7 +1344,7 @@ select.dex-input {
   max-height: 240px;
   overflow: auto;
   white-space: pre-wrap;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   color: var(--dex-fg);
 }
@@ -1385,7 +1387,7 @@ select.dex-input {
 
 .dex-prompt-card__body {
   margin: 8px 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg);
   white-space: pre-wrap;
   line-height: 1.5;
@@ -1401,7 +1403,7 @@ select.dex-input {
   border: 1px solid var(--dex-border);
   border-radius: 999px;
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dex-muted);
   background: color-mix(in srgb, var(--dex-accent) 6%, var(--dex-shell-strong));
 }
@@ -1424,7 +1426,7 @@ select.dex-input {
 }
 
 .dex-tour__eyebrow {
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--dex-muted);
@@ -1461,7 +1463,7 @@ select.dex-input {
 }
 
 .dex-tour__step-index {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -1481,7 +1483,7 @@ select.dex-input {
 
 .dex-tour__anchor-note {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--dex-fg-soft);
 }
@@ -1513,7 +1515,7 @@ select.dex-input {
 }
 
 .dex-tour__example-label {
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--dex-fg-soft);
@@ -1540,7 +1542,7 @@ select.dex-input {
 }
 
 .dex-tour__progress {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg-soft);
 }
 
@@ -1589,7 +1591,7 @@ select.dex-input:focus-visible {
 /* ── Collapsed panel clickable hint ─────────────────────────── */
 .dex-panel-frame__collapsed {
   padding: 8px 10px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-muted);
   display: flex;
   align-items: center;
@@ -1603,7 +1605,7 @@ select.dex-input:focus-visible {
 }
 
 .dex-panel-frame__collapsed-hint {
-  font-size: 11px;
+  font-size: 12px;
   opacity: 0.62;
 }
 
@@ -1623,7 +1625,7 @@ select.dex-input:focus-visible {
   flex: 1;
   min-height: 34px;
   padding: 6px 9px;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .dex-folder-rename-actions {
@@ -1642,7 +1644,7 @@ select.dex-input:focus-visible {
 
 .dex-folder-confirm__text {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg);
   margin-bottom: 6px;
   line-height: 1.45;
@@ -1698,7 +1700,7 @@ select.dex-input:focus-visible {
 }
 
 .dex-hub__group-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1707,7 +1709,7 @@ select.dex-input:focus-visible {
 }
 
 .dex-hub__group-caret {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-muted);
 }
 
@@ -1756,7 +1758,7 @@ select.dex-input:focus-visible {
   display: inline-grid;
   gap: 1px;
   justify-items: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg-soft);
   line-height: 1.35;
   min-width: 238px;
@@ -1804,13 +1806,13 @@ select.dex-input:focus-visible {
 }
 
 .dex-settings-slider-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dex-muted);
   font-weight: 600;
 }
 
 .dex-settings-slider-val {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dex-fg-soft);
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -1824,7 +1826,7 @@ select.dex-input:focus-visible {
   color: var(--dex-fg);
   min-height: 34px;
   padding: 7px 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -1837,7 +1839,7 @@ select.dex-input:focus-visible {
 }
 
 .dex-settings-accordion__caret {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-muted);
 }
 
@@ -1861,7 +1863,7 @@ select.dex-input:focus-visible {
 /* ── TokenOverlay own label (replaces dex-sidebar__label dep) ── */
 .dex-token-overlay__label {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.09em;
   text-transform: uppercase;
   opacity: 0.88;
@@ -1877,21 +1879,21 @@ select.dex-input:focus-visible {
 }
 
 .dex-form__hint {
-  font-size: 11px;
+  font-size: 12px;
   margin: 2px 0;
   color: var(--dex-muted);
   line-height: 1.4;
 }
 
 .dex-form__error {
-  font-size: 12px;
+  font-size: 13px;
   margin: 4px 0;
   color: #d04658;
   line-height: 1.4;
 }
 
 .dex-form__warning {
-  font-size: 12px;
+  font-size: 13px;
   margin: 4px 0;
   color: color-mix(in srgb, #e07a2a 90%, var(--dex-fg));
   line-height: 1.4;
@@ -1905,7 +1907,7 @@ select.dex-input:focus-visible {
 }
 
 .dex-sidebar__section-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -1922,7 +1924,7 @@ select.dex-input:focus-visible {
   align-items: center;
   justify-content: center;
   min-width: 22px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   border-radius: 999px;
   padding: 2px 8px;
@@ -1939,7 +1941,7 @@ select.dex-input:focus-visible {
 }
 
 .dex-optimizer__copy-btn {
-  font-size: 11px;
+  font-size: 12px;
   min-height: 26px;
   padding: 4px 8px;
   border-radius: 8px;
@@ -1953,7 +1955,7 @@ select.dex-input:focus-visible {
 }
 
 .dex-tour__kbd-hint {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dex-muted);
   opacity: 0.72;
 }

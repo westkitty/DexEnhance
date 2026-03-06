@@ -26,7 +26,7 @@ export function HUDSettingsPanel({
   bgGlassHue = 214,
   bgGlassSaturation = 18,
   bgGlassLightness = 86,
-  bgGlassAlpha = 0.78,
+  bgGlassAlpha = 0.88,
   onBackgroundChange,
   panelVisibility = {},
   panelOpacities = {},
@@ -239,7 +239,7 @@ export function HUDSettingsPanel({
                 h('div', { class: 'dex-settings-slider-row' }, [
                   h('span', { class: 'dex-settings-slider-label' }, 'Alpha'),
                   h('input', {
-                    type: 'range', min: 0.18, max: 0.9, step: 0.01,
+                    type: 'range', min: 0.62, max: 0.9, step: 0.01,
                     value: Number(bgGlassAlpha),
                     class: 'dex-panel-frame__slider',
                     'aria-label': 'Glass alpha',
@@ -298,7 +298,7 @@ export function HUDSettingsPanel({
                     }, [
                       h('input', {
                         type: 'range',
-                        min: 0.58,
+                        min: 0.72,
                         max: 1,
                         step: 0.02,
                         value: Number.isFinite(Number(panelOpacities?.[panelId])) ? Number(panelOpacities[panelId]) : 0.96,

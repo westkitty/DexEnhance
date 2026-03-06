@@ -1774,3 +1774,34 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
       - E2E popup: 8 pass / 0 fail
     - `bun run build` (pass)
     - `bun run verify:playwright` (pass; report `pass: true`)
+
+[2026-03-06] v1.30 — High-contrast readability enforcement (follow-up).
+  User-reported readability remained insufficient in practical use, so readability constraints were tightened
+  across typography and transparency controls.
+
+  Contrast + transparency enforcement:
+    - Increased default glass alpha from `0.84` to `0.88` and raised normalized glass-alpha floor from `0.18` to `0.62`
+      to prevent unreadable low-opacity themes from persisted settings.
+    - Raised panel opacity floor from `0.58` to `0.72` (state clamping + runtime value normalization).
+    - Updated panel/window transparency sliders to enforce the same new floor (`min: 0.72`).
+    - Strengthened base theme glass/background opacity in both light/dark variants so host content bleed-through
+      is reduced under moving page backgrounds.
+
+  Typography uplift:
+    - Added base app text sizing baseline (`#dex-app` font-size/line-height) and lifted small-font tiers throughout
+      the UI (labels, chips, status rows, panel actions, inputs, metadata, helper text) by +1px where applicable.
+    - This keeps compact controls usable while materially improving legibility across Sidebar, Status, Settings,
+      Prompt Library, Optimizer, Tour/help remnants, and token overlays.
+
+  Files touched:
+    - `src/lib/ui-settings.js`
+    - `src/ui/components/HUDSettingsPanel.jsx`
+    - `src/ui/components/PanelFrame.jsx`
+    - `src/ui/styles/theme.css`
+
+  Verification run:
+    - `bun run test:all` (pass)
+      - Unit: 56 pass / 0 fail
+      - E2E popup: 8 pass / 0 fail
+    - `bun run build` (pass)
+    - `bun run verify:playwright` (pass; report `pass: true`)

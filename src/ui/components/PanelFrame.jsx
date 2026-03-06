@@ -249,7 +249,7 @@ export function PanelFrame({
             h('input', {
               class: 'dex-panel-frame__slider',
               type: 'range',
-              min: 0.58,
+              min: 0.72,
               max: 1,
               step: 0.02,
               value: panelOpacityValue(state.opacity),
