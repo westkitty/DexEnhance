@@ -1,8 +1,9 @@
 import { h } from 'preact';
 
 function timeLabel(value) {
-  if (!Number.isFinite(Number(value))) return 'Never';
-  const date = new Date(Number(value));
+  const timestamp = Number(value);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) return 'Never';
+  const date = new Date(timestamp);
   return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
 

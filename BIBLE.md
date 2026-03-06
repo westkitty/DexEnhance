@@ -1696,3 +1696,16 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
       - Unit: 56 pass / 0 fail
       - E2E popup: 8 pass / 0 fail
     - `bun run build` (pass)
+
+[2026-03-06] v1.27 — Status timestamp display normalization fixed.
+  Corrected status panel time rendering for unset timestamps (`0`) that were previously displayed as
+  Unix epoch date (`12/31/1969 07:00 PM`) in worker failure and token refresh rows.
+
+  Fix applied in `src/ui/components/StatusPanel.jsx`:
+    - Updated `timeLabel` guard to treat non-finite and non-positive timestamps (`<= 0`) as `Never`.
+
+  Verification run:
+    - `bun run test:all` (pass)
+      - Unit: 56 pass / 0 fail
+      - E2E popup: 8 pass / 0 fail
+    - `bun run build` (pass)
