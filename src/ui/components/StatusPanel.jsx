@@ -23,16 +23,10 @@ export function StatusPanel({
   onReloadAdapter,
 }) {
   const modules = featureSettings?.modules || {};
-  const healthLabel = adapterHealth?.healthy
-    ? (adapterHealth?.degraded ? 'Degraded' : 'Healthy')
-    : 'Attention';
-  const healthClass = adapterHealth?.healthy
-    ? (adapterHealth?.degraded ? ' warn' : '')
-    : ' danger';
-  const showBanner = adapterHealth?.healthy === false || adapterHealth?.degraded === true;
-  const bannerText = adapterHealth?.healthy === false
-    ? 'Host adapter mismatch detected. Run diagnostics or re-inject UI.'
-    : 'Host navigation selector drift detected. Composer features remain available.';
+  const healthLabel = adapterHealth?.healthy ? 'Healthy' : 'Attention';
+  const healthClass = adapterHealth?.healthy ? '' : ' danger';
+  const showBanner = adapterHealth?.healthy === false;
+  const bannerText = 'Host adapter mismatch detected. Run diagnostics or re-inject UI.';
 
   return h('section', { class: 'dex-status-panel', 'aria-label': 'DexEnhance Status' }, [
     h('header', { class: 'dex-status-panel__head' }, [
@@ -41,7 +35,7 @@ export function StatusPanel({
     ]),
 
     showBanner
-      ? h('div', { class: `dex-status-banner${adapterHealth?.healthy ? ' warn' : ''}`, role: 'status' }, bannerText)
+      ? h('div', { class: 'dex-status-banner', role: 'status' }, bannerText)
       : null,
 
     h('div', { class: 'dex-status-grid' }, [

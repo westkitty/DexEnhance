@@ -1066,25 +1066,42 @@
   width: 100%;
   aspect-ratio: 1 / 1;
   border-radius: 999px;
-  overflow: hidden;
+  overflow: visible;
   margin: 0;
   padding: 0;
   background: transparent;
   border: 0;
   box-shadow: none;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.dex-welcome__logo-circle::before {
+  content: '';
+  position: absolute;
+  width: 86%;
+  height: 86%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(90, 217, 255, 0.30) 0%, rgba(64, 127, 255, 0.20) 44%, rgba(15, 29, 55, 0) 76%);
+  filter: blur(22px);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .dex-welcome__logo {
-  width: 100%;
-  height: 100%;
+  width: 92%;
+  height: 92%;
   border-radius: 999px;
   display: block;
   object-fit: contain;
   object-position: center;
   background: transparent;
   transform: none;
-  filter: none;
+  filter: drop-shadow(0 12px 28px rgba(13, 18, 34, 0.34));
   image-rendering: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .dex-welcome__cta {
@@ -1736,15 +1753,30 @@ select.dex-input:focus-visible {
 }
 
 .dex-welcome__tagline {
+  display: inline-grid;
+  gap: 1px;
+  justify-items: center;
   font-size: 11px;
   color: var(--dex-fg-soft);
-  line-height: 1.4;
-  max-width: 240px;
+  line-height: 1.35;
+  min-width: 238px;
+  max-width: 248px;
   margin-top: 2px;
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--dex-border-strong) 42%, #ffffff 58%);
   background: color-mix(in srgb, var(--dex-shell-strong) 94%, #ffffff 6%);
+}
+
+.dex-welcome__tagline-line {
+  display: block;
+  white-space: nowrap;
+}
+
+.dex-welcome__tagline-line.is-strong {
+  color: var(--dex-fg);
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 /* ── HUDSettingsPanel labeled slider rows ────────────────────── */

@@ -116,7 +116,7 @@ async function logStorageRoundTrip() {
 
   const ui = createShadowRenderer({ site: 'gemini' });
   const iconUrl = chrome.runtime.getURL('icons/icon128.png');
-  const welcomeIconUrl = chrome.runtime.getURL('icons/icon1024-welcome.png');
+  const welcomeIconUrl = chrome.runtime.getURL('icons/icon1024.png');
 
   let queueSizeState = 0;
   let welcomeVisible = false;
@@ -144,6 +144,8 @@ async function logStorageRoundTrip() {
     lastError: '',
   };
   let lastAdapterHealthToastAt = 0;
+  let adapterHealthFailCount = 0;
+  const healthCheckStartedAt = Date.now();
   let healthCheckTimer = null;
 
   let hudSettings = normalizeHudSettings({}, { width: window.innerWidth, height: window.innerHeight });
@@ -243,12 +245,19 @@ async function logStorageRoundTrip() {
     }
 
     const becameUnhealthy = adapterHealthState.healthy !== false && next.healthy === false;
+    if (next.healthy) {
+      adapterHealthFailCount = 0;
+    } else {
+      adapterHealthFailCount += 1;
+    }
     adapterHealthState = next;
     renderUI();
 
     if (notify && !next.healthy) {
       const ts = Date.now();
-      if (becameUnhealthy || ts - lastAdapterHealthToastAt > 60000) {
+      const inStartupWindow = ts - healthCheckStartedAt < 4500;
+      const unstable = adapterHealthFailCount < 3;
+      if (!inStartupWindow && !unstable && (becameUnhealthy || ts - lastAdapterHealthToastAt > 60000)) {
         lastAdapterHealthToastAt = ts;
         showDexToast({
           type: 'error',

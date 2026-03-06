@@ -1709,3 +1709,37 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
       - Unit: 56 pass / 0 fail
       - E2E popup: 8 pass / 0 fail
     - `bun run build` (pass)
+
+[2026-03-06] v1.28 — Welcome surface visual cleanup + startup health-noise reduction.
+  Addressed launch experience issues reported on Gemini/ChatGPT welcome flow and status signaling.
+
+  Welcome logo and copy polish:
+    - Switched welcome hero logo source from `icon1024-welcome.png` to transparent circular `icon1024.png`
+      in both host content entries (`src/content/chatgpt/index.js`, `src/content/gemini/index.js`) to remove
+      the opaque dark shield/background shape around the brand mark.
+    - Updated welcome subtitle structure to explicit balanced two-line layout in `WelcomeHandoffModal`:
+      line 1: `AI workflow assistant for`
+      line 2: `ChatGPT + Gemini`.
+    - Refined welcome styles (`src/ui/styles/theme.css`) for cleaner circle-only presentation with subtle
+      glow behind the logo and stronger line-balance styling for tagline readability.
+
+  Health/error noise reduction on launch:
+    - Added adapter health stabilization gating in both host content scripts before surfacing unhealthy toast errors:
+      requires brief startup grace window to pass and multiple consecutive unhealthy checks to avoid false
+      launch-time alarm spikes from transient host DOM initialization.
+    - Status panel severity display adjusted so degraded (optional selector drift) remains operationally healthy
+      instead of presenting as top-level error state; hard attention banner remains only for required-selector failure.
+
+  Files touched:
+    - `src/content/chatgpt/index.js`
+    - `src/content/gemini/index.js`
+    - `src/ui/components/StatusPanel.jsx`
+    - `src/ui/components/WelcomeHandoffModal.jsx`
+    - `src/ui/styles/theme.css`
+
+  Verification run:
+    - `bun run test:all` (pass)
+      - Unit: 56 pass / 0 fail
+      - E2E popup: 8 pass / 0 fail
+    - `bun run build` (pass)
+    - `bun run verify:playwright` (final rerun pass)
