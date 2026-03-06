@@ -22,15 +22,25 @@ export function StatusPanel({
   onReloadAdapter,
 }) {
   const modules = featureSettings?.modules || {};
+  const healthLabel = adapterHealth?.healthy
+    ? (adapterHealth?.degraded ? 'Degraded' : 'Healthy')
+    : 'Attention';
+  const healthClass = adapterHealth?.healthy
+    ? (adapterHealth?.degraded ? ' warn' : '')
+    : ' danger';
+  const showBanner = adapterHealth?.healthy === false || adapterHealth?.degraded === true;
+  const bannerText = adapterHealth?.healthy === false
+    ? 'Host adapter mismatch detected. Run diagnostics or re-inject UI.'
+    : 'Host navigation selector drift detected. Composer features remain available.';
 
   return h('section', { class: 'dex-status-panel', 'aria-label': 'DexEnhance Status' }, [
     h('header', { class: 'dex-status-panel__head' }, [
       h('strong', null, 'Status'),
-      h('span', { class: `dex-folder-count${adapterHealth?.healthy ? '' : ' danger'}` }, adapterHealth?.healthy ? 'Healthy' : 'Attention'),
+      h('span', { class: `dex-folder-count${healthClass}` }, healthLabel),
     ]),
 
-    !adapterHealth?.healthy
-      ? h('div', { class: 'dex-status-banner', role: 'status' }, 'Host adapter mismatch detected. Run diagnostics or re-inject UI.')
+    showBanner
+      ? h('div', { class: `dex-status-banner${adapterHealth?.healthy ? ' warn' : ''}`, role: 'status' }, bannerText)
       : null,
 
     h('div', { class: 'dex-status-grid' }, [
@@ -39,6 +49,7 @@ export function StatusPanel({
       h('div', { class: 'dex-status-row' }, [h('span', null, 'Textarea selector'), h('strong', null, boolLabel(adapterHealth?.hasTextarea))]),
       h('div', { class: 'dex-status-row' }, [h('span', null, 'Submit selector'), h('strong', null, boolLabel(adapterHealth?.hasSubmitButton))]),
       h('div', { class: 'dex-status-row' }, [h('span', null, 'Chat list selector'), h('strong', null, boolLabel(adapterHealth?.hasChatList))]),
+      h('div', { class: 'dex-status-row' }, [h('span', null, 'Adapter note'), h('strong', null, adapterHealth?.reason || 'None')]),
       h('div', { class: 'dex-status-row' }, [h('span', null, 'Adapter check'), h('strong', null, timeLabel(adapterHealth?.lastCheckedAt))]),
       h('div', { class: 'dex-status-row' }, [h('span', null, 'Worker ping'), h('strong', null, timeLabel(workerHealth?.lastPingAt))]),
       h('div', { class: 'dex-status-row' }, [h('span', null, 'Worker failure'), h('strong', null, timeLabel(workerHealth?.lastFailureAt))]),

@@ -471,6 +471,12 @@
   font-size: 12px;
 }
 
+.dex-status-banner.warn {
+  border-color: color-mix(in srgb, #d38a2d 68%, var(--dex-border));
+  background: color-mix(in srgb, #d38a2d 12%, var(--dex-shell-strong));
+  color: color-mix(in srgb, #d38a2d 86%, var(--dex-fg));
+}
+
 .dex-contextual-hint {
   margin: 8px 0 10px;
   padding: 9px;
@@ -549,6 +555,16 @@
   padding: 3px 6px;
   background: color-mix(in srgb, var(--dex-accent) 16%, transparent);
   color: color-mix(in srgb, var(--dex-accent) 80%, var(--dex-fg));
+}
+
+.dex-folder-count.warn {
+  background: color-mix(in srgb, #d38a2d 20%, transparent);
+  color: color-mix(in srgb, #d38a2d 85%, var(--dex-fg));
+}
+
+.dex-folder-count.danger {
+  background: color-mix(in srgb, #e64c5b 18%, transparent);
+  color: color-mix(in srgb, #e64c5b 85%, var(--dex-fg));
 }
 
 .dex-folder-actions {

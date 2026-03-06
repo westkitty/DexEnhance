@@ -1617,3 +1617,35 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
   Verification run:
     - `bun test tests/unit/` (pass)
     - `bun run build` (pass)
+
+[2026-03-06] v1.24 — Gemini adapter health severity correction + diagnostics cleanup landed.
+  Corrected adapter health classification for host selector checks in both Gemini and ChatGPT content scripts:
+    - Required selectors: UI host injection, composer textarea, submit button.
+    - Optional selector: chat-list container.
+    - Missing optional chat-list now reports `degraded` (not `unhealthy`) when required selectors are present.
+  Updated health reason text to distinguish required selector failure vs optional chat-list drift.
+  Preserved unhealthy toast escalation for required selector failures only (no error toast for degraded-only state).
+
+  Improved status diagnostics payload quality:
+    - `status.copy_diagnostics` snapshots no longer force `error: "unknown error"` when no error object exists.
+    - Empty error/stack are now emitted for manual status snapshots to avoid false failure signaling.
+
+  Updated status UI presentation:
+    - Added `Healthy` / `Degraded` / `Attention` badge states.
+    - Added warning-style banner for degraded state and retained danger-style banner for unhealthy state.
+    - Exposed adapter reason text in the status grid.
+
+  Files touched:
+    - `src/content/gemini/index.js`
+    - `src/content/chatgpt/index.js`
+    - `src/ui/components/StatusPanel.jsx`
+    - `src/ui/styles/theme.css`
+
+  Verification run:
+    - `bun test tests/unit/` (pending after this entry)
+    - `bun run build` (pending after this entry)
+
+[2026-03-06] v1.24.1 — Post-patch verification completed.
+  Executed verification for v1.24 health severity + diagnostics cleanup patch:
+    - `bun test tests/unit/` (pass)
+    - `bun run build` (pass)

@@ -130,6 +130,7 @@ async function logStorageRoundTrip() {
   let queueRuntimeState = null;
   let adapterHealthState = {
     healthy: true,
+    degraded: false,
     uiInjected: true,
     hasTextarea: false,
     hasSubmitButton: false,
@@ -175,26 +176,33 @@ async function logStorageRoundTrip() {
     });
   };
 
-  const statusDiagnosticsPayload = (operation, error) => ({
-    ...buildDiagnostics({
+  const statusDiagnosticsPayload = (operation, error) => {
+    const diagnostics = buildDiagnostics({
       module: 'content/chatgpt',
       operation,
       host: window.location.hostname,
       url: window.location.href,
       error,
-    }),
-    adapterHealth: adapterHealthState,
-    workerHealth: workerHealthState,
-    queue: {
-      paused: queueRuntimeState?.paused === true,
-      count: queueRuntimeState?.items?.length || 0,
-      lastError: queueRuntimeState?.lastError || null,
-    },
-    token: {
-      source: tokenSource || '',
-      updatedAt: tokenUpdatedAt || 0,
-    },
-  });
+    });
+    if (error == null) {
+      diagnostics.error = '';
+      diagnostics.stack = '';
+    }
+    return {
+      ...diagnostics,
+      adapterHealth: adapterHealthState,
+      workerHealth: workerHealthState,
+      queue: {
+        paused: queueRuntimeState?.paused === true,
+        count: queueRuntimeState?.items?.length || 0,
+        lastError: queueRuntimeState?.lastError || null,
+      },
+      token: {
+        source: tokenSource || '',
+        updatedAt: tokenUpdatedAt || 0,
+      },
+    };
+  };
 
   const copyStatusDiagnostics = async () => {
     const payload = statusDiagnosticsPayload('status.copy_diagnostics', null);
@@ -222,11 +230,16 @@ async function logStorageRoundTrip() {
       hasChatList: Boolean(adapter.getChatListContainer()),
       lastCheckedAt: Date.now(),
       reason: '',
+      degraded: false,
       healthy: true,
     };
-    next.healthy = next.uiInjected && next.hasTextarea && next.hasSubmitButton && next.hasChatList;
+    const hasRequiredSelectors = next.uiInjected && next.hasTextarea && next.hasSubmitButton;
+    next.degraded = hasRequiredSelectors && !next.hasChatList;
+    next.healthy = hasRequiredSelectors;
     if (!next.healthy) {
-      next.reason = 'Selector mismatch or host UI drift detected.';
+      next.reason = 'Required selector mismatch or host UI drift detected.';
+    } else if (next.degraded) {
+      next.reason = 'Optional chat-list selector mismatch detected. Composer actions remain available.';
     }
 
     const becameUnhealthy = adapterHealthState.healthy !== false && next.healthy === false;
