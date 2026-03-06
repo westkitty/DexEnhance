@@ -6,15 +6,15 @@ test.beforeEach(async ({ page }) => {
 
 test('popup renders DexEnhance brand heading', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('DexEnhance');
-  await expect(page.locator('.tips strong')).toHaveText('Status snapshot');
+  await expect(page.locator('.tips strong')).toHaveText('Quick tips');
 });
 
 test('popup renders all four feature cards', async ({ page }) => {
   await expect(page.locator('.feature-card')).toHaveCount(4);
-  await expect(page.locator('.feature-card h3').nth(0)).toHaveText('Folders');
-  await expect(page.locator('.feature-card h3').nth(1)).toHaveText('Queue');
-  await expect(page.locator('.feature-card h3').nth(2)).toHaveText('Prompt Library');
-  await expect(page.locator('.feature-card h3').nth(3)).toHaveText('Export + Tokens');
+  await expect(page.locator('.feature-card h3').nth(0)).toHaveText('Command Palette');
+  await expect(page.locator('.feature-card h3').nth(1)).toHaveText('Single Drawer');
+  await expect(page.locator('.feature-card h3').nth(2)).toHaveText('Prompt + Folder Workspace');
+  await expect(page.locator('.feature-card h3').nth(3)).toHaveText('Undo-first Actions');
 });
 
 test('popup renders Settings and Open Home buttons', async ({ page }) => {
@@ -27,10 +27,12 @@ test('popup no longer exposes legacy Tour controls', async ({ page }) => {
   await expect(page.locator('#tour-modal')).toHaveCount(0);
 });
 
-test('settings button opens modal with hue slider', async ({ page }) => {
+test('settings button opens modal with theme presets', async ({ page }) => {
   await page.click('#open-settings');
   await expect(page.locator('#settings-modal')).toHaveClass(/is-open/);
-  await expect(page.locator('#hud-hue')).toBeVisible();
+  await expect(page.locator('[data-theme-preset="graphite"]')).toBeVisible();
+  await expect(page.locator('[data-theme-preset="paper"]')).toBeVisible();
+  await expect(page.locator('[data-theme-preset="oxide"]')).toBeVisible();
 });
 
 test('settings close button dismisses modal', async ({ page }) => {

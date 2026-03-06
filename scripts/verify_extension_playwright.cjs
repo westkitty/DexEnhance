@@ -45,13 +45,11 @@ async function verifySite(context, site) {
       return {
         hostPresent: Boolean(host),
         shadowPresent: Boolean(root),
-        sidebarPresent: Boolean(root?.querySelector('.dex-sidebar')),
-        fabPresent: Boolean(root?.querySelector('.dex-fab')),
-        overlayPresent: Boolean(root?.querySelector('.dex-token-overlay')),
-        badgePresent: Boolean(root?.querySelector('.dex-brand-badge')),
-        sidebarIconPresent: Boolean(root?.querySelector('.dex-sidebar__icon')),
-        fabIconPresent: Boolean(root?.querySelector('.dex-fab__icon')),
-        overlayIconPresent: Boolean(root?.querySelector('.dex-token-overlay__icon')),
+        welcomePresent: Boolean(root?.querySelector('.dex-welcome')),
+        launcherPresent: Boolean(root?.querySelector('.dex-launcher')),
+        drawerPresent: Boolean(root?.querySelector('.dex-drawer')),
+        palettePresent: Boolean(root?.querySelector('.dex-command-palette')),
+        drawerStatusPresent: Boolean(root?.querySelector('.dex-drawer-status')),
       };
     }, hostId);
 
@@ -81,8 +79,33 @@ async function verifySite(context, site) {
       screenshotPath,
       sampleLogs: logs.slice(0, 30),
     };
+  } catch (error) {
+    return {
+      site,
+      url,
+      expectedLogSeen: logs.some((entry) => entry.text.includes(expectedLog)),
+      dexEnhanceErrors: logs.filter(
+        (entry) =>
+          /DexEnhance/i.test(entry.text) &&
+          /(error|uncaught|failed|exception)/i.test(entry.text)
+      ),
+      extensionInlineCspErrors: [],
+      extensionResourceDeniedErrors: [],
+      pageErrors: [...errors, String(error)],
+      ui: {
+        hostPresent: false,
+        shadowPresent: false,
+        welcomePresent: false,
+        launcherPresent: false,
+        drawerPresent: false,
+        palettePresent: false,
+        drawerStatusPresent: false,
+      },
+      screenshotPath,
+      sampleLogs: logs.slice(0, 30),
+    };
   } finally {
-    await page.close();
+    await page.close().catch(() => {});
   }
 }
 
@@ -96,29 +119,29 @@ async function verifyPopup(context, extensionId) {
     await page.waitForTimeout(800);
 
     const initial = await page.evaluate(() => {
-      const modal = document.getElementById('tour-modal');
+      const modal = document.getElementById('settings-modal');
       const icon = document.querySelector('.brand img');
-      const openButton = document.getElementById('open-tour');
       const settingsButton = document.getElementById('open-settings');
+      const openHomeButton = document.getElementById('open-home');
       return {
         modalOpen: Boolean(modal?.classList.contains('is-open')),
         iconPresent: Boolean(icon),
         iconSource: icon?.getAttribute('src') || '',
-        openTourButtonPresent: Boolean(openButton),
         openSettingsButtonPresent: Boolean(settingsButton),
+        openHomeButtonPresent: Boolean(openHomeButton),
       };
     });
 
-    await page.click('#tour-close').catch(() => {});
-    await page.waitForTimeout(220);
     await page.click('#open-settings').catch(() => {});
     await page.waitForTimeout(320);
     const settingsState = await page.evaluate(() => {
       const modal = document.getElementById('settings-modal');
-      const hue = document.getElementById('hud-hue');
+      const graphite = document.querySelector('[data-theme-preset="graphite"]');
+      const paper = document.querySelector('[data-theme-preset="paper"]');
+      const oxide = document.querySelector('[data-theme-preset="oxide"]');
       return {
         modalOpen: Boolean(modal?.classList.contains('is-open')),
-        hueControlPresent: Boolean(hue),
+        themePresetControlsPresent: Boolean(graphite && paper && oxide),
       };
     });
 
@@ -127,10 +150,9 @@ async function verifyPopup(context, extensionId) {
     await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
 
     const closed = await page.evaluate(() => {
-      const modal = document.getElementById('tour-modal');
+      const modal = document.getElementById('settings-modal');
       return {
         modalOpen: Boolean(modal?.classList.contains('is-open')),
-        progressText: document.getElementById('tour-progress')?.textContent || '',
       };
     });
 
@@ -245,6 +267,15 @@ async function verifyPopup(context, extensionId) {
     if (!result.chatgpt.ui.hostPresent || !result.gemini.ui.hostPresent) {
       result.errors.push('Shadow host was not detected on one or more target sites.');
     }
+    if (!result.chatgpt.ui.welcomePresent && !result.chatgpt.ui.launcherPresent) {
+      result.errors.push('ChatGPT shell did not expose either welcome modal or launcher.');
+    }
+    if (!result.gemini.ui.welcomePresent && !result.gemini.ui.launcherPresent) {
+      result.errors.push('Gemini shell did not expose either welcome modal or launcher.');
+    }
+    if (!result.chatgpt.ui.drawerPresent || !result.gemini.ui.drawerPresent) {
+      result.errors.push('Drawer shell was not detected on one or more target sites.');
+    }
     if ((result.promptCatalog?.promptCount || 0) < 50) {
       result.errors.push('Prompt catalog contains fewer than 50 templates.');
     }
@@ -254,14 +285,17 @@ async function verifyPopup(context, extensionId) {
     if (!result.popup?.initial?.openSettingsButtonPresent) {
       result.errors.push('Popup settings button was not detected.');
     }
-    if (!result.popup?.settingsState?.modalOpen || !result.popup?.settingsState?.hueControlPresent) {
-      result.errors.push('Popup settings modal did not open correctly.');
+    if (!result.popup?.initial?.openHomeButtonPresent) {
+      result.errors.push('Popup open-home button was not detected.');
+    }
+    if (!result.popup?.settingsState?.modalOpen || !result.popup?.settingsState?.themePresetControlsPresent) {
+      result.errors.push('Popup settings modal did not expose theme preset controls correctly.');
     }
     if (result.popup?.initial?.modalOpen) {
-      result.errors.push('Popup tour should not auto-open on launch.');
+      result.errors.push('Popup settings modal should not auto-open on launch.');
     }
     if (result.popup?.closed?.modalOpen) {
-      result.errors.push('Popup tour did not close when requested.');
+      result.errors.push('Popup settings modal did not close when requested.');
     }
   } finally {
     await context.close();

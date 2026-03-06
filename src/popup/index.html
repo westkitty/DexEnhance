@@ -7,278 +7,116 @@
   <title>DexEnhance</title>
   <style>
     :root {
-      --dex-bg: linear-gradient(145deg, #c9cdd5 0%, #b9bec8 46%, #d7dae1 100%);
-      --dex-card: rgba(130, 136, 147, 0.26);
-      --dex-card-strong: rgba(151, 157, 168, 0.3);
-      --dex-border: rgba(18, 52, 80, 0.22);
-      --dex-ink: #0d1f2d;
-      --dex-muted: rgba(18, 52, 76, 0.72);
-      --dex-accent: #1567b8;
-      --dex-accent-2: #0a8c77;
-      --dex-cta: #c45a0a;
-      --dex-shadow: 0 20px 44px rgba(18, 21, 28, 0.32);
-      --dex-watermark-opacity: 0.12;
-      --dex-popup-logo-url: none;
-      --dex-pill-bg: rgba(21, 103, 184, 0.12);
-      --dex-pill-color: #0e4d8a;
-      --dex-example-color: #0e4d8a;
+      --dex-bg: #151b23;
+      --dex-surface: #1d2530;
+      --dex-surface-contrast: #26303d;
+      --dex-border: #3a495b;
+      --dex-border-strong: #6a7e94;
+      --dex-ink: #edf3fb;
+      --dex-muted: #b4c2d3;
+      --dex-accent: #7cc2ff;
+      --dex-success: #39c57a;
+      --dex-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       min-width: 360px;
       min-height: 520px;
-      font-family: system-ui, -apple-system, "Avenir Next", "Segoe UI", sans-serif;
+      font-family: system-ui, -apple-system, 'Avenir Next', 'Segoe UI', sans-serif;
+      background: linear-gradient(180deg, #111720 0%, #151b23 100%);
       color: var(--dex-ink);
-      background: var(--dex-bg);
-      position: relative;
-      overflow: hidden;
     }
 
-    @keyframes dex-popup-fade {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
+    button, input {
+      font: inherit;
     }
 
-    @keyframes dex-popup-slide {
-      from {
-        opacity: 0;
-        transform: translateY(10px) scale(0.985);
-        filter: blur(2px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        filter: blur(0);
-      }
-    }
-
-    body::before,
-    body::after {
-      content: "";
-      position: absolute;
-      pointer-events: none;
-      border-radius: 999px;
-      filter: blur(22px);
-      opacity: 0.65;
-    }
-
-    body::before {
-      width: 220px;
-      height: 220px;
-      background: rgba(255, 255, 255, 0.26);
-      top: -90px;
-      right: -80px;
-    }
-
-    body::after {
-      width: 190px;
-      height: 190px;
-      background: rgba(111, 118, 130, 0.22);
-      bottom: -95px;
-      left: -70px;
+    button:focus-visible, input:focus-visible {
+      outline: 2px solid var(--dex-accent);
+      outline-offset: 2px;
     }
 
     .panel {
-      position: relative;
-      z-index: 2;
       margin: 12px;
-      padding: 14px;
-      border-radius: 18px;
+      padding: 16px;
       border: 1px solid var(--dex-border);
-      background:
-        linear-gradient(145deg, rgba(183, 190, 203, 0.26), rgba(126, 132, 144, 0.2)),
-        var(--dex-card);
+      border-radius: 20px;
+      background: var(--dex-surface);
       box-shadow: var(--dex-shadow);
-      backdrop-filter: blur(18px) saturate(120%);
-      animation: dex-popup-slide 280ms cubic-bezier(0.19, 1, 0.22, 1);
-      isolation: isolate;
-      overflow: hidden;
     }
 
-    .panel::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(125deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.04) 54%, transparent 85%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .panel::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      top: 58%;
-      transform: translate(-50%, -50%);
-      width: 210px;
-      height: 210px;
-      background-image: var(--dex-popup-logo-url);
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: contain;
-      opacity: var(--dex-watermark-opacity);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .panel > * {
-      position: relative;
-      z-index: 1;
-    }
-
-    .brand-row {
+    .brand-row, .brand, .brand-actions, .feature-grid, .settings-row, .tour-actions {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
       gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .brand-actions {
-      display: flex;
       align-items: center;
-      gap: 8px;
+      flex-wrap: wrap;
     }
 
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .brand img {
+    .brand-row { justify-content: space-between; }
+    .brand img, .tour-modal__brand img {
       width: 44px;
       height: 44px;
-      border-radius: 10px;
-      border: 1px solid rgba(250, 252, 255, 0.45);
+      border-radius: 12px;
       object-fit: contain;
-      box-shadow: 0 10px 22px rgba(9, 12, 18, 0.28);
+      border: 1px solid var(--dex-border-strong);
+      background: #111720;
     }
 
-    h1 {
-      margin: 0;
-      font-size: 18px;
-      line-height: 1.2;
-      letter-spacing: 0.02em;
-    }
+    h1, h2, h3, p { margin: 0; }
 
-    .muted {
-      margin: 3px 0 0;
-      font-size: 12px;
+    .muted, .tour-sub, .feature-card p, .settings-note, .feature-toggle-desc, .popup-status-summary {
       color: var(--dex-muted);
     }
 
-    .tour-btn {
-      border: 1px solid rgba(21, 103, 184, 0.38);
-      border-radius: 999px;
-      background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--dex-accent) 88%, transparent),
-        color-mix(in srgb, var(--dex-accent-2) 88%, transparent)
-      );
-      color: #fff;
-      font-size: 12px;
-      font-weight: 700;
-      padding: 10px 14px;
-      cursor: pointer;
+    .tour-btn, .btn, .theme-preset {
       min-height: 42px;
-      transition: transform 180ms ease, box-shadow 220ms ease, filter 220ms ease;
-      box-shadow: 0 10px 22px rgba(12, 16, 22, 0.28);
-      backdrop-filter: blur(10px) saturate(120%);
+      border: 1px solid var(--dex-border);
+      border-radius: 12px;
+      background: var(--dex-surface-contrast);
+      color: var(--dex-ink);
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
     }
 
-    .settings-btn {
-      background: linear-gradient(
-        135deg,
-        rgba(80, 88, 100, 0.88),
-        rgba(60, 68, 82, 0.92)
-      );
-    }
-
-    .tour-btn:hover {
-      transform: translateY(-1px);
-      filter: brightness(1.06);
+    .tour-btn.primary, .btn.primary, .theme-preset.is-active {
+      background: var(--dex-accent);
+      border-color: var(--dex-accent);
+      color: #07131d;
     }
 
     .feature-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-top: 10px;
+      margin-top: 12px;
     }
 
-    .feature-card {
+    .feature-card, .feature-toggle-row, .theme-preset {
       border: 1px solid var(--dex-border);
-      border-radius: 12px;
-      background: var(--dex-card-strong);
-      padding: 10px;
-      backdrop-filter: blur(12px) saturate(115%);
-      transition: transform 170ms ease, border-color 220ms ease, box-shadow 220ms ease;
-    }
-
-    .feature-card:hover {
-      transform: translateY(-1px);
-      border-color: rgba(255, 255, 255, 0.52);
-      box-shadow: 0 10px 22px rgba(12, 17, 22, 0.24);
-    }
-
-    .feature-card h3 {
-      margin: 0 0 4px;
-      font-size: 12px;
-      letter-spacing: 0.03em;
-      text-transform: uppercase;
-    }
-
-    .feature-card p {
-      margin: 0;
-      font-size: 11px;
-      color: var(--dex-muted);
-      line-height: 1.4;
+      border-radius: 14px;
+      background: var(--dex-surface-contrast);
+      padding: 12px;
     }
 
     .tips {
       margin-top: 12px;
-      border: 1px dashed var(--dex-border);
-      border-radius: 12px;
-      background: rgba(176, 184, 197, 0.2);
-      padding: 10px;
-      backdrop-filter: blur(10px) saturate(110%);
-    }
-
-    .tips strong {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 12px;
-    }
-
-    .tips p {
-      margin: 0;
-      font-size: 11px;
-      color: var(--dex-muted);
-      line-height: 1.5;
+      border: 1px solid var(--dex-border);
+      border-radius: 14px;
+      background: #111720;
+      padding: 12px;
     }
 
     .modal-backdrop {
-      position: absolute;
+      position: fixed;
       inset: 0;
       z-index: 5;
-      background: rgba(29, 33, 40, 0.42);
+      background: rgba(0, 0, 0, 0.56);
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 10px;
-      backdrop-filter: blur(8px) saturate(120%);
-      animation: dex-popup-fade 220ms ease;
+      padding: 12px;
     }
 
     .modal-backdrop.is-open {
@@ -286,367 +124,133 @@
     }
 
     .tour-modal {
-      position: relative;
-      isolation: isolate;
       width: 100%;
-      max-width: 380px;
+      max-width: 400px;
       max-height: calc(100vh - 24px);
       overflow: auto;
-      border-radius: 16px;
-      border: 1px solid var(--dex-border);
-      background:
-        linear-gradient(145deg, rgba(190, 198, 210, 0.3), rgba(126, 132, 144, 0.22)),
-        var(--dex-card);
+      border-radius: 18px;
+      border: 1px solid var(--dex-border-strong);
+      background: var(--dex-surface);
       box-shadow: var(--dex-shadow);
-      padding: 14px;
-      backdrop-filter: blur(20px) saturate(126%);
-      animation: dex-popup-slide 300ms cubic-bezier(0.19, 1, 0.22, 1);
+      padding: 16px;
     }
 
-    .tour-modal::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      border-radius: inherit;
-      background: linear-gradient(125deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.05) 52%, transparent 84%);
-      pointer-events: none;
-      z-index: 0;
-    }
+    .tour-modal__brand { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .settings-field, .feature-toggle-list, .theme-preset-grid { display: grid; gap: 10px; margin-top: 12px; }
+    .theme-preset-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .settings-label, .feature-toggle-title { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dex-muted); }
+    .feature-toggle-row { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
+    .feature-toggle-row input[type="checkbox"] { accent-color: var(--dex-accent); margin-top: 3px; }
+    .tour-actions { margin-top: 14px; }
+    .status-line { margin-top: 10px; color: var(--dex-success); font-size: 12px; }
 
-    .tour-modal::after {
-      content: "";
-      position: absolute;
-      left: 50%;
-      top: 58%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      background-image: var(--dex-popup-logo-url);
-      background-repeat: no-repeat;
-      background-position: center;
-      background-size: contain;
-      opacity: var(--dex-watermark-opacity);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .tour-modal > * {
-      position: relative;
-      z-index: 1;
-    }
-
-    .tour-modal__brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 8px;
-    }
-
-    .tour-modal__brand img {
-      width: 42px;
-      height: 42px;
-      object-fit: contain;
-      border-radius: 11px;
-      border: 1px solid rgba(255, 255, 255, 0.44);
-      box-shadow: 0 10px 22px rgba(10, 13, 20, 0.26);
-    }
-
-    .tour-modal h2 {
-      margin: 0;
-      font-size: 16px;
-    }
-
-    .settings-field {
-      margin: 10px 0;
-      display: grid;
-      gap: 6px;
-    }
-
-    .settings-label {
-      font-size: 12px;
-      color: var(--dex-muted);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
-    .settings-slider {
-      width: 100%;
-      accent-color: var(--dex-accent);
-    }
-
-    .settings-slider--spectrum {
-      -webkit-appearance: none;
-      appearance: none;
-      height: 10px;
-      border-radius: 999px;
-      border: 1px solid var(--dex-border);
-      background: linear-gradient(90deg, #ff3b30 0%, #ff9500 16%, #ffcc00 32%, #34c759 48%, #00c7be 64%, #007aff 80%, #af52de 100%);
-    }
-
-    .settings-slider--spectrum::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 999px;
-      border: 2px solid #fff;
-      background: rgba(230, 236, 246, 0.96);
-      cursor: pointer;
-    }
-
-    .settings-row {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .settings-note {
-      margin: 8px 0 0;
-      font-size: 11px;
-      color: var(--dex-muted);
-      line-height: 1.5;
-    }
-
-    .feature-toggle-list {
-      margin-top: 12px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .feature-toggle-row {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 8px;
-      align-items: start;
-      padding: 8px;
-      border: 1px solid var(--dex-border);
-      border-radius: 10px;
-      background: rgba(170, 177, 190, 0.22);
-      backdrop-filter: blur(8px) saturate(110%);
-    }
-
-    .feature-toggle-row input[type=\"checkbox\"] {
-      margin-top: 2px;
-      accent-color: var(--dex-accent);
-    }
-
-    .feature-toggle-title {
-      margin: 0;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .feature-toggle-desc {
-      margin: 3px 0 0;
-      font-size: 11px;
-      color: var(--dex-muted);
-      line-height: 1.4;
-    }
-
-    .tour-modal .tour-sub {
-      margin: 4px 0 10px;
-      font-size: 12px;
-      color: var(--dex-muted);
-    }
-
-    .step-pill {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      border: 1px solid rgba(21, 103, 184, 0.32);
-      padding: 5px 9px;
-      font-size: 11px;
-      margin-bottom: 10px;
-      background: var(--dex-pill-bg);
-      color: var(--dex-pill-color);
-    }
-
-    .tour-title {
-      margin: 0;
-      font-size: 15px;
-      line-height: 1.35;
-    }
-
-    .tour-desc,
-    .tour-example {
-      margin: 8px 0;
-      font-size: 12px;
-      line-height: 1.5;
-      color: var(--dex-muted);
-    }
-
-    .tour-example {
-      border-left: 3px solid var(--dex-accent);
-      padding-left: 8px;
-      color: var(--dex-example-color);
-    }
-
-    .tour-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .btn {
-      min-height: 42px;
-      border-radius: 10px;
-      border: 1px solid var(--dex-border);
-      background: rgba(167, 175, 188, 0.2);
-      color: var(--dex-ink);
-      padding: 9px 11px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      flex: 1;
-      backdrop-filter: blur(10px);
-      transition: transform 170ms ease, border-color 220ms ease, background-color 220ms ease;
-    }
-
-    .btn:hover {
-      transform: translateY(-1px);
-      border-color: rgba(255, 255, 255, 0.52);
-      background: rgba(189, 197, 210, 0.3);
-    }
-
-    .btn.primary {
-      border: 1px solid rgba(245, 249, 255, 0.44);
-      color: #fff;
-      background: linear-gradient(
-        135deg,
-        color-mix(in srgb, var(--dex-accent) 76%, transparent),
-        color-mix(in srgb, var(--dex-cta) 76%, transparent)
-      );
-    }
-
-    .btn.ghost {
-      flex: initial;
-      min-width: 96px;
-    }
-
-    .btn:focus-visible,
-    .tour-btn:focus-visible {
-      outline: 2px solid var(--dex-accent);
-      outline-offset: 2px;
+    @media (max-width: 420px) {
+      .feature-grid, .theme-preset-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <section class="panel" id="popup-root">
+  <main class="panel">
     <div class="brand-row">
       <div class="brand">
-        <img src="../icons/icon128.png" alt="DexEnhance icon" />
+        <img src="../icons/icon128.png" alt="DexEnhance logo" />
         <div>
           <h1>DexEnhance</h1>
-          <p class="muted">Cross-site workflow assistant for ChatGPT + Gemini</p>
+          <p class="muted">Command palette shell for ChatGPT and Gemini.</p>
         </div>
       </div>
       <div class="brand-actions">
-        <button id="open-settings" class="tour-btn settings-btn" type="button">Settings</button>
-        <button id="open-home" class="tour-btn" type="button">Open Home</button>
+        <button id="open-settings" class="tour-btn" type="button">Settings</button>
+        <button id="open-home" class="tour-btn primary" type="button">Open Home</button>
       </div>
     </div>
 
-    <div class="feature-grid">
-      <article class="feature-card">
-        <h3>Folders</h3>
-        <p>Organize chats by project and assign active threads instantly.</p>
-      </article>
-      <article class="feature-card">
-        <h3>Queue</h3>
-        <p>Queue follow-up prompts while generation is in progress.</p>
-      </article>
-      <article class="feature-card">
-        <h3>Prompt Library</h3>
-        <p>Use reusable templates with variables like {{topic}}.</p>
-      </article>
-      <article class="feature-card">
-        <h3>Export + Tokens</h3>
-        <p>Export threads and monitor model/token metadata live.</p>
-      </article>
-    </div>
+    <p id="popup-status-summary" class="popup-status-summary">Loading status…</p>
 
-    <div class="tips">
-      <strong>Status snapshot</strong>
-      <p id="popup-status-summary">Checking extension status...</p>
-    </div>
-  </section>
+    <section class="feature-grid" aria-label="Primary capabilities">
+      <article class="feature-card">
+        <h3>Command Palette</h3>
+        <p>`Cmd/Ctrl+K` opens a keyboard-first launcher for navigation, export, diagnostics, and context actions.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Single Drawer</h3>
+        <p>Prompts, queue, optimizer, export, and settings now share one opaque workspace.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Prompt + Folder Workspace</h3>
+        <p>Reusable prompts and chat organization stay reachable without floating windows.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Undo-first Actions</h3>
+        <p>Reversible deletes resolve immediately and expose Undo through the toast system.</p>
+      </article>
+    </section>
+
+    <section class="tips" aria-label="Quick tips">
+      <strong>Quick tips</strong>
+      <p>Use Shift-click on the corner launcher to reopen the last drawer view directly. Use the popup only for launch and feature toggles.</p>
+    </section>
+  </main>
 
   <div id="settings-modal" class="modal-backdrop" aria-hidden="true">
     <section class="tour-modal" aria-label="DexEnhance Popup Settings">
       <div class="tour-modal__brand">
         <img src="../icons/icon128.png" alt="DexEnhance logo" />
-        <h2>HUD Settings</h2>
+        <div>
+          <h2>Shell Settings</h2>
+          <p class="tour-sub">Preset themes, layout resets, and feature module toggles for both hosts.</p>
+        </div>
       </div>
-      <p class="tour-sub">Tune HUD color and reset layout for both sites.</p>
 
       <div class="settings-field">
-        <label class="settings-label" for="hud-hue">Accent Hue <strong id="hud-hue-value">202°</strong></label>
-        <input id="hud-hue" class="settings-slider settings-slider--spectrum" type="range" min="0" max="360" step="1" value="202" />
+        <span class="settings-label">Theme preset</span>
+        <div class="theme-preset-grid">
+          <button type="button" class="theme-preset" data-theme-preset="graphite">Graphite</button>
+          <button type="button" class="theme-preset" data-theme-preset="paper">Paper</button>
+          <button type="button" class="theme-preset" data-theme-preset="oxide">Oxide</button>
+        </div>
       </div>
 
       <div class="settings-row">
-        <button id="reset-layout" class="btn" type="button">Reset Window Layout</button>
+        <button id="reset-layout" class="btn" type="button">Reset Layout</button>
         <button id="reset-theme" class="btn" type="button">Reset Theme</button>
       </div>
 
       <div class="feature-toggle-list">
         <label class="feature-toggle-row">
           <input id="feature-ghostOverlay" type="checkbox" />
-          <span>
-            <p class="feature-toggle-title">Ghost Overlay</p>
-            <p class="feature-toggle-desc">Selection-triggered semantic overlay on external pages.</p>
-          </span>
+          <div><p class="feature-toggle-title">Ghost Overlay</p><p class="feature-toggle-desc">Keep experimental overlay hooks available.</p></div>
         </label>
         <label class="feature-toggle-row">
           <input id="feature-observerAgent" type="checkbox" />
-          <span>
-            <p class="feature-toggle-title">Observer Agent</p>
-            <p class="feature-toggle-desc">Watchpoint monitor for DOM deltas and alerts.</p>
-          </span>
+          <div><p class="feature-toggle-title">Observer Agent</p><p class="feature-toggle-desc">Enable DOM observer assist routines.</p></div>
         </label>
         <label class="feature-toggle-row">
           <input id="feature-semanticClipboard" type="checkbox" />
-          <span>
-            <p class="feature-toggle-title">Semantic Clipboard</p>
-            <p class="feature-toggle-desc">Local semantic context memory and prompt preamble injection.</p>
-          </span>
+          <div><p class="feature-toggle-title">Semantic Clipboard</p><p class="feature-toggle-desc">Collect recent context for inject-context actions.</p></div>
         </label>
         <label class="feature-toggle-row">
           <input id="feature-popoutCanvas" type="checkbox" />
-          <span>
-            <p class="feature-toggle-title">Pop-Out Canvas</p>
-            <p class="feature-toggle-desc">Open generated code in a detached live render window.</p>
-          </span>
+          <div><p class="feature-toggle-title">Pop-out Canvas</p><p class="feature-toggle-desc">Open runnable code bundles in a dedicated window.</p></div>
         </label>
         <label class="feature-toggle-row">
           <input id="feature-macroRecorder" type="checkbox" />
-          <span>
-            <p class="feature-toggle-title">Macro Recorder</p>
-            <p class="feature-toggle-desc">Capture browser interaction macros for LLM transformation.</p>
-          </span>
+          <div><p class="feature-toggle-title">Macro Recorder</p><p class="feature-toggle-desc">Preserve macro recorder hooks for future work.</p></div>
         </label>
         <label class="feature-toggle-row">
           <input id="feature-conversationMapper" type="checkbox" />
-          <span>
-            <p class="feature-toggle-title">Conversation Mapper</p>
-            <p class="feature-toggle-desc">Graph visualization layer for chat knowledge mapping.</p>
-          </span>
+          <div><p class="feature-toggle-title">Conversation Mapper</p><p class="feature-toggle-desc">Preserve conversation mapping hooks for future work.</p></div>
         </label>
         <label class="feature-toggle-row">
           <input id="feature-promptUnitTesting" type="checkbox" />
-          <span>
-            <p class="feature-toggle-title">Prompt Unit Testing</p>
-            <p class="feature-toggle-desc">Matrix test bench for Smart Queue prompt variants.</p>
-          </span>
+          <div><p class="feature-toggle-title">Prompt Unit Testing</p><p class="feature-toggle-desc">Preserve prompt validation hooks for future work.</p></div>
         </label>
       </div>
 
-      <p id="settings-status" class="settings-note">Changes sync to ChatGPT and Gemini HUD instantly.</p>
+      <p id="settings-status" class="status-line">Loading settings…</p>
 
       <div class="tour-actions">
-        <button id="settings-close" class="btn ghost" type="button">Close</button>
+        <button id="settings-close" class="btn primary" type="button">Close</button>
       </div>
     </section>
   </div>

@@ -1,6 +1,5 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
-import { DexDialog } from './DexDialog.jsx';
 import { ContextualHint } from './ContextualHint.jsx';
 import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
 
@@ -20,11 +19,10 @@ export function QueueManager({ queueController, siteLabel = '' }) {
   const [expandedId, setExpandedId] = useState('');
   const [editingId, setEditingId] = useState('');
   const [editText, setEditText] = useState('');
-  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const lastErrorAtRef = useRef(0);
 
   useEffect(() => {
-    if (!queueController?.subscribe) return;
+    if (!queueController?.subscribe) return undefined;
     return queueController.subscribe(setQueueState);
   }, [queueController]);
 
@@ -78,11 +76,7 @@ export function QueueManager({ queueController, siteLabel = '' }) {
     if (!nextText) return;
     const didEdit = queueController.editItem(editingItem.id, nextText);
     if (didEdit) {
-      showDexToast({
-        type: 'success',
-        title: 'Queue item updated',
-        message: 'Queued prompt text was updated.',
-      });
+      showDexToast({ type: 'success', title: 'Queue item updated', message: 'Queued prompt text was updated.' });
     }
     setEditingId('');
     setEditText('');
@@ -111,7 +105,6 @@ export function QueueManager({ queueController, siteLabel = '' }) {
 
   const clearAllWithUndo = () => {
     const removed = queueController.clearAll();
-    setClearConfirmOpen(false);
     if (!removed.length) return;
     showDexToast({
       type: 'action',
@@ -131,7 +124,7 @@ export function QueueManager({ queueController, siteLabel = '' }) {
     });
   };
 
-  return h('section', { class: 'dex-queue-manager', 'aria-label': 'Queue Manager' }, [
+  return h('section', { class: 'dex-drawer-view dex-queue-manager', 'aria-label': 'Queue Manager' }, [
     h(ContextualHint, {
       hintId: 'queue-manager',
       visible: true,
@@ -140,9 +133,26 @@ export function QueueManager({ queueController, siteLabel = '' }) {
     }),
     h('div', { class: 'dex-queue-manager__head' }, [
       h('strong', null, 'Queue Manager'),
-      h('span', { class: 'dex-folder-state' }, `${runningLabel} • ${items.length} queued`),
+      h('span', { class: 'dex-folder-state' }, `${runningLabel} • ${items.length} queued • ${siteLabel}`),
     ]),
-
+    queueState?.lastError
+      ? h('div', { class: 'dex-inline-banner dex-inline-banner--error', role: 'alert' }, [
+          h('strong', null, 'Most recent queue failure'),
+          h('p', null, queueState.lastError.message || 'The queued prompt could not be sent.'),
+          h('div', { class: 'dex-inline-banner__actions' }, [
+            queueState.lastError.itemId
+              ? h('button', {
+                  type: 'button',
+                  class: 'dex-link-btn',
+                  onClick: () => {
+                    queueController.retryItem(queueState.lastError.itemId);
+                    queueController.sendNow(queueState.lastError.itemId);
+                  },
+                }, 'Retry')
+              : null,
+          ]),
+        ])
+      : null,
     h('div', { class: 'dex-folder-actions' }, [
       h('button', {
         type: 'button',
@@ -152,9 +162,7 @@ export function QueueManager({ queueController, siteLabel = '' }) {
           showDexToast({
             type: 'info',
             title: paused ? 'Queue paused' : 'Queue resumed',
-            message: paused
-              ? 'Queue processing is paused until resumed.'
-              : 'Queue processing resumed.',
+            message: paused ? 'Queue processing is paused until resumed.' : 'Queue processing resumed.',
           });
         },
       }, queueState?.paused ? 'Resume' : 'Pause'),
@@ -163,15 +171,14 @@ export function QueueManager({ queueController, siteLabel = '' }) {
         class: 'dex-link-btn',
         disabled: items.length === 0,
         onClick: () => queueController.sendNow(),
-      }, 'Send now'),
+      }, 'Send next'),
       h('button', {
         type: 'button',
         class: 'dex-link-btn danger',
         disabled: items.length === 0,
-        onClick: () => setClearConfirmOpen(true),
+        onClick: clearAllWithUndo,
       }, 'Clear all'),
     ]),
-
     items.length === 0
       ? h('p', { class: 'dex-folder-state' }, 'No queued prompts.')
       : h('div', { class: 'dex-queue-manager__list', role: 'list' },
@@ -232,11 +239,7 @@ export function QueueManager({ queueController, siteLabel = '' }) {
                 class: 'dex-link-btn',
                 onClick: () => {
                   queueController.duplicateItem(item.id);
-                  showDexToast({
-                    type: 'success',
-                    title: 'Queue item duplicated',
-                    message: 'A duplicate queued item was added.',
-                  });
+                  showDexToast({ type: 'success', title: 'Queue item duplicated', message: 'A duplicate queued item was added.' });
                 },
               }, 'Duplicate'),
               h('button', {
@@ -272,22 +275,8 @@ export function QueueManager({ queueController, siteLabel = '' }) {
                 onClick: () => removeItemWithUndo(item.id),
               }, 'Remove'),
             ]),
-            expandedId === item.id
-              ? h('pre', { class: 'dex-toast__details' }, JSON.stringify(item, null, 2))
-              : null,
+            expandedId === item.id ? h('pre', { class: 'dex-toast__details' }, JSON.stringify(item, null, 2)) : null,
           ]))
         ),
-
-    h(DexDialog, {
-      open: clearConfirmOpen,
-      variant: 'alertdialog',
-      title: 'Clear queue?',
-      description: 'This will remove all queued prompts. You can undo from the toast for a short time.',
-      confirmText: 'Clear queue',
-      cancelText: 'Cancel',
-      danger: true,
-      onConfirm: clearAllWithUndo,
-      onCancel: () => setClearConfirmOpen(false),
-    }),
   ]);
 }

@@ -1,8 +1,7 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.js';
-import { PanelFrame } from './PanelFrame.jsx';
-import { DexDialog } from './DexDialog.jsx';
+import { FolderTree } from './FolderTree.jsx';
 import { ContextualHint } from './ContextualHint.jsx';
 import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
 
@@ -17,69 +16,37 @@ function normalizeTags(input) {
   return [...new Set(input.split(',').map((tag) => tag.trim()).filter(Boolean))];
 }
 
-/** Collect variable values via inline form — no window.prompt */
-function VariableForm({ prompt, onInsert, onCancel }) {
-  const vars = Array.isArray(prompt.variables) ? prompt.variables : [];
-  const [values, setValues] = useState(() =>
-    Object.fromEntries(vars.map((v) => [v, '']))
-  );
-
-  function handleInsert() {
-    let text = prompt.body;
-    for (const key of vars) {
-      const val = values[key] || '';
-      const pattern = new RegExp(`\\{\\{\\s*${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\}\\}`, 'g');
-      text = text.replace(pattern, val);
-    }
-    onInsert(text);
+function fillPromptVariables(prompt, values) {
+  let text = prompt.body;
+  for (const key of Array.isArray(prompt.variables) ? prompt.variables : []) {
+    const value = values[key] || '';
+    const pattern = new RegExp(`\\{\\{\\s*${key.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\s*\\}\\}`, 'g');
+    text = text.replace(pattern, value);
   }
-
-  return h('div', { class: 'dex-var-form' }, [
-    h('p', { class: 'dex-var-form__title' }, `Insert: "${prompt.title}"`),
-    h('p', { class: 'dex-folder-state' }, 'Fill in the variables below, then click Insert.'),
-    h('div', { class: 'dex-form' },
-      vars.map((varName) =>
-        h('div', { key: varName }, [
-          h('label', { class: 'dex-sidebar__label' }, varName),
-          h('input', {
-            class: 'dex-input',
-            placeholder: `Value for ${varName}`,
-            value: values[varName] || '',
-            onInput: (e) => setValues((prev) => ({ ...prev, [varName]: e.currentTarget.value })),
-          }),
-        ])
-      )
-    ),
-    h('div', { class: 'dex-form__actions' }, [
-      h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: handleInsert }, 'Insert'),
-      h('button', { type: 'button', class: 'dex-link-btn', onClick: onCancel }, 'Cancel'),
-    ]),
-  ]);
+  return text;
 }
 
 export function PromptLibrary({
   visible,
   onClose,
   onInsert,
-  iconUrl = '',
-  windowState,
-  defaultWindowState,
-  onWindowStateChange,
+  currentChatUrl = '',
+  initialSection = 'prompts',
 }) {
   const [prompts, setPrompts] = useState([]);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [currentSection, setCurrentSection] = useState(initialSection === 'folders' ? 'folders' : 'prompts');
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [tagsText, setTagsText] = useState('');
-
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [varFormPrompt, setVarFormPrompt] = useState(null); // prompt object | null
+  const [activeVariablePromptId, setActiveVariablePromptId] = useState('');
+  const [variableValues, setVariableValues] = useState({});
   const pendingDeletesRef = useRef(new Map());
 
   const notifyError = (operation, err) => {
@@ -97,14 +64,17 @@ export function PromptLibrary({
     });
   };
 
-  useEffect(() => {
-    return () => {
-      for (const pending of pendingDeletesRef.current.values()) {
-        window.clearTimeout(pending.timerId);
-      }
-      pendingDeletesRef.current.clear();
-    };
+  useEffect(() => () => {
+    for (const pending of pendingDeletesRef.current.values()) {
+      window.clearTimeout(pending.timerId);
+    }
+    pendingDeletesRef.current.clear();
   }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    setCurrentSection(initialSection === 'folders' ? 'folders' : 'prompts');
+  }, [initialSection, visible]);
 
   async function refresh() {
     setLoading(true);
@@ -131,7 +101,7 @@ export function PromptLibrary({
       const tierMatch = tierFilter === 'all' || tags.includes(tierFilter);
       if (!tierMatch) return false;
       if (!q) return true;
-      const haystack = `${prompt.title} ${prompt.body} ${(prompt.tags || []).join(' ')}`.toLowerCase();
+      const haystack = `${prompt.title} ${prompt.body} ${tags.join(' ')}`.toLowerCase();
       return haystack.includes(q);
     });
   }, [prompts, search, tierFilter]);
@@ -175,16 +145,13 @@ export function PromptLibrary({
   function schedulePromptDelete(id) {
     const prompt = prompts.find((item) => item.id === id);
     if (!prompt) return;
-    setConfirmDeleteId(null);
     setPrompts((current) => current.filter((item) => item.id !== id));
 
     const timerId = window.setTimeout(async () => {
       pendingDeletesRef.current.delete(id);
       try {
         const response = await sendRuntimeMessage(MESSAGE_ACTIONS.PROMPT_DELETE, { id });
-        if (!response.ok) {
-          throw new Error(response.error || 'Delete request failed');
-        }
+        if (!response.ok) throw new Error(response.error || 'Delete request failed');
       } catch (err) {
         setPrompts((current) => [prompt, ...current].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
         setError(err instanceof Error ? err.message : String(err));
@@ -193,13 +160,6 @@ export function PromptLibrary({
           type: 'error',
           title: 'Delete rolled back',
           message: 'Prompt deletion failed and was restored.',
-          diagnostics: buildDiagnostics({
-            module: 'ui/PromptLibrary',
-            operation: 'prompt_delete.rollback',
-            host: window.location.hostname,
-            url: window.location.href,
-            error: err,
-          }),
         });
       }
     }, 5000);
@@ -208,8 +168,8 @@ export function PromptLibrary({
 
     showDexToast({
       type: 'action',
-      title: 'Prompt scheduled for deletion',
-      message: `\"${prompt.title}\" will be deleted in 5 seconds.`,
+      title: 'Prompt deleted',
+      message: `"${prompt.title}" will commit in 5 seconds.`,
       actions: [{
         label: 'Undo',
         onSelect: () => {
@@ -218,20 +178,10 @@ export function PromptLibrary({
           window.clearTimeout(pending.timerId);
           pendingDeletesRef.current.delete(id);
           setPrompts((current) => [pending.prompt, ...current].sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
-          showDexToast({
-            type: 'success',
-            title: 'Deletion undone',
-            message: 'Prompt restored.',
-          });
+          showDexToast({ type: 'success', title: 'Deletion undone', message: 'Prompt restored.' });
         },
       }],
-      diagnostics: {
-        module: 'ui/PromptLibrary',
-        operation: 'prompt_delete.schedule',
-        promptId: id,
-        at: Date.now(),
-      },
-      durationMs: 5500,
+      durationMs: 5200,
     });
   }
 
@@ -241,189 +191,176 @@ export function PromptLibrary({
     setBody(prompt.body || '');
     setTagsText(Array.isArray(prompt.tags) ? prompt.tags.join(', ') : '');
     setShowForm(true);
+    setCurrentSection('prompts');
+  }
+
+  function openVariableEditor(prompt) {
+    const vars = Array.isArray(prompt.variables) ? prompt.variables : [];
+    setActiveVariablePromptId(prompt.id);
+    setVariableValues(Object.fromEntries(vars.map((value) => [value, ''])));
   }
 
   function insertPrompt(prompt) {
     const vars = Array.isArray(prompt.variables) ? prompt.variables : [];
     if (vars.length > 0) {
-      // Show inline variable form instead of window.prompt
-      setVarFormPrompt(prompt);
-    } else {
-      onInsert?.(prompt.body);
-      onClose?.();
+      openVariableEditor(prompt);
+      return;
     }
+    onInsert?.(prompt.body);
+    onClose?.();
+  }
+
+  function submitVariablePrompt(prompt) {
+    const text = fillPromptVariables(prompt, variableValues);
+    setActiveVariablePromptId('');
+    setVariableValues({});
+    onInsert?.(text);
+    onClose?.();
   }
 
   if (!visible) return null;
-  const confirmPrompt = prompts.find((item) => item.id === confirmDeleteId) || null;
 
-  return h(
-    PanelFrame,
-    {
-      panelId: 'promptLibrary',
-      title: 'Prompt Library',
-      iconUrl,
-      panelState: windowState,
-      defaultState: defaultWindowState,
-      onPanelStateChange: onWindowStateChange,
-      onClose,
-      minWidth: 460,
-      minHeight: 280,
-      zIndex: 2147483647,
-      showPin: true,
-      showClose: true,
-      allowResize: true,
-    },
-    [
-      // Variable fill-in form overlays the list when active
-      varFormPrompt
-        ? h(VariableForm, {
-            prompt: varFormPrompt,
-            onInsert: (text) => {
-              setVarFormPrompt(null);
-              onInsert?.(text);
-              onClose?.();
-            },
-            onCancel: () => setVarFormPrompt(null),
-          })
-        : [
-            h(ContextualHint, {
-              key: 'hint-prompt-library',
-              hintId: 'prompt-library',
-              visible: true,
-              title: 'Prompt Library hint',
-              message: 'Insert uses current prompt text. Edit templates before deleting to avoid losing reusable variants.',
-            }),
-            // Search — at top for quick access
+  return h('section', { class: 'dex-drawer-view dex-prompt-workspace', 'aria-label': 'Prompt workspace' }, [
+    h('div', { class: 'dex-segmented' }, [
+      h('button', {
+        type: 'button',
+        class: `dex-segmented__button${currentSection === 'prompts' ? ' is-active' : ''}`,
+        onClick: () => setCurrentSection('prompts'),
+      }, 'Prompt Library'),
+      h('button', {
+        type: 'button',
+        class: `dex-segmented__button${currentSection === 'folders' ? ' is-active' : ''}`,
+        onClick: () => setCurrentSection('folders'),
+      }, 'Chat Organization'),
+    ]),
+
+    currentSection === 'folders'
+      ? h('div', { class: 'dex-drawer-stack' }, [
+          h(ContextualHint, {
+            hintId: 'folder-workspace',
+            visible: true,
+            title: 'Chat organization',
+            message: 'Assign the current conversation to a folder without leaving the active thread.',
+          }),
+          h(FolderTree, { currentChatUrl }),
+        ])
+      : h('div', { class: 'dex-drawer-stack' }, [
+          h(ContextualHint, {
+            hintId: 'prompt-library',
+            visible: true,
+            title: 'Prompt library',
+            message: 'Reusable prompts stay keyboard-first here. Variable prompts expand inline before insertion.',
+          }),
+          h('div', { class: 'dex-command-row' }, [
             h('input', {
-              class: 'dex-input',
+              class: 'dex-input dex-command-row__search',
               placeholder: 'Search prompts…',
               value: search,
               'aria-label': 'Search prompts',
-              onInput: (e) => setSearch(e.currentTarget.value),
+              onInput: (event) => setSearch(event.currentTarget.value),
             }),
-
-            // Tier filter row
-            h('div', { class: 'dex-prompt-filter-row' },
-              ['all', 'common', 'advanced', 'epic'].map((tier) =>
-                h('button', {
-                  key: tier,
-                  type: 'button',
-                  class: `dex-link-btn${tierFilter === tier ? ' dex-link-btn--accent' : ''}`,
-                  onClick: () => setTierFilter(tier),
-                }, tier === 'all' ? `All (${tierCounts.all})` : `${tier.charAt(0).toUpperCase() + tier.slice(1)} (${tierCounts[tier]})`)
-              )
-            ),
-
-            // New Prompt toggle
-            h('div', { class: 'dex-form__actions' }, [
-              h('button', {
-                type: 'button',
-                class: `dex-link-btn${showForm ? '' : ' dex-link-btn--accent'}`,
-                onClick: () => {
-                  if (showForm) { resetForm(); } else { setShowForm(true); }
-                },
-              }, showForm && !editingId ? 'Hide Form' : editingId ? 'Editing Prompt' : '+ New Prompt'),
-            ]),
-
-            // Create / edit form — only when visible
-            showForm
-              ? h('form', { class: 'dex-form', onSubmit: submitPrompt }, [
-                  h('input', {
-                    class: 'dex-input',
-                    placeholder: 'Prompt title',
-                    value: title,
-                    required: true,
-                    'aria-label': 'Prompt title',
-                    onInput: (e) => setTitle(e.currentTarget.value),
-                  }),
-                  h('textarea', {
-                    class: 'dex-textarea',
-                    placeholder: 'Prompt body (use {{variable}} for fill-in placeholders)',
-                    value: body,
-                    rows: 4,
-                    'aria-label': 'Prompt body',
-                    onInput: (e) => setBody(e.currentTarget.value),
-                  }),
-                  h('input', {
-                    class: 'dex-input',
-                    placeholder: 'Tags (comma separated)',
-                    value: tagsText,
-                    'aria-label': 'Prompt tags',
-                    onInput: (e) => setTagsText(e.currentTarget.value),
-                  }),
-                  h('div', { class: 'dex-form__actions' }, [
-                    h('button', { type: 'submit', class: 'dex-link-btn dex-link-btn--accent' },
-                      editingId ? 'Update Prompt' : 'Save Prompt'),
-                    h('button', { type: 'button', class: 'dex-link-btn', onClick: resetForm }, 'Cancel'),
-                  ]),
-                ])
-              : null,
-
-            loading ? h('div', { class: 'dex-folder-state', role: 'status' }, 'Loading prompts…') : null,
-            error ? h('div', { class: 'dex-folder-state error', role: 'alert' }, error) : null,
-
-            h('p', { class: 'dex-folder-state' }, 'Tip: Use {{variable}} in prompt bodies — you\'ll be prompted to fill values before insertion.'),
-
-            // Prompt list
-            !loading && filteredPrompts.length === 0
-              ? h('div', { class: 'dex-folder-state' },
-                  search ? `No prompts matching "${search}".` : 'No prompts in this tier yet.')
-              : null,
-
-            h('div', { class: 'dex-prompt-list' },
-              filteredPrompts.map((prompt) =>
-                h('article', { key: prompt.id, class: 'dex-prompt-card' }, [
-                  h('div', { class: 'dex-prompt-card__head' }, [
-                    h('strong', null, prompt.title),
-                    (prompt.variables || []).length > 0
-                      ? h('span', { class: 'dex-folder-count', title: 'Variables' },
-                          `${prompt.variables.length} var${prompt.variables.length !== 1 ? 's' : ''}`)
-                      : null,
-                  ]),
-                  h('p', { class: 'dex-prompt-card__body' }, prompt.body),
-                  h('div', { class: 'dex-prompt-tags' },
-                    (prompt.tags || []).map((tag) =>
-                      h('span', { class: 'dex-tag', key: `${prompt.id}-${tag}` }, tag)
-                    )
-                  ),
-                  h('div', { class: 'dex-folder-actions' }, [
-                    h('button', {
-                      type: 'button',
-                      class: 'dex-link-btn dex-link-btn--accent',
-                      onClick: () => insertPrompt(prompt),
-                    }, 'Insert'),
-                    h('button', {
-                      type: 'button',
-                      class: 'dex-link-btn',
-                      onClick: () => startEdit(prompt),
-                    }, 'Edit'),
-                    h('button', {
-                      type: 'button',
-                      class: 'dex-link-btn danger',
-                      onClick: () => setConfirmDeleteId(prompt.id),
-                    }, 'Delete'),
-                  ]),
-                ])
-              )
-            ),
-            h(DexDialog, {
-              open: Boolean(confirmPrompt),
-              title: 'Delete prompt?',
-              description: confirmPrompt
-                ? `Delete \"${confirmPrompt.title}\" from your prompt library?`
-                : '',
-              confirmText: 'Delete',
-              cancelText: 'Cancel',
-              variant: 'alertdialog',
-              danger: true,
-              onConfirm: () => {
-                if (!confirmPrompt?.id) return;
-                schedulePromptDelete(confirmPrompt.id);
+            h('button', {
+              type: 'button',
+              class: `dex-link-btn${showForm ? '' : ' dex-link-btn--accent'}`,
+              onClick: () => {
+                if (showForm) {
+                  resetForm();
+                  return;
+                }
+                setShowForm(true);
               },
-              onCancel: () => setConfirmDeleteId(null),
-            }),
-          ],
-    ]
-  );
+            }, showForm && !editingId ? 'Hide Form' : editingId ? 'Editing Prompt' : '+ New Prompt'),
+          ]),
+          h('div', { class: 'dex-prompt-filter-row' },
+            ['all', 'common', 'advanced', 'epic'].map((tier) => h('button', {
+              key: tier,
+              type: 'button',
+              class: `dex-link-btn${tierFilter === tier ? ' dex-link-btn--accent' : ''}`,
+              onClick: () => setTierFilter(tier),
+            }, tier === 'all' ? `All (${tierCounts.all})` : `${tier.charAt(0).toUpperCase() + tier.slice(1)} (${tierCounts[tier]})`))
+          ),
+          showForm
+            ? h('form', { class: 'dex-form', onSubmit: submitPrompt }, [
+                h('input', {
+                  class: 'dex-input',
+                  placeholder: 'Prompt title',
+                  value: title,
+                  required: true,
+                  'aria-label': 'Prompt title',
+                  onInput: (event) => setTitle(event.currentTarget.value),
+                }),
+                h('textarea', {
+                  class: 'dex-textarea',
+                  placeholder: 'Prompt body (use {{variable}} for fill-in placeholders)',
+                  value: body,
+                  rows: 5,
+                  'aria-label': 'Prompt body',
+                  onInput: (event) => setBody(event.currentTarget.value),
+                }),
+                h('input', {
+                  class: 'dex-input',
+                  placeholder: 'Tags (comma separated)',
+                  value: tagsText,
+                  'aria-label': 'Prompt tags',
+                  onInput: (event) => setTagsText(event.currentTarget.value),
+                }),
+                h('div', { class: 'dex-form__actions' }, [
+                  h('button', { type: 'submit', class: 'dex-link-btn dex-link-btn--accent' }, editingId ? 'Update Prompt' : 'Save Prompt'),
+                  h('button', { type: 'button', class: 'dex-link-btn', onClick: resetForm }, 'Cancel'),
+                ]),
+              ])
+            : null,
+          loading ? h('div', { class: 'dex-folder-state', role: 'status' }, 'Loading prompts…') : null,
+          error ? h('div', { class: 'dex-folder-state error', role: 'alert' }, error) : null,
+          h('p', { class: 'dex-folder-state' }, 'Use {{variable}} in prompt bodies. Variable inputs open inline beneath the selected prompt.'),
+          !loading && filteredPrompts.length === 0
+            ? h('div', { class: 'dex-folder-state' }, search ? `No prompts matching "${search}".` : 'No prompts in this tier yet.')
+            : null,
+          h('div', { class: 'dex-prompt-list' },
+            filteredPrompts.map((prompt) => {
+              const isVariablePrompt = activeVariablePromptId === prompt.id;
+              const variables = Array.isArray(prompt.variables) ? prompt.variables : [];
+              return h('article', { key: prompt.id, class: 'dex-prompt-card' }, [
+                h('div', { class: 'dex-prompt-card__head' }, [
+                  h('strong', null, prompt.title),
+                  variables.length > 0 ? h('span', { class: 'dex-folder-count' }, `${variables.length} var${variables.length === 1 ? '' : 's'}`) : null,
+                ]),
+                h('p', { class: 'dex-prompt-card__body' }, prompt.body),
+                h('div', { class: 'dex-prompt-tags' },
+                  (prompt.tags || []).map((tag) => h('span', { class: 'dex-tag', key: `${prompt.id}-${tag}` }, tag))
+                ),
+                h('div', { class: 'dex-folder-actions' }, [
+                  h('button', {
+                    type: 'button',
+                    class: 'dex-link-btn dex-link-btn--accent',
+                    onClick: () => insertPrompt(prompt),
+                  }, variables.length > 0 ? 'Fill Variables' : 'Insert'),
+                  h('button', { type: 'button', class: 'dex-link-btn', onClick: () => startEdit(prompt) }, 'Edit'),
+                  h('button', { type: 'button', class: 'dex-link-btn danger', onClick: () => schedulePromptDelete(prompt.id) }, 'Delete'),
+                ]),
+                isVariablePrompt
+                  ? h('div', { class: 'dex-inline-variable-form' }, [
+                      h('strong', { class: 'dex-inline-variable-form__title' }, `Insert “${prompt.title}”`),
+                      h('div', { class: 'dex-form' },
+                        variables.map((variableName) => h('div', { key: variableName }, [
+                          h('label', { class: 'dex-sidebar__label' }, variableName),
+                          h('input', {
+                            class: 'dex-input',
+                            placeholder: `Value for ${variableName}`,
+                            value: variableValues[variableName] || '',
+                            onInput: (event) => setVariableValues((current) => ({ ...current, [variableName]: event.currentTarget.value })),
+                          }),
+                        ]))
+                      ),
+                      h('div', { class: 'dex-form__actions' }, [
+                        h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => submitVariablePrompt(prompt) }, 'Insert'),
+                        h('button', { type: 'button', class: 'dex-link-btn', onClick: () => { setActiveVariablePromptId(''); setVariableValues({}); } }, 'Cancel'),
+                      ]),
+                    ])
+                  : null,
+              ]);
+            })
+          ),
+        ]),
+  ]);
 }

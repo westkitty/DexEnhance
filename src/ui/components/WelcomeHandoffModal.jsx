@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { useMemo } from 'preact/hooks';
+import { useEffect, useMemo, useRef } from 'preact/hooks';
 import { panelOpacityValue } from '../../lib/ui-settings.js';
 import { useDraggable } from '../hooks/useDraggable.js';
 
@@ -15,6 +15,7 @@ export function WelcomeHandoffModal({
 }) {
   const panelWidth = 316;
   const panelHeight = 364;
+  const ctaRef = useRef(null);
 
   const drag = useDraggable({
     initialPosition: {
@@ -39,18 +40,21 @@ export function WelcomeHandoffModal({
     },
   });
 
+  useEffect(() => {
+    if (!visible || zipping) return;
+    window.setTimeout(() => ctaRef.current?.focus(), 0);
+  }, [visible, zipping]);
+
   const zipStyle = useMemo(() => {
     if (!zipping) return '';
-    const width = panelWidth;
-    const height = panelHeight;
     const targetX = Number.isFinite(Number(zipTarget?.x)) ? Number(zipTarget.x) : drag.position.x;
     const targetY = Number.isFinite(Number(zipTarget?.y)) ? Number(zipTarget.y) : drag.position.y;
-    const targetSize = Math.max(40, Number(zipTarget?.size || 62));
-    const dx = targetX - drag.position.x + ((targetSize - width) / 2);
-    const dy = targetY - drag.position.y + ((targetSize - height) / 2);
-    const scale = Math.max(0.14, Math.min(1, targetSize / width));
+    const targetSize = Math.max(40, Number(zipTarget?.size || 64));
+    const dx = targetX - drag.position.x + ((targetSize - panelWidth) / 2);
+    const dy = targetY - drag.position.y + ((targetSize - panelHeight) / 2);
+    const scale = Math.max(0.14, Math.min(1, targetSize / panelWidth));
     return `translate(${Math.round(dx)}px, ${Math.round(dy)}px) scale(${scale.toFixed(3)})`;
-  }, [zipping, panelWidth, panelHeight, zipTarget?.x, zipTarget?.y, zipTarget?.size, drag.position.x, drag.position.y]);
+  }, [drag.position.x, drag.position.y, zipTarget?.size, zipTarget?.x, zipTarget?.y, zipping]);
 
   if (!visible) return null;
 
@@ -63,20 +67,20 @@ export function WelcomeHandoffModal({
   return h('section', {
     class: `dex-welcome${zipping ? ' is-zipping' : ''}`,
     role: 'dialog',
+    'aria-modal': 'true',
     'aria-label': 'DexEnhance welcome',
     style: {
       left: `${Math.round(drag.position.x)}px`,
       top: `${Math.round(drag.position.y)}px`,
       width: `${panelWidth}px`,
       height: `${panelHeight}px`,
-      opacity: panelOpacityValue(panelState?.opacity ?? 0.98),
+      opacity: panelOpacityValue(panelState?.opacity ?? 1),
       transform: zipStyle || undefined,
       zIndex: 2147483647,
     },
     onPointerDown: startDrag,
     onTransitionEnd: (event) => {
-      if (!zipping) return;
-      if (event?.propertyName !== 'transform') return;
+      if (!zipping || event?.propertyName !== 'transform') return;
       onZipTransitionEnd?.();
     },
   }, [
@@ -97,16 +101,14 @@ export function WelcomeHandoffModal({
           h('span', { class: 'dex-welcome__tagline-line is-strong' }, 'ChatGPT + Gemini'),
         ]),
       ]),
-      h(
-        'button',
-        {
-          type: 'button',
-          class: 'dex-link-btn dex-link-btn--accent dex-welcome__cta',
-          disabled: zipping,
-          onClick: () => onGetStarted?.(),
-        },
-        'Get Started'
-      ),
+      h('p', { class: 'dex-welcome__copy' }, 'Run everything through one command surface. No floating clutter. No context loss.'),
+      h('button', {
+        ref: ctaRef,
+        type: 'button',
+        class: 'dex-link-btn dex-link-btn--accent dex-welcome__cta',
+        disabled: zipping,
+        onClick: () => onGetStarted?.(),
+      }, 'Get Started'),
     ]),
   ]);
 }

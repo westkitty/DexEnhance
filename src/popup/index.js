@@ -1,17 +1,16 @@
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../lib/message-protocol.js';
-import { DEFAULT_HUD_SETTINGS, HUD_SETTINGS_KEY } from '../lib/ui-settings.js';
+import { DEFAULT_HUD_SETTINGS, HUD_SETTINGS_KEY, normalizeHudSettings } from '../lib/ui-settings.js';
 import { normalizeFeatureSettings } from '../lib/feature-settings.js';
 
 const settingsModalEl = document.getElementById('settings-modal');
 const openSettingsButton = document.getElementById('open-settings');
 const openHomeButton = document.getElementById('open-home');
 const closeSettingsButton = document.getElementById('settings-close');
-const hueInput = document.getElementById('hud-hue');
-const hueValueEl = document.getElementById('hud-hue-value');
-const resetLayoutButton = document.getElementById('reset-layout');
-const resetThemeButton = document.getElementById('reset-theme');
 const settingsStatusEl = document.getElementById('settings-status');
 const popupStatusSummaryEl = document.getElementById('popup-status-summary');
+const themePresetEls = Array.from(document.querySelectorAll('[data-theme-preset]'));
+const resetLayoutButton = document.getElementById('reset-layout');
+const resetThemeButton = document.getElementById('reset-theme');
 const chromeApi = globalThis.chrome;
 const hasChromeRuntimeApi = Boolean(chromeApi?.runtime?.sendMessage && chromeApi?.runtime?.getManifest);
 const hasChromeTabsApi = Boolean(chromeApi?.tabs?.query);
@@ -26,11 +25,8 @@ const featureToggleEls = {
   promptUnitTesting: document.getElementById('feature-promptUnitTesting'),
 };
 
-let hudSettings = {};
+let hudSettings = normalizeHudSettings({}, { width: 1280, height: 760 });
 let featureSettings = normalizeFeatureSettings({});
-let hueSaveTimer = null;
-
-document.documentElement.style.setProperty('--dex-popup-logo-url', 'url("../icons/icon128.png")');
 
 function setModalOpen(target, isOpen) {
   if (!(target instanceof HTMLElement)) return;
@@ -39,27 +35,22 @@ function setModalOpen(target, isOpen) {
 }
 
 function setStatus(message) {
-  if (!settingsStatusEl) return;
-  settingsStatusEl.textContent = message;
+  if (settingsStatusEl) settingsStatusEl.textContent = message;
 }
 
 function setPopupSummary(message) {
-  if (!popupStatusSummaryEl) return;
-  popupStatusSummaryEl.textContent = message;
+  if (popupStatusSummaryEl) popupStatusSummaryEl.textContent = message;
 }
 
-function applyHueValue(value) {
-  const safe = Math.max(0, Math.min(360, Number(value) || DEFAULT_HUD_SETTINGS.accentHue));
-  if (hueInput instanceof HTMLInputElement) {
-    hueInput.value = String(Math.round(safe));
-  }
-  if (hueValueEl) {
-    hueValueEl.textContent = `${Math.round(safe)}°`;
+function paintThemePresets() {
+  for (const button of themePresetEls) {
+    const preset = button.getAttribute('data-theme-preset');
+    button.classList.toggle('is-active', preset === hudSettings.themePreset);
   }
 }
 
-async function persistHudSettings(next, message = 'Saved HUD settings.') {
-  hudSettings = typeof next === 'object' && next !== null ? next : {};
+async function persistHudSettings(next, message = 'Saved shell settings.') {
+  hudSettings = normalizeHudSettings(next, { width: 1280, height: 760 });
   const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
     items: {
       [HUD_SETTINGS_KEY]: hudSettings,
@@ -69,25 +60,16 @@ async function persistHudSettings(next, message = 'Saved HUD settings.') {
     setStatus(`Save failed: ${response.error || 'unknown error'}`);
     return false;
   }
+  paintThemePresets();
   setStatus(message);
   return true;
 }
 
 async function loadHudSettings() {
-  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, {
-    key: HUD_SETTINGS_KEY,
-  });
-
-  if (!response.ok) {
-    hudSettings = {};
-    applyHueValue(DEFAULT_HUD_SETTINGS.accentHue);
-    setStatus('Could not read HUD settings; using defaults.');
-    return;
-  }
-
-  hudSettings = typeof response.data === 'object' && response.data !== null ? response.data : {};
-  applyHueValue(hudSettings.accentHue ?? DEFAULT_HUD_SETTINGS.accentHue);
-  setStatus('Changes sync to ChatGPT and Gemini HUD instantly.');
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: HUD_SETTINGS_KEY });
+  hudSettings = response.ok ? normalizeHudSettings(response.data, { width: 1280, height: 760 }) : normalizeHudSettings({}, { width: 1280, height: 760 });
+  paintThemePresets();
+  setStatus('Settings sync to ChatGPT and Gemini instantly.');
 }
 
 function paintFeatureToggles() {
@@ -99,14 +81,7 @@ function paintFeatureToggles() {
 
 async function loadFeatureSettings() {
   const response = await sendRuntimeMessage(MESSAGE_ACTIONS.FEATURE_SETTINGS_GET, {});
-  if (!response.ok) {
-    featureSettings = normalizeFeatureSettings({});
-    paintFeatureToggles();
-    setStatus('Could not load feature toggles; defaults applied.');
-    return;
-  }
-
-  featureSettings = normalizeFeatureSettings(response.data);
+  featureSettings = response.ok ? normalizeFeatureSettings(response.data) : normalizeFeatureSettings({});
   paintFeatureToggles();
 }
 
@@ -135,11 +110,7 @@ async function refreshPopupStatus() {
   const enabledRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: 'enabled' });
   const [activeTab] = await chromeApi.tabs.query({ active: true, currentWindow: true });
   const tabUrl = String(activeTab?.url || '');
-  const host = tabUrl.includes('chatgpt.com')
-    ? 'ChatGPT'
-    : tabUrl.includes('gemini.google.com')
-      ? 'Gemini'
-      : 'Unsupported tab';
+  const host = tabUrl.includes('chatgpt.com') ? 'ChatGPT' : tabUrl.includes('gemini.google.com') ? 'Gemini' : 'Unsupported tab';
   const enabledLabel = enabledRes.ok ? (enabledRes.data === false ? 'disabled' : 'enabled') : 'unknown';
   const version = chromeApi.runtime.getManifest()?.version || 'unknown';
   setPopupSummary(`DexEnhance ${enabledLabel} • Host: ${host} • v${version}`);
@@ -166,7 +137,7 @@ async function openHomeInActiveTab() {
     setPopupSummary(`Open Home failed: ${response.error || 'unknown error'}`);
     return;
   }
-  setPopupSummary('Opening DexEnhance Home in active tab...');
+  setPopupSummary('Opening DexEnhance command palette in active tab...');
   window.close();
 }
 
@@ -183,47 +154,35 @@ closeSettingsButton?.addEventListener('click', () => {
   setModalOpen(settingsModalEl, false);
 });
 
-hueInput?.addEventListener('input', (event) => {
-  const nextHue = Math.max(0, Math.min(360, Number(event.currentTarget.value) || DEFAULT_HUD_SETTINGS.accentHue));
-  applyHueValue(nextHue);
-
-  if (hueSaveTimer) window.clearTimeout(hueSaveTimer);
-  hueSaveTimer = window.setTimeout(() => {
-    void persistHudSettings(
-      {
-        ...hudSettings,
-        accentHue: nextHue,
-      },
-      `Saved accent hue: ${Math.round(nextHue)}°`
-    );
-  }, 180);
+themePresetEls.forEach((button) => {
+  button.addEventListener('click', () => {
+    const themePreset = button.getAttribute('data-theme-preset') || DEFAULT_HUD_SETTINGS.themePreset;
+    void persistHudSettings({
+      ...hudSettings,
+      themePreset,
+    }, `Saved theme preset: ${themePreset}`);
+  });
 });
 
 resetLayoutButton?.addEventListener('click', () => {
-  void persistHudSettings(
-    {
-      ...hudSettings,
-      panels: {},
-    },
-    'Window layout reset. Reload active chat tabs if needed.'
-  );
+  const defaults = normalizeHudSettings(DEFAULT_HUD_SETTINGS, { width: 1280, height: 760 });
+  void persistHudSettings({
+    ...hudSettings,
+    panels: defaults.panels,
+    drawer: defaults.drawer,
+  }, 'Launcher and drawer layout reset.');
 });
 
 resetThemeButton?.addEventListener('click', () => {
-  applyHueValue(DEFAULT_HUD_SETTINGS.accentHue);
-  void persistHudSettings(
-    {
-      accentHue: DEFAULT_HUD_SETTINGS.accentHue,
-      panels: {},
-    },
-    'Theme and opacity reset to defaults.'
-  );
+  void persistHudSettings({
+    ...hudSettings,
+    themePreset: DEFAULT_HUD_SETTINGS.themePreset,
+  }, 'Theme preset reset to default.');
 });
 
 for (const [moduleId, inputEl] of Object.entries(featureToggleEls)) {
   inputEl?.addEventListener('change', (event) => {
-    const nextEnabled = event.currentTarget.checked === true;
-    void updateFeatureToggle(moduleId, nextEnabled);
+    void updateFeatureToggle(moduleId, event.currentTarget.checked === true);
   });
 }
 
@@ -240,4 +199,3 @@ document.addEventListener('keydown', (event) => {
 });
 
 void refreshPopupStatus();
-console.log('[DexEnhance] Popup loaded');

@@ -1839,3 +1839,78 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
       - E2E popup: 8 pass / 0 fail
     - `bun run build` (pass)
     - `bun run verify:playwright` (pass; report `pass: true`)
+
+[2026-03-06] PHASE 10 SHELL REFACTOR AUDIT START — Preservation-gated UI rewrite initiated.
+  Read-first compliance confirmed against BIBLE Sections 3, 5, 13, and 14 before implementation.
+  Scope locked:
+  - replace floating glass HUD with command palette + solid-state drawer shell
+  - preserve onboarding logo-circle handoff and Get Started CTA
+  - preserve all current user-facing capabilities via explicit remap, not silent removal
+  Audit artifacts added:
+  - `docs/feature-preservation-matrix.md`
+  - existing baselines reused: `docs/feature-function-inventory.md`, `docs/phase0-recon-map.md`, `docs/verification.md`
+  Immediate implementation gates:
+  - no feature may become unreachable
+  - keyboard workflow must remain first-class across launcher, palette, drawer, popup, and toast actions
+  - BIBLE will be updated additively after each major implementation tranche
+
+[2026-03-06] v1.32 — Preservation matrix established for shell rewrite.
+  Added a dedicated feature-preservation contract in `docs/feature-preservation-matrix.md`.
+  The matrix enumerates current entrypoints, future entrypoints, accessibility obligations,
+  verification method, and regression risk for onboarding, launcher, prompts, folders, queue,
+  optimizer, export, diagnostics, popup flows, and cross-site parity.
+
+[2026-03-06] PHASE 10 SHELL REFACTOR TRANCHE 1 — Solid-state shell primitives landed.
+  Replaced floating-shell orchestration with a centralized host runtime in:
+  - `src/content/shared/init-host-shell.js`
+  Host entrypoints now delegate through that shared runtime:
+  - `src/content/chatgpt/index.js`
+  - `src/content/gemini/index.js`
+  New shell primitives added:
+  - `src/ui/components/CommandPalette.jsx`
+  - `src/ui/components/DexLauncher.jsx`
+  - `src/ui/components/DexDrawer.jsx`
+  - `src/ui/components/DrawerStatusBar.jsx`
+  Persistence model replaced in `src/lib/ui-settings.js`:
+  - old floating-panel hue/glass schema migrated to launcher + drawer + theme preset schema
+  - legacy `fab` / floating-panel width values now normalize into launcher and drawer defaults
+  Preservation-sensitive remaps completed in component layer:
+  - `PromptLibrary.jsx` now uses inline variable expansion and embeds folder access via a workspace switch
+  - `QueueManager.jsx` now clears immediately with Undo instead of blocking confirmation
+  - `FolderTree.jsx` removes modal confirmation for reversible trash actions and keeps irreversible delete inline
+  - `PromptOptimizerModal.jsx`, `ExportDialog.jsx`, and `HUDSettingsPanel.jsx` now render as drawer views
+  - `WelcomeHandoffModal.jsx` keeps logo circle and CTA intact while moving to solid-state modal styling
+  Popup settings also migrated away from hue/glass controls toward theme presets.
+
+[2026-03-06] v1.33 — Command palette + drawer shell architecture replaces floating HUD.
+  Sidebar/FAB-first navigation is superseded by a corner launcher, command palette, and one mutually-exclusive drawer.
+  Legacy window-management appearance controls are removed from the active UI in favor of preset opaque themes.
+  Prompt and folder workflows are now co-located in a shared drawer workspace to preserve chat organization after sidebar removal.
+
+[2026-03-06] PHASE 10 SHELL REFACTOR TRANCHE 2 — Verification and preservation checks completed.
+  Verification completed successfully:
+  - `bun run build`
+  - `bun run test`
+  - `bun run test:e2e`
+  Preservation coverage explicitly validated in this tranche:
+  - popup launch/settings path updated to command-palette shell terminology
+  - unit coverage added for legacy HUD-settings migration into launcher/drawer schema
+  - unit coverage added for command-palette filtering behavior
+  - popup Playwright assertions updated to preset-based settings controls and new feature-card copy
+  Verification caveat recorded:
+  - `bun run verify:playwright` remains stale against live host-page lifecycle and still needs a dedicated follow-up before it can be trusted as a shell-regression gate
+  - script was updated toward launcher/drawer and preset-based popup expectations, but host automation stability is not yet restored
+
+[2026-03-06] v1.34 — Shell refactor verified through build, unit, and popup e2e.
+  The active DexEnhance UX now routes through preserved onboarding, a persistent corner launcher,
+  a keyboard command palette, and one solid-state drawer. Popup tests were rewritten to match the
+  preset-based settings model. Manual authenticated host verification remains the remaining follow-up.
+
+[2026-03-06] PHASE 10 SHELL REFACTOR TRANCHE 3 — Legacy floating-shell files removed.
+  Deleted unused legacy entry surfaces after confirming the new shell no longer imports them:
+  - `src/ui/components/FAB.jsx`
+  - `src/ui/components/PanelFrame.jsx`
+  - `src/ui/components/QuickHubPanel.jsx`
+  - `src/ui/components/Sidebar.jsx`
+  - `src/ui/components/TokenOverlay.jsx`
+  This leaves the repo aligned with the active command-palette + drawer architecture instead of retaining dead floating-window code.

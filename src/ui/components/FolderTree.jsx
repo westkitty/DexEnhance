@@ -1,7 +1,6 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.js';
-import { DexDialog } from './DexDialog.jsx';
 import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
 
 async function callAction(action, payload = {}) {
@@ -22,10 +21,8 @@ export function FolderTree({ currentChatUrl }) {
   const [showTrash, setShowTrash] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // Inline UI state — replaces all window.prompt / window.confirm
   const [activeMenuId, setActiveMenuId] = useState(null);
-  const [creatingIn, setCreatingIn] = useState(null); // null | 'root' | folderId
+  const [creatingIn, setCreatingIn] = useState(null);
   const [newFolderName, setNewFolderName] = useState('');
   const [renamingId, setRenamingId] = useState(null);
   const [renamingName, setRenamingName] = useState('');
@@ -48,23 +45,19 @@ export function FolderTree({ currentChatUrl }) {
     });
   };
 
-  useEffect(() => {
-    return () => {
-      for (const pending of pendingDeletesRef.current.values()) {
-        window.clearTimeout(pending.timerId);
-      }
-      pendingDeletesRef.current.clear();
-    };
+  useEffect(() => () => {
+    for (const pending of pendingDeletesRef.current.values()) {
+      window.clearTimeout(pending.timerId);
+    }
+    pendingDeletesRef.current.clear();
   }, []);
 
   function collectDescendantIdsLocal(sourceFolders, rootId) {
     const byParent = new Map();
     for (const folder of sourceFolders) {
       const parentId = folder.parentId || null;
-      if (!parentId) continue;
-      const bucket = byParent.get(parentId) || [];
-      bucket.push(folder.id);
-      byParent.set(parentId, bucket);
+      if (!byParent.has(parentId)) byParent.set(parentId, []);
+      byParent.get(parentId).push(folder.id);
     }
 
     const visited = new Set();
@@ -73,17 +66,15 @@ export function FolderTree({ currentChatUrl }) {
       const current = queue.shift();
       if (!current || visited.has(current)) continue;
       visited.add(current);
-      const children = byParent.get(current) || [];
-      for (const childId of children) queue.push(childId);
+      for (const childId of byParent.get(current) || []) queue.push(childId);
     }
     return visited;
   }
 
-  const visibleFolders = useMemo(() => {
-    return folders
-      .filter((folder) => (showTrash ? folder.deletedAt !== null : folder.deletedAt === null))
-      .sort(sortByCreatedAt);
-  }, [folders, showTrash]);
+  const visibleFolders = useMemo(
+    () => folders.filter((folder) => (showTrash ? folder.deletedAt !== null : folder.deletedAt === null)).sort(sortByCreatedAt),
+    [folders, showTrash]
+  );
 
   const childrenByParentId = useMemo(() => {
     const map = new Map();
@@ -175,15 +166,8 @@ export function FolderTree({ currentChatUrl }) {
         notifyError('folder_soft_delete.commit', err);
         showDexToast({
           type: 'error',
-          title: 'Delete rolled back',
+          title: 'Trash move rolled back',
           message: 'Folder deletion failed and was restored.',
-          diagnostics: buildDiagnostics({
-            module: 'ui/FolderTree',
-            operation: 'folder_soft_delete.rollback',
-            host: window.location.hostname,
-            url: window.location.href,
-            error: err,
-          }),
         });
       }
     }, 5000);
@@ -192,8 +176,8 @@ export function FolderTree({ currentChatUrl }) {
 
     showDexToast({
       type: 'action',
-      title: 'Folder scheduled for deletion',
-      message: `\"${folder.name}\" will be moved to trash in 5 seconds.`,
+      title: 'Folder moved to trash',
+      message: `"${folder.name}" will commit in 5 seconds.`,
       actions: [{
         label: 'Undo',
         onSelect: () => {
@@ -204,18 +188,12 @@ export function FolderTree({ currentChatUrl }) {
           setFolders(pending.snapshot);
           showDexToast({
             type: 'success',
-            title: 'Deletion undone',
-            message: 'Folder restored before deletion commit.',
+            title: 'Trash move undone',
+            message: 'Folder restored.',
           });
         },
       }],
-      diagnostics: {
-        module: 'ui/FolderTree',
-        operation: 'folder_soft_delete.schedule',
-        folderId: folder.id,
-        at: Date.now(),
-      },
-      durationMs: 5500,
+      durationMs: 5200,
     });
   }
 
@@ -243,10 +221,7 @@ export function FolderTree({ currentChatUrl }) {
   async function assignCurrentChat(folder) {
     if (!currentChatUrl) return;
     try {
-      await callAction(MESSAGE_ACTIONS.FOLDER_ASSIGN_CHAT, {
-        id: folder.id,
-        chatUrl: currentChatUrl,
-      });
+      await callAction(MESSAGE_ACTIONS.FOLDER_ASSIGN_CHAT, { id: folder.id, chatUrl: currentChatUrl });
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -273,10 +248,13 @@ export function FolderTree({ currentChatUrl }) {
         value: newFolderName,
         autofocus: true,
         'aria-label': 'New folder name',
-        onInput: (e) => setNewFolderName(e.currentTarget.value),
-        onKeyDown: (e) => {
-          if (e.key === 'Enter') void createFolder(parentId);
-          if (e.key === 'Escape') { setCreatingIn(null); setNewFolderName(''); }
+        onInput: (event) => setNewFolderName(event.currentTarget.value),
+        onKeyDown: (event) => {
+          if (event.key === 'Enter') void createFolder(parentId);
+          if (event.key === 'Escape') {
+            setCreatingIn(null);
+            setNewFolderName('');
+          }
         },
       }),
       h('div', { class: 'dex-folder-inline-actions' }, [
@@ -289,7 +267,10 @@ export function FolderTree({ currentChatUrl }) {
         h('button', {
           type: 'button',
           class: 'dex-link-btn',
-          onClick: () => { setCreatingIn(null); setNewFolderName(''); },
+          onClick: () => {
+            setCreatingIn(null);
+            setNewFolderName('');
+          },
         }, 'Cancel'),
       ]),
     ]);
@@ -301,175 +282,142 @@ export function FolderTree({ currentChatUrl }) {
     const menuOpen = activeMenuId === folder.id;
     const isRenaming = renamingId === folder.id;
     const confirmingTrash = confirmTrashId === folder.id;
+    const confirmingPermanentDelete = confirmPermId === folder.id;
 
     return h('div', { key: folder.id, class: 'dex-folder-node' }, [
-      // Row: name | count | ⋯
-      h('div', {
-        class: `dex-folder-row${assigned ? ' is-active' : ''}`,
-        style: `--depth:${depth};`,
-      }, [
+      h('div', { class: `dex-folder-row${assigned ? ' is-active' : ''}`, style: `--depth:${depth};` }, [
         isRenaming
           ? h('input', {
               class: 'dex-input dex-folder-rename-input',
               value: renamingName,
               autofocus: true,
               'aria-label': `Rename ${folder.name}`,
-              onInput: (e) => setRenamingName(e.currentTarget.value),
-              onKeyDown: (e) => {
-                if (e.key === 'Enter') void commitRename(folder);
-                if (e.key === 'Escape') { setRenamingId(null); setRenamingName(''); }
+              onInput: (event) => setRenamingName(event.currentTarget.value),
+              onKeyDown: (event) => {
+                if (event.key === 'Enter') void commitRename(folder);
+                if (event.key === 'Escape') {
+                  setRenamingId(null);
+                  setRenamingName('');
+                }
               },
             })
           : h('span', { class: 'dex-folder-name' }, folder.name),
-
-        !isRenaming
-          ? h('span', { class: 'dex-folder-count' }, `${folder.chatUrls?.length || 0}`)
-          : null,
-
+        !isRenaming ? h('span', { class: 'dex-folder-count' }, `${folder.chatUrls?.length || 0}`) : null,
         isRenaming
           ? h('div', { class: 'dex-folder-rename-actions' }, [
-              h('button', {
-                type: 'button',
-                class: 'dex-link-btn dex-link-btn--panel dex-link-btn--accent',
-                onClick: () => commitRename(folder),
-              }, 'Save'),
-              h('button', {
-                type: 'button',
-                class: 'dex-link-btn dex-link-btn--panel',
-                onClick: () => { setRenamingId(null); setRenamingName(''); },
-              }, 'Cancel'),
+              h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => commitRename(folder) }, 'Save'),
+              h('button', { type: 'button', class: 'dex-link-btn', onClick: () => { setRenamingId(null); setRenamingName(''); } }, 'Cancel'),
             ])
           : h('button', {
               type: 'button',
-              class: `dex-link-btn dex-link-btn--panel dex-folder-menu-btn${menuOpen ? ' dex-link-btn--accent' : ''}`,
+              class: `dex-link-btn dex-folder-menu-btn${menuOpen ? ' dex-link-btn--accent' : ''}`,
               onClick: () => setActiveMenuId(menuOpen ? null : folder.id),
-              title: 'Folder actions',
               'aria-label': `Actions for ${folder.name}`,
               'aria-expanded': menuOpen ? 'true' : 'false',
-            }, '⋯'),
+            }, 'Actions'),
       ]),
-
-      // Inline confirm: move to trash
       confirmingTrash
         ? h('div', { class: 'dex-folder-confirm', style: `--depth:${depth};` }, [
             h('span', { class: 'dex-folder-confirm__text' }, `Move "${folder.name}" to Trash?`),
             h('div', { class: 'dex-folder-confirm__actions' }, [
-              h('button', {
-                type: 'button',
-                class: 'dex-link-btn danger',
-                onClick: () => scheduleFolderDelete(folder),
-              }, 'Move to Trash'),
-              h('button', {
-                type: 'button',
-                class: 'dex-link-btn',
-                onClick: () => setConfirmTrashId(null),
-              }, 'Cancel'),
+              h('button', { type: 'button', class: 'dex-link-btn danger', onClick: () => scheduleFolderDelete(folder) }, 'Move to Trash'),
+              h('button', { type: 'button', class: 'dex-link-btn', onClick: () => setConfirmTrashId(null) }, 'Cancel'),
             ]),
           ])
         : null,
-
-      // Action menu (revealed by ⋯)
+      confirmingPermanentDelete
+        ? h('div', { class: 'dex-folder-confirm dex-folder-confirm--danger', style: `--depth:${depth};` }, [
+            h('span', { class: 'dex-folder-confirm__text' }, `Delete "${folder.name}" and its nested folders permanently?`),
+            h('div', { class: 'dex-folder-confirm__actions' }, [
+              h('button', { type: 'button', class: 'dex-link-btn danger', onClick: () => void permanentlyDeleteFolder(folder) }, 'Delete forever'),
+              h('button', { type: 'button', class: 'dex-link-btn', onClick: () => setConfirmPermId(null) }, 'Cancel'),
+            ]),
+          ])
+        : null,
       menuOpen
         ? h('div', { class: 'dex-folder-actions', style: `--depth:${depth};` },
             showTrash
               ? [
-                  h('button', {
-                    type: 'button',
-                    class: 'dex-link-btn',
-                    onClick: () => restoreFolder(folder),
-                  }, 'Restore'),
+                  h('button', { type: 'button', class: 'dex-link-btn', onClick: () => restoreFolder(folder) }, 'Restore'),
                   h('button', {
                     type: 'button',
                     class: 'dex-link-btn danger',
-                    onClick: () => { setConfirmPermId(folder.id); setActiveMenuId(null); },
+                    onClick: () => {
+                      setConfirmPermId(folder.id);
+                      setActiveMenuId(null);
+                    },
                   }, 'Delete Forever'),
                 ]
               : [
                   h('button', {
                     type: 'button',
                     class: 'dex-link-btn',
-                    onClick: () => { setCreatingIn(folder.id); setNewFolderName(''); setActiveMenuId(null); },
+                    onClick: () => {
+                      setCreatingIn(folder.id);
+                      setNewFolderName('');
+                      setActiveMenuId(null);
+                    },
                   }, '+ Child'),
                   h('button', {
                     type: 'button',
                     class: 'dex-link-btn',
-                    onClick: () => { setRenamingId(folder.id); setRenamingName(folder.name); setActiveMenuId(null); },
+                    onClick: () => {
+                      setRenamingId(folder.id);
+                      setRenamingName(folder.name);
+                      setActiveMenuId(null);
+                    },
                   }, 'Rename'),
                   h('button', {
                     type: 'button',
                     class: 'dex-link-btn',
-                    onClick: () => { void assignCurrentChat(folder); setActiveMenuId(null); },
+                    onClick: () => {
+                      void assignCurrentChat(folder);
+                      setActiveMenuId(null);
+                    },
                   }, assigned ? 'Reassign Here' : 'Assign Here'),
                   h('button', {
                     type: 'button',
                     class: 'dex-link-btn danger',
-                    onClick: () => { setConfirmTrashId(folder.id); setActiveMenuId(null); },
+                    onClick: () => {
+                      setConfirmTrashId(folder.id);
+                      setActiveMenuId(null);
+                    },
                   }, 'Trash'),
                 ]
           )
         : null,
-
-      // Inline create form for child folder
       creatingIn === folder.id ? renderCreateForm(folder.id) : null,
-
       children.length > 0
-        ? h('div', { class: 'dex-folder-children' },
-            children.map((child) => renderFolderNode(child, depth + 1))
-          )
+        ? h('div', { class: 'dex-folder-children' }, children.map((child) => renderFolderNode(child, depth + 1)))
         : null,
     ]);
   }
 
-  const confirmPermanentFolder = folders.find((item) => item.id === confirmPermId) || null;
-
-  return h('div', { class: 'dex-folder-tree' }, [
+  return h('section', { class: 'dex-folder-tree', 'aria-label': 'Chat organization' }, [
     h('div', { class: 'dex-folder-toolbar' }, [
       h('button', {
         type: 'button',
-        class: 'dex-link-btn',
-        onClick: () => { setCreatingIn('root'); setNewFolderName(''); },
+        class: 'dex-link-btn dex-link-btn--accent',
+        onClick: () => {
+          setCreatingIn('root');
+          setNewFolderName('');
+        },
       }, '+ Folder'),
       h('button', {
         type: 'button',
         class: 'dex-link-btn',
-        onClick: () => setShowTrash((v) => !v),
+        onClick: () => setShowTrash((value) => !value),
       }, showTrash ? 'Show Active' : 'Show Trash'),
       activeFolderId
-        ? h('button', {
-            type: 'button',
-            class: 'dex-link-btn',
-            onClick: () => unassignCurrentChat(),
-          }, 'Unassign Chat')
+        ? h('button', { type: 'button', class: 'dex-link-btn', onClick: () => unassignCurrentChat() }, 'Unassign Chat')
         : null,
     ]),
-
     creatingIn === 'root' ? renderCreateForm(null) : null,
-
     isLoading ? h('div', { class: 'dex-folder-state', role: 'status' }, 'Loading folders…') : null,
     error ? h('div', { class: 'dex-folder-state error', role: 'alert' }, error) : null,
     !isLoading && visibleFolders.length === 0
-      ? h('div', { class: 'dex-folder-state' }, showTrash ? 'Trash is empty.' : 'No folders yet. Click + Folder to create one.')
+      ? h('div', { class: 'dex-folder-state' }, showTrash ? 'Trash is empty.' : 'No folders yet. Create one to organize this chat.')
       : null,
-
-    h('div', { class: 'dex-folder-list' },
-      (childrenByParentId.get(null) || []).map((folder) => renderFolderNode(folder, 0))
-    ),
-    h(DexDialog, {
-      open: Boolean(confirmPermanentFolder),
-      variant: 'alertdialog',
-      title: 'Permanently delete folder tree?',
-      description: confirmPermanentFolder
-        ? `This cannot be undone. Delete \"${confirmPermanentFolder.name}\" and all nested folders permanently?`
-        : '',
-      confirmText: 'Delete forever',
-      cancelText: 'Cancel',
-      danger: true,
-      onConfirm: () => {
-        if (!confirmPermanentFolder) return;
-        void permanentlyDeleteFolder(confirmPermanentFolder);
-        setConfirmPermId(null);
-      },
-      onCancel: () => setConfirmPermId(null),
-    }),
+    h('div', { class: 'dex-folder-list' }, (childrenByParentId.get(null) || []).map((folder) => renderFolderNode(folder, 0))),
   ]);
 }

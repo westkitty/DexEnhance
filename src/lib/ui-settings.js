@@ -1,42 +1,30 @@
 export const HUD_SETTINGS_KEY = 'hudUiSettingsV1';
 
 const SAFE_MARGIN = 8;
+const MIN_DRAWER_WIDTH = 320;
+const MAX_DRAWER_WIDTH = 720;
+const MIN_LAUNCHER_SIZE = 54;
+const MAX_LAUNCHER_SIZE = 84;
+const VALID_THEME_PRESETS = new Set(['graphite', 'paper', 'oxide']);
+const VALID_DRAWER_VIEWS = new Set(['prompts', 'queue', 'optimizer', 'export', 'settings']);
 
 export const PANEL_IDS = Object.freeze([
   'welcome',
-  'hub',
-  'sidebar',
-  'tokens',
-  'fab',
-  'promptLibrary',
-  'optimizer',
-  'tour',
-  'export',
-  'settings',
+  'launcher',
+  'drawer',
 ]);
 
 export const DEFAULT_HUD_SETTINGS = Object.freeze({
-  accentHue: 202,
-  watermarkOpacity: 0.30,
-  bgBaseHue: 214,
-  bgBaseSaturation: 24,
-  bgBaseLightness: 93,
-  bgGlassHue: 214,
-  bgGlassSaturation: 18,
-  bgGlassLightness: 86,
-  bgGlassAlpha: 0.88,
+  themePreset: 'graphite',
   panels: {},
   visibility: {
-    welcome: false,
-    hub: false,
-    sidebar: false,
-    tokens: false,
-    fab: true,
-    promptLibrary: false,
-    optimizer: false,
-    tour: false,
-    export: false,
-    settings: false,
+    welcome: true,
+    launcher: true,
+  },
+  drawer: {
+    side: 'right',
+    width: 420,
+    lastView: 'prompts',
   },
 });
 
@@ -60,28 +48,26 @@ function centerY(height, viewportHeight) {
   return Math.round((viewportHeight - height) / 2);
 }
 
+function normalizeThemePreset(value) {
+  return VALID_THEME_PRESETS.has(value) ? value : DEFAULT_HUD_SETTINGS.themePreset;
+}
+
+function normalizeDrawerView(value) {
+  return VALID_DRAWER_VIEWS.has(value) ? value : DEFAULT_HUD_SETTINGS.drawer.lastView;
+}
+
+function normalizeDrawerSide(value) {
+  return value === 'left' ? 'left' : DEFAULT_HUD_SETTINGS.drawer.side;
+}
+
 export function panelMinSize(panelId) {
   switch (panelId) {
     case 'welcome':
       return { minWidth: 316, minHeight: 364 };
-    case 'hub':
-      return { minWidth: 300, minHeight: 220 };
-    case 'sidebar':
-      return { minWidth: 240, minHeight: 220 };
-    case 'tokens':
-      return { minWidth: 160, minHeight: 44 };
-    case 'fab':
-      return { minWidth: 46, minHeight: 46 };
-    case 'promptLibrary':
-      return { minWidth: 460, minHeight: 280 };
-    case 'optimizer':
-      return { minWidth: 460, minHeight: 280 };
-    case 'tour':
-      return { minWidth: 500, minHeight: 300 };
-    case 'export':
-      return { minWidth: 320, minHeight: 200 };
-    case 'settings':
-      return { minWidth: 360, minHeight: 280 };
+    case 'launcher':
+      return { minWidth: MIN_LAUNCHER_SIZE, minHeight: MIN_LAUNCHER_SIZE };
+    case 'drawer':
+      return { minWidth: MIN_DRAWER_WIDTH, minHeight: 320 };
     default:
       return { minWidth: 180, minHeight: 80 };
   }
@@ -100,208 +86,151 @@ export function defaultPanelState(panelId, viewport) {
         width: panelWidth,
         height: panelHeight,
         opacity: 1,
-        collapsed: false,
-        pinned: false,
       };
     }
-    case 'hub': {
-      const panelWidth = Math.min(440, Math.max(320, Math.round(width * 0.3)));
-      const panelHeight = Math.min(520, Math.max(300, Math.round(height * 0.48)));
+    case 'launcher': {
+      const size = 64;
       return {
-        x: centerX(panelWidth, width),
-        y: Math.max(38, centerY(panelHeight, height)),
-        width: panelWidth,
-        height: panelHeight,
-        opacity: 0.98,
-        collapsed: false,
-        pinned: false,
-      };
-    }
-    case 'sidebar': {
-      const panelWidth = Math.min(300, Math.max(240, Math.round(width * 0.24)));
-      const panelHeight = Math.min(560, Math.max(300, Math.round(height * 0.6)));
-      return {
-        x: 14,
-        y: 74,
-        width: panelWidth,
-        height: panelHeight,
-        opacity: 0.96,
-        collapsed: false,
-        pinned: false,
-      };
-    }
-    case 'tokens':
-      return {
-        x: Math.max(SAFE_MARGIN, width - 206),
-        y: Math.max(SAFE_MARGIN, height - 60),
-        width: 176,
-        height: 48,
-        opacity: 0.94,
-        collapsed: false,
-        pinned: false,
-      };
-    case 'fab': {
-      const size = 62;
-      return {
-        x: Math.max(SAFE_MARGIN, width - size - 14),
-        y: Math.max(SAFE_MARGIN, height - size - 14),
+        x: Math.max(SAFE_MARGIN, width - size - 18),
+        y: Math.max(SAFE_MARGIN, height - size - 18),
         width: size,
         height: size,
         opacity: 1,
-        collapsed: false,
-        pinned: false,
       };
     }
-    case 'promptLibrary': {
-      const panelWidth = Math.min(760, Math.max(500, Math.round(width * 0.56)));
-      const panelHeight = Math.min(620, Math.max(360, Math.round(height * 0.68)));
+    case 'drawer': {
+      const drawerWidth = Math.min(460, Math.max(MIN_DRAWER_WIDTH, Math.round(width * 0.34)));
       return {
-        x: centerX(panelWidth, width),
-        y: Math.max(26, centerY(panelHeight, height)),
-        width: panelWidth,
-        height: panelHeight,
-        opacity: 0.97,
-        collapsed: false,
-        pinned: false,
-      };
-    }
-    case 'optimizer': {
-      const panelWidth = Math.min(780, Math.max(500, Math.round(width * 0.58)));
-      const panelHeight = Math.min(620, Math.max(360, Math.round(height * 0.68)));
-      return {
-        x: centerX(panelWidth, width),
-        y: Math.max(24, centerY(panelHeight, height)),
-        width: panelWidth,
-        height: panelHeight,
-        opacity: 0.97,
-        collapsed: false,
-        pinned: false,
-      };
-    }
-    case 'tour': {
-      const panelWidth = Math.min(700, Math.max(500, Math.round(width * 0.58)));
-      const panelHeight = Math.min(500, Math.max(320, Math.round(panelWidth * 0.56)));
-      return {
-        x: centerX(panelWidth, width),
-        y: Math.max(30, centerY(panelHeight, height)),
-        width: panelWidth,
-        height: panelHeight,
-        opacity: 0.98,
-        collapsed: false,
-        pinned: false,
-      };
-    }
-    case 'export': {
-      const panelWidth = Math.min(460, Math.max(320, Math.round(width * 0.32)));
-      const panelHeight = Math.min(340, Math.max(210, Math.round(height * 0.32)));
-      return {
-        x: centerX(panelWidth, width),
-        y: centerY(panelHeight, height),
-        width: panelWidth,
-        height: panelHeight,
-        opacity: 0.97,
-        collapsed: false,
-        pinned: false,
-      };
-    }
-    case 'settings': {
-      const panelWidth = Math.min(500, Math.max(380, Math.round(width * 0.36)));
-      const panelHeight = Math.min(680, Math.max(420, Math.round(height * 0.65)));
-      return {
-        x: centerX(panelWidth, width),
-        y: Math.max(24, centerY(panelHeight, height)),
-        width: panelWidth,
-        height: panelHeight,
-        opacity: 0.98,
-        collapsed: false,
-        pinned: false,
+        x: Math.max(SAFE_MARGIN, width - drawerWidth),
+        y: 0,
+        width: drawerWidth,
+        height,
+        opacity: 1,
       };
     }
     default:
       return {
-        x: 40,
-        y: 90,
+        x: SAFE_MARGIN,
+        y: SAFE_MARGIN,
         width: 420,
         height: 320,
-        opacity: 0.96,
-        collapsed: false,
-        pinned: false,
+        opacity: 1,
       };
   }
 }
 
-export function clampPanelState(panelState, viewport, minWidth = 180, minHeight = 80) {
+export function clampPanelState(panelState, viewport, minWidth = 180, minHeight = 80, panelId = 'unknown') {
   const { width: vw, height: vh } = viewportOrFallback(viewport);
+
+  if (panelId === 'launcher') {
+    const size = clamp(panelState?.width ?? panelState?.height, MIN_LAUNCHER_SIZE, MAX_LAUNCHER_SIZE);
+    return {
+      x: clamp(panelState?.x, SAFE_MARGIN, Math.max(SAFE_MARGIN, vw - size - SAFE_MARGIN)),
+      y: clamp(panelState?.y, SAFE_MARGIN, Math.max(SAFE_MARGIN, vh - size - SAFE_MARGIN)),
+      width: size,
+      height: size,
+      opacity: 1,
+    };
+  }
+
+  if (panelId === 'drawer') {
+    const width = clamp(panelState?.width, MIN_DRAWER_WIDTH, Math.min(MAX_DRAWER_WIDTH, vw - SAFE_MARGIN * 2));
+    return {
+      x: Math.max(SAFE_MARGIN, vw - width),
+      y: 0,
+      width,
+      height: vh,
+      opacity: 1,
+    };
+  }
+
   const width = clamp(panelState?.width, minWidth, Math.max(minWidth, vw - SAFE_MARGIN * 2));
   const height = clamp(panelState?.height, minHeight, Math.max(minHeight, vh - SAFE_MARGIN * 2));
 
-  const maxX = Math.max(SAFE_MARGIN, vw - width - SAFE_MARGIN);
-  const maxY = Math.max(SAFE_MARGIN, vh - (panelState?.collapsed ? 44 : height) - SAFE_MARGIN);
-
   return {
-    x: clamp(panelState?.x, SAFE_MARGIN, maxX),
-    y: clamp(panelState?.y, SAFE_MARGIN, maxY),
+    x: clamp(panelState?.x, SAFE_MARGIN, Math.max(SAFE_MARGIN, vw - width - SAFE_MARGIN)),
+    y: clamp(panelState?.y, SAFE_MARGIN, Math.max(SAFE_MARGIN, vh - height - SAFE_MARGIN)),
     width,
     height,
-    opacity: clamp(panelState?.opacity, 0.72, 1),
-    collapsed: panelState?.collapsed === true,
-    pinned: panelState?.pinned === true,
+    opacity: clamp(panelState?.opacity, 0.92, 1),
   };
 }
 
+function migrateLegacyPanel(sourcePanels, panelId, viewport) {
+  if (panelId === 'launcher') {
+    return sourcePanels?.launcher || sourcePanels?.fab || defaultPanelState('launcher', viewport);
+  }
+  if (panelId === 'drawer') {
+    const legacySource = sourcePanels?.drawer || sourcePanels?.promptLibrary || sourcePanels?.sidebar || sourcePanels?.settings || null;
+    if (!legacySource) return defaultPanelState('drawer', viewport);
+    return {
+      ...defaultPanelState('drawer', viewport),
+      width: legacySource.width,
+    };
+  }
+  return sourcePanels?.welcome || defaultPanelState('welcome', viewport);
+}
+
 export function normalizePanelState(rawPanel, fallback, viewport, panelId = 'unknown') {
+  const base = typeof fallback === 'object' && fallback !== null ? fallback : defaultPanelState(panelId, viewport);
   const source = typeof rawPanel === 'object' && rawPanel !== null ? rawPanel : {};
-  const base = typeof fallback === 'object' && fallback !== null ? fallback : defaultPanelState('unknown', viewport);
   const merged = {
     x: source.x ?? base.x,
     y: source.y ?? base.y,
     width: source.width ?? base.width,
     height: source.height ?? base.height,
     opacity: source.opacity ?? base.opacity,
-    collapsed: source.collapsed ?? base.collapsed,
-    pinned: source.pinned ?? base.pinned,
   };
   const { minWidth, minHeight } = panelMinSize(panelId);
-  return clampPanelState(merged, viewport, minWidth, minHeight);
+  return clampPanelState(merged, viewport, minWidth, minHeight, panelId);
 }
 
-function normalizeVisibility(rawVisibility) {
-  const source = typeof rawVisibility === 'object' && rawVisibility !== null ? rawVisibility : {};
-  const normalized = {};
-  for (const panelId of PANEL_IDS) {
-    const fallback = DEFAULT_HUD_SETTINGS.visibility[panelId] === true;
-    normalized[panelId] = source[panelId] === true ? true : fallback;
-  }
-  return normalized;
+function normalizeVisibility(source = {}) {
+  return {
+    welcome: source.welcome === true,
+    launcher: source.launcher === true || source.fab === true || source.launcher == null,
+  };
 }
 
 export function normalizeHudSettings(rawSettings, viewport) {
   const source = typeof rawSettings === 'object' && rawSettings !== null ? rawSettings : {};
   const sourcePanels = typeof source.panels === 'object' && source.panels !== null ? source.panels : {};
   const normalized = {
-    accentHue: clamp(source.accentHue ?? DEFAULT_HUD_SETTINGS.accentHue, 0, 360),
-    watermarkOpacity: clamp(source.watermarkOpacity ?? DEFAULT_HUD_SETTINGS.watermarkOpacity, 0, 0.30),
-    bgBaseHue: clamp(source.bgBaseHue ?? DEFAULT_HUD_SETTINGS.bgBaseHue, 0, 360),
-    bgBaseSaturation: clamp(source.bgBaseSaturation ?? DEFAULT_HUD_SETTINGS.bgBaseSaturation, 0, 100),
-    bgBaseLightness: clamp(source.bgBaseLightness ?? DEFAULT_HUD_SETTINGS.bgBaseLightness, 0, 100),
-    bgGlassHue: clamp(source.bgGlassHue ?? DEFAULT_HUD_SETTINGS.bgGlassHue, 0, 360),
-    bgGlassSaturation: clamp(source.bgGlassSaturation ?? DEFAULT_HUD_SETTINGS.bgGlassSaturation, 0, 100),
-    bgGlassLightness: clamp(source.bgGlassLightness ?? DEFAULT_HUD_SETTINGS.bgGlassLightness, 0, 100),
-    bgGlassAlpha: clamp(source.bgGlassAlpha ?? DEFAULT_HUD_SETTINGS.bgGlassAlpha, 0.62, 0.9),
+    themePreset: normalizeThemePreset(source.themePreset),
     panels: {},
     visibility: normalizeVisibility(source.visibility),
+    drawer: {
+      side: normalizeDrawerSide(source.drawer?.side),
+      width: clamp(
+        source.drawer?.width ?? sourcePanels?.drawer?.width ?? sourcePanels?.promptLibrary?.width,
+        MIN_DRAWER_WIDTH,
+        MAX_DRAWER_WIDTH
+      ),
+      lastView: normalizeDrawerView(source.drawer?.lastView),
+    },
   };
 
   for (const panelId of PANEL_IDS) {
     const fallback = defaultPanelState(panelId, viewport);
-    normalized.panels[panelId] = normalizePanelState(sourcePanels[panelId], fallback, viewport, panelId);
+    normalized.panels[panelId] = normalizePanelState(
+      sourcePanels[panelId] ?? migrateLegacyPanel(sourcePanels, panelId, viewport),
+      fallback,
+      viewport,
+      panelId
+    );
   }
+
+  normalized.panels.drawer.width = normalized.drawer.width;
+  normalized.panels.drawer.height = viewportOrFallback(viewport).height;
+  normalized.panels.drawer.x = Math.max(SAFE_MARGIN, viewportOrFallback(viewport).width - normalized.drawer.width);
+  normalized.panels.drawer.y = 0;
 
   return normalized;
 }
 
 export function updatePanelInSettings(settings, panelId, patch, viewport) {
   const current = normalizeHudSettings(settings, viewport);
+  if (!PANEL_IDS.includes(panelId)) return current;
   const nextPanel = normalizePanelState(
     {
       ...current.panels[panelId],
@@ -312,18 +241,27 @@ export function updatePanelInSettings(settings, panelId, patch, viewport) {
     panelId
   );
 
-  return {
+  const next = {
     ...current,
     panels: {
       ...current.panels,
       [panelId]: nextPanel,
     },
   };
+
+  if (panelId === 'drawer') {
+    next.drawer = {
+      ...current.drawer,
+      width: nextPanel.width,
+    };
+  }
+
+  return next;
 }
 
 export function updatePanelVisibilityInSettings(settings, panelId, isOpen, viewport) {
   const current = normalizeHudSettings(settings, viewport);
-  if (!PANEL_IDS.includes(panelId)) return current;
+  if (panelId !== 'welcome' && panelId !== 'launcher') return current;
   return {
     ...current,
     visibility: {
@@ -344,32 +282,83 @@ export function updateThemeInSettings(settings, patch, viewport) {
 
 export function resetPanelInSettings(settings, panelId, viewport) {
   const current = normalizeHudSettings(settings, viewport);
-  return {
+  if (!PANEL_IDS.includes(panelId)) return current;
+  const next = {
     ...current,
     panels: {
       ...current.panels,
       [panelId]: defaultPanelState(panelId, viewport),
     },
   };
+  if (panelId === 'drawer') {
+    next.drawer = {
+      ...current.drawer,
+      width: next.panels.drawer.width,
+    };
+  }
+  return next;
 }
 
 export function panelOpacityValue(value) {
-  return clamp(value, 0.72, 1);
+  return clamp(value, 0.92, 1);
 }
 
-export function hueToHudPalette(hue) {
-  const safeHue = clamp(hue, 0, 360);
-  return {
-    accent: `hsl(${safeHue} 82% 58%)`,
-    accent2: `hsl(${(safeHue + 42) % 360} 78% 50%)`,
-    cta: `hsl(${(safeHue + 320) % 360} 88% 58%)`,
-  };
-}
-
-export function hudBackgroundPalette(settings) {
-  const normalized = normalizeHudSettings(settings, { width: 1280, height: 760 });
-  return {
-    bgBase: `hsl(${Math.round(normalized.bgBaseHue)} ${Math.round(normalized.bgBaseSaturation)}% ${Math.round(normalized.bgBaseLightness)}%)`,
-    bgGlass: `hsla(${Math.round(normalized.bgGlassHue)} ${Math.round(normalized.bgGlassSaturation)}% ${Math.round(normalized.bgGlassLightness)}% / ${normalized.bgGlassAlpha.toFixed(2)})`,
-  };
+export function themePresetTokens(preset) {
+  switch (normalizeThemePreset(preset)) {
+    case 'paper':
+      return {
+        accent: '#0f6cbd',
+        accent2: '#0a8f72',
+        cta: '#b44d12',
+        surface: '#f3f1eb',
+        surfaceRaised: '#fcfbf7',
+        surfaceContrast: '#ffffff',
+        surfaceSubtle: '#e7e2d8',
+        border: '#c4b8a2',
+        borderStrong: '#8c7758',
+        text: '#1b222c',
+        textMuted: '#4f5b6d',
+        danger: '#b43737',
+        success: '#197a43',
+        warning: '#94640d',
+        shadowDrawer: '0 0 0 1px rgba(56, 43, 20, 0.10), -18px 0 42px rgba(34, 29, 22, 0.24)',
+      };
+    case 'oxide':
+      return {
+        accent: '#4ea1ff',
+        accent2: '#27b38f',
+        cta: '#e08a2e',
+        surface: '#1f252d',
+        surfaceRaised: '#2a313b',
+        surfaceContrast: '#313a47',
+        surfaceSubtle: '#171d24',
+        border: '#4a5666',
+        borderStrong: '#7d8ca3',
+        text: '#edf3fb',
+        textMuted: '#b3c0d0',
+        danger: '#ff6b6b',
+        success: '#3bc37d',
+        warning: '#e9b44c',
+        shadowDrawer: '0 0 0 1px rgba(255, 255, 255, 0.04), -18px 0 42px rgba(0, 0, 0, 0.38)',
+      };
+    case 'graphite':
+    default:
+      return {
+        accent: '#7cc2ff',
+        accent2: '#35c0a1',
+        cta: '#f38b3d',
+        surface: '#10151c',
+        surfaceRaised: '#171d26',
+        surfaceContrast: '#202833',
+        surfaceSubtle: '#0a0f15',
+        border: '#2f3947',
+        borderStrong: '#5f7085',
+        text: '#f3f7fc',
+        textMuted: '#b7c3d2',
+        danger: '#ff6b6b',
+        success: '#39c57a',
+        warning: '#e8b34d',
+        shadowDrawer: '0 0 0 1px rgba(255, 255, 255, 0.04), -18px 0 42px rgba(0, 0, 0, 0.46)',
+      };
+  }
 }
