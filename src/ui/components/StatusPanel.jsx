@@ -23,9 +23,10 @@ export function StatusPanel({
   onReloadAdapter,
 }) {
   const modules = featureSettings?.modules || {};
-  const healthLabel = adapterHealth?.healthy ? 'Healthy' : 'Attention';
-  const healthClass = adapterHealth?.healthy ? '' : ' danger';
-  const showBanner = adapterHealth?.healthy === false;
+  const checking = adapterHealth?.settled === false && adapterHealth?.healthy === false;
+  const healthLabel = checking ? 'Checking' : (adapterHealth?.healthy ? 'Healthy' : 'Attention');
+  const healthClass = checking ? ' warn' : (adapterHealth?.healthy ? '' : ' danger');
+  const showBanner = !checking && adapterHealth?.healthy === false;
   const bannerText = 'Host adapter mismatch detected. Run diagnostics or re-inject UI.';
 
   return h('section', { class: 'dex-status-panel', 'aria-label': 'DexEnhance Status' }, [

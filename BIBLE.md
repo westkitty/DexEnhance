@@ -1743,3 +1743,34 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
       - E2E popup: 8 pass / 0 fail
     - `bun run build` (pass)
     - `bun run verify:playwright` (final rerun pass)
+
+[2026-03-06] v1.29 — Readability floor hardening + startup status calm-state polish.
+  Follow-up pass focused on practical legibility and reducing false "error-like" launch perception.
+
+  Readability hardening:
+    - Increased baseline glass/background opacity tokens in theme to improve foreground contrast under host-page motion.
+    - Raised key text sizes for status/sidebar/toast/action affordances so controls remain readable at normal zoom.
+    - Enforced stronger minimum panel transparency (`0.58`) across settings/state clamps and panel sliders to prevent
+      unreadable near-transparent panel states.
+
+  Startup status behavior:
+    - Added explicit adapter-health `settled` propagation through host health checks so launch transitions surface
+      `Checking` first and only escalate to unhealthy after stabilization conditions are met.
+    - Kept unhealthy toast/banner signaling restricted to settled-required-selector failures; optional selector drift
+      remains non-fatal and does not present as a startup error state.
+
+  Files touched:
+    - `src/content/chatgpt/index.js`
+    - `src/content/gemini/index.js`
+    - `src/lib/ui-settings.js`
+    - `src/ui/components/HUDSettingsPanel.jsx`
+    - `src/ui/components/PanelFrame.jsx`
+    - `src/ui/components/StatusPanel.jsx`
+    - `src/ui/styles/theme.css`
+
+  Verification run:
+    - `bun run test:all` (pass)
+      - Unit: 56 pass / 0 fail
+      - E2E popup: 8 pass / 0 fail
+    - `bun run build` (pass)
+    - `bun run verify:playwright` (pass; report `pass: true`)

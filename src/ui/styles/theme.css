@@ -16,8 +16,8 @@
   --dex-transition-slow: 320ms cubic-bezier(0.19, 1, 0.22, 1);
   --dex-outline: 0 0 0 3px color-mix(in srgb, var(--dex-accent) 25%, transparent);
   --dex-watermark-opacity: 0.30;
-  --dex-bg-base: rgba(236, 239, 244, 0.96);
-  --dex-bg-glass: rgba(168, 175, 187, 0.52);
+  --dex-bg-base: rgba(236, 239, 244, 0.985);
+  --dex-bg-glass: rgba(168, 175, 187, 0.72);
 }
 
 #dex-app * {
@@ -32,18 +32,18 @@
 
 :host([data-theme="light"]) #dex-app {
   --dex-app-bg: #eaf6ff;
-  --dex-shell: rgba(246, 249, 253, 0.99);
+  --dex-shell: rgba(246, 249, 253, 1);
   --dex-shell-strong: rgba(255, 255, 255, 1);
   --dex-border: rgba(18, 96, 158, 0.3);
   --dex-border-strong: rgba(18, 96, 158, 0.46);
   --dex-fg: #072235;
-  --dex-fg-soft: #12384d;
-  --dex-muted: #1f4d66;
+  --dex-fg-soft: #0d2f43;
+  --dex-muted: #173f58;
   --dex-accent: #1e8fda;
   --dex-accent-2: #12b8a1;
   --dex-cta: #f97316;
-  --dex-glass-bg: rgba(148, 157, 169, 0.62);
-  --dex-glass-surface: rgba(243, 246, 252, 0.92);
+  --dex-glass-bg: rgba(148, 157, 169, 0.78);
+  --dex-glass-surface: rgba(243, 246, 252, 0.98);
   --dex-glass-border: rgba(248, 251, 255, 0.42);
   --dex-glass-shadow: 0 24px 52px rgba(15, 24, 36, 0.24);
   --dex-bg-base: var(--dex-shell);
@@ -57,13 +57,13 @@
   --dex-border: rgba(108, 174, 227, 0.34);
   --dex-border-strong: rgba(108, 174, 227, 0.52);
   --dex-fg: #ebf8ff;
-  --dex-fg-soft: #c8e5f2;
-  --dex-muted: #b3d4e3;
+  --dex-fg-soft: #d7edf8;
+  --dex-muted: #c5e0ee;
   --dex-accent: #45b2ff;
   --dex-accent-2: #26d3ba;
   --dex-cta: #ff9a4d;
-  --dex-glass-bg: rgba(79, 88, 102, 0.74);
-  --dex-glass-surface: rgba(39, 46, 56, 0.9);
+  --dex-glass-bg: rgba(79, 88, 102, 0.82);
+  --dex-glass-surface: rgba(39, 46, 56, 0.96);
   --dex-glass-border: rgba(226, 233, 246, 0.22);
   --dex-glass-shadow: 0 24px 56px rgba(4, 8, 13, 0.46);
   --dex-bg-base: var(--dex-shell);
@@ -150,13 +150,13 @@
 }
 
 .dex-toast__title {
-  font-size: 12px;
+  font-size: 13px;
   letter-spacing: 0.03em;
 }
 
 .dex-toast__message {
   margin: 8px 0 6px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--dex-fg-soft);
 }
@@ -347,7 +347,7 @@
 
 .dex-sidebar__body {
   padding: 12px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--dex-fg-soft);
   max-height: none;
   overflow: auto;
@@ -360,8 +360,8 @@
 
 .dex-sidebar__label {
   display: block;
-  font-size: 11px;
-  letter-spacing: 0.09em;
+  font-size: 12px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.88;
   color: var(--dex-fg-soft);
@@ -370,7 +370,7 @@
 .dex-sidebar__url {
   display: block;
   margin-top: 4px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
   word-break: break-all;
   color: var(--dex-fg-soft);
@@ -543,7 +543,7 @@
 }
 
 .dex-folder-name {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--dex-fg);
 }
 
@@ -580,7 +580,7 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--dex-shell-strong) 94%, transparent);
   color: var(--dex-fg);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   padding: 7px 9px;
@@ -1756,7 +1756,7 @@ select.dex-input:focus-visible {
   display: inline-grid;
   gap: 1px;
   justify-items: center;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--dex-fg-soft);
   line-height: 1.35;
   min-width: 238px;

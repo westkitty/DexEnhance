@@ -131,6 +131,7 @@ async function logStorageRoundTrip() {
   let adapterHealthState = {
     healthy: true,
     degraded: false,
+    settled: false,
     uiInjected: true,
     hasTextarea: false,
     hasSubmitButton: false,
@@ -145,6 +146,7 @@ async function logStorageRoundTrip() {
   };
   let lastAdapterHealthToastAt = 0;
   let adapterHealthFailCount = 0;
+  let adapterHealthSettled = false;
   const healthCheckStartedAt = Date.now();
   let healthCheckTimer = null;
 
@@ -225,15 +227,17 @@ async function logStorageRoundTrip() {
   };
 
   const runAdapterHealthCheck = ({ notify = false } = {}) => {
+    const ts = Date.now();
     const next = {
       uiInjected: ui.host?.isConnected === true,
       hasTextarea: Boolean(adapter.getTextarea()),
       hasSubmitButton: Boolean(adapter.getSubmitButton()),
       hasChatList: Boolean(adapter.getChatListContainer()),
-      lastCheckedAt: Date.now(),
+      lastCheckedAt: ts,
       reason: '',
       degraded: false,
       healthy: true,
+      settled: false,
     };
     const hasRequiredSelectors = next.uiInjected && next.hasTextarea && next.hasSubmitButton;
     next.degraded = hasRequiredSelectors && !next.hasChatList;
@@ -244,20 +248,26 @@ async function logStorageRoundTrip() {
       next.reason = 'Optional chat-list selector mismatch detected. Composer actions remain available.';
     }
 
-    const becameUnhealthy = adapterHealthState.healthy !== false && next.healthy === false;
+    const wasSettled = adapterHealthState.settled === true;
+    const wasHealthy = adapterHealthState.healthy === true;
     if (next.healthy) {
       adapterHealthFailCount = 0;
+      adapterHealthSettled = true;
     } else {
       adapterHealthFailCount += 1;
+      const inStartupWindow = ts - healthCheckStartedAt < 10000;
+      if (!inStartupWindow && adapterHealthFailCount >= 3) {
+        adapterHealthSettled = true;
+      }
     }
+    next.settled = adapterHealthSettled;
     adapterHealthState = next;
     renderUI();
 
-    if (notify && !next.healthy) {
-      const ts = Date.now();
-      const inStartupWindow = ts - healthCheckStartedAt < 4500;
-      const unstable = adapterHealthFailCount < 3;
-      if (!inStartupWindow && !unstable && (becameUnhealthy || ts - lastAdapterHealthToastAt > 60000)) {
+    if (notify && next.settled && !next.healthy) {
+      const becameUnhealthy = wasSettled && wasHealthy && next.healthy === false;
+      const becameSettledUnhealthy = !wasSettled && next.healthy === false;
+      if (becameUnhealthy || becameSettledUnhealthy || ts - lastAdapterHealthToastAt > 60000) {
         lastAdapterHealthToastAt = ts;
         showDexToast({
           type: 'error',

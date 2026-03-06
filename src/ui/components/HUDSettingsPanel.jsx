@@ -298,7 +298,7 @@ export function HUDSettingsPanel({
                     }, [
                       h('input', {
                         type: 'range',
-                        min: 0.28,
+                        min: 0.58,
                         max: 1,
                         step: 0.02,
                         value: Number.isFinite(Number(panelOpacities?.[panelId])) ? Number(panelOpacities[panelId]) : 0.96,
