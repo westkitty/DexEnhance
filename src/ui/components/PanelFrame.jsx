@@ -32,18 +32,27 @@ export function PanelFrame({
   );
 
   const resizeRef = useRef(null);
+  const panelRef = useRef(null);
+  const optionsRef = useRef(null);
+  const optionsToggleRef = useRef(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
 
   useEffect(() => {
-    if (!showOptions) return undefined;
+    if (!showOptions || !optionsOpen) return undefined;
     const closeOptions = (event) => {
-      if (!(event.target instanceof Element)) return;
-      if (event.target.closest(`[data-dex-panel-options="${panelId}"]`)) return;
+      const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+      if (optionsRef.current && path.includes(optionsRef.current)) return;
+      if (optionsToggleRef.current && path.includes(optionsToggleRef.current)) return;
+      if (panelRef.current && path.includes(panelRef.current)) return;
+      if (event.target instanceof Element) {
+        if (event.target.closest(`[data-dex-panel-options="${panelId}"]`)) return;
+        if (event.target.closest(`[data-dex-panel-options-toggle="${panelId}"]`)) return;
+      }
       setOptionsOpen(false);
     };
     window.addEventListener('pointerdown', closeOptions);
     return () => window.removeEventListener('pointerdown', closeOptions);
-  }, [panelId, showOptions]);
+  }, [optionsOpen, panelId, showOptions]);
 
   function updatePanel(next) {
     const clamped = clampPanelState(next, { width: window.innerWidth, height: window.innerHeight }, minWidth, minHeight);
@@ -131,6 +140,7 @@ export function PanelFrame({
       style,
       'data-dex-panel': panelId,
       'aria-label': title,
+      ref: panelRef,
     },
     [
       h(
@@ -206,6 +216,8 @@ export function PanelFrame({
                     class: 'dex-link-btn dex-link-btn--panel',
                     onClick: () => setOptionsOpen((value) => !value),
                     title: 'Panel options',
+                    'data-dex-panel-options-toggle': panelId,
+                    ref: optionsToggleRef,
                   },
                   'Options'
                 )
@@ -226,7 +238,13 @@ export function PanelFrame({
         ]
       ),
       showOptions && optionsOpen
-        ? h('div', { class: 'dex-panel-frame__options', 'data-dex-panel-options': panelId }, [
+        ? h('div', {
+            class: 'dex-panel-frame__options',
+            'data-dex-panel-options': panelId,
+            ref: optionsRef,
+            onPointerDown: (event) => event.stopPropagation(),
+            onClick: (event) => event.stopPropagation(),
+          }, [
             h('label', { class: 'dex-sidebar__label' }, 'Transparency'),
             h('input', {
               class: 'dex-panel-frame__slider',

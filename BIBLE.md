@@ -1675,3 +1675,24 @@ node -e "const m=require('./dist/manifest.json'); console.assert(m.manifest_vers
       - E2E popup: 8 pass / 0 fail
     - `bun run verify:playwright` (pass; report `pass: true`)
     - `bun run build` (pass)
+
+[2026-03-06] v1.26 — Panel options slider touch-dismiss regression fixed.
+  Resolved a PanelFrame interaction bug where touching/dragging the panel transparency slider could immediately
+  dismiss the options row, making opacity adjustment unreliable.
+
+  Root cause:
+    - Global `window` `pointerdown` close logic for panel options relied on shallow target/closest checks,
+      which can misclassify inside interactions under Shadow DOM retargeting and touch pointer events.
+
+  Fixes applied in `src/ui/components/PanelFrame.jsx`:
+    - Added stable refs for panel root, options container, and options toggle button.
+    - Updated outside-click close logic to use `event.composedPath()` + ref inclusion checks.
+    - Scoped close listener activation to `optionsOpen === true`.
+    - Added pointer/click propagation guards on the options container to prevent false outside-close events
+      while interacting with slider controls.
+
+  Verification run:
+    - `bun run test:all` (pass)
+      - Unit: 56 pass / 0 fail
+      - E2E popup: 8 pass / 0 fail
+    - `bun run build` (pass)
