@@ -135,6 +135,14 @@ export function QueueManager({ queueController, siteLabel = '' }) {
       h('strong', null, 'Queue Manager'),
       h('span', { class: 'dex-folder-state' }, `${runningLabel} • ${items.length} queued • ${siteLabel}`),
     ]),
+    h('div', { class: `dex-state-panel dex-state-panel--${queueState?.lastError ? 'error' : items.length > 0 ? 'success' : 'empty'}` }, [
+      h('strong', null, 'Queue surface'),
+      h('p', { class: 'dex-folder-state' }, queueState?.currentSendingId
+        ? `Active state: sending ${queueState.currentSendingId}.`
+        : items.length > 0
+          ? 'Pending items are visible and can be removed, cleared, reordered, or sent now.'
+          : 'Empty state: no queued prompts yet.'),
+    ]),
     queueState?.lastError
       ? h('div', { class: 'dex-inline-banner dex-inline-banner--error', role: 'alert' }, [
           h('strong', null, 'Most recent queue failure'),

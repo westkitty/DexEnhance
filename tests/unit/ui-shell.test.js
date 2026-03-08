@@ -36,6 +36,20 @@ describe('ui-settings migration', () => {
     expect(updated.drawer.width).toBeLessThanOrEqual(720);
     expect(updated.panels.drawer.width).toBe(updated.drawer.width);
   });
+
+  test('normalizes new vnext HUD controls', () => {
+    const normalized = normalizeHudSettings({
+      accentHue: 512,
+      transparency: 0.2,
+      tokenOverlay: { enabled: true, mode: 'expanded' },
+      fab: { behavior: 'hub_first' },
+    }, { width: 1280, height: 760 });
+
+    expect(normalized.accentHue).toBe(360);
+    expect(normalized.transparency).toBeGreaterThanOrEqual(0.74);
+    expect(normalized.tokenOverlay.mode).toBe('expanded');
+    expect(normalized.fab.behavior).toBe('hub_first');
+  });
 });
 
 describe('command palette filtering', () => {

@@ -50,6 +50,8 @@ async function verifySite(context, site) {
         drawerPresent: Boolean(root?.querySelector('.dex-drawer')),
         palettePresent: Boolean(root?.querySelector('.dex-command-palette')),
         drawerStatusPresent: Boolean(root?.querySelector('.dex-drawer-status')),
+        tokenOverlayPresent: Boolean(root?.querySelector('.dex-token-overlay')),
+        currentChatChipPresent: Boolean(root?.querySelector('.dex-current-chat-chip')),
       };
     }, hostId);
 
@@ -100,6 +102,8 @@ async function verifySite(context, site) {
         drawerPresent: false,
         palettePresent: false,
         drawerStatusPresent: false,
+        tokenOverlayPresent: false,
+        currentChatChipPresent: false,
       },
       screenshotPath,
       sampleLogs: logs.slice(0, 30),
@@ -123,12 +127,20 @@ async function verifyPopup(context, extensionId) {
       const icon = document.querySelector('.brand img');
       const settingsButton = document.getElementById('open-settings');
       const openHomeButton = document.getElementById('open-home');
+      const promptsButton = document.querySelector('[data-open-surface="prompts"]');
+      const optimizerButton = document.querySelector('[data-open-surface="optimizer"]');
+      const contextButton = document.querySelector('[data-open-surface="context"]');
+      const exportButton = document.querySelector('[data-open-surface="export"]');
       return {
         modalOpen: Boolean(modal?.classList.contains('is-open')),
         iconPresent: Boolean(icon),
         iconSource: icon?.getAttribute('src') || '',
         openSettingsButtonPresent: Boolean(settingsButton),
         openHomeButtonPresent: Boolean(openHomeButton),
+        promptsButtonPresent: Boolean(promptsButton),
+        optimizerButtonPresent: Boolean(optimizerButton),
+        contextButtonPresent: Boolean(contextButton),
+        exportButtonPresent: Boolean(exportButton),
       };
     });
 
@@ -139,9 +151,17 @@ async function verifyPopup(context, extensionId) {
       const graphite = document.querySelector('[data-theme-preset="graphite"]');
       const paper = document.querySelector('[data-theme-preset="paper"]');
       const oxide = document.querySelector('[data-theme-preset="oxide"]');
+      const accentHue = document.getElementById('accent-hue');
+      const transparency = document.getElementById('transparency');
+      const fabSize = document.getElementById('fab-size');
+      const fabBehavior = document.getElementById('fab-behavior');
+      const tokenOverlayMode = document.getElementById('token-overlay-mode');
+      const relaunchTour = document.getElementById('relaunch-tour');
       return {
         modalOpen: Boolean(modal?.classList.contains('is-open')),
         themePresetControlsPresent: Boolean(graphite && paper && oxide),
+        hudControlsPresent: Boolean(accentHue && transparency && fabSize && fabBehavior && tokenOverlayMode),
+        relaunchTourPresent: Boolean(relaunchTour),
       };
     });
 
@@ -276,6 +296,14 @@ async function verifyPopup(context, extensionId) {
     if (!result.chatgpt.ui.drawerPresent || !result.gemini.ui.drawerPresent) {
       result.errors.push('Drawer shell was not detected on one or more target sites.');
     }
+    const tokenOverlayExpected = !result.chatgpt.ui.welcomePresent && !result.gemini.ui.welcomePresent;
+    if (tokenOverlayExpected && (!result.chatgpt.ui.tokenOverlayPresent || !result.gemini.ui.tokenOverlayPresent)) {
+      result.errors.push('Token overlay was not detected on one or more target sites.');
+    }
+    const chatChipExpected = !result.chatgpt.ui.welcomePresent && !result.gemini.ui.welcomePresent;
+    if (chatChipExpected && (!result.chatgpt.ui.currentChatChipPresent || !result.gemini.ui.currentChatChipPresent)) {
+      result.errors.push('Current chat assignment chip was not detected on one or more target sites.');
+    }
     if ((result.promptCatalog?.promptCount || 0) < 50) {
       result.errors.push('Prompt catalog contains fewer than 50 templates.');
     }
@@ -288,8 +316,14 @@ async function verifyPopup(context, extensionId) {
     if (!result.popup?.initial?.openHomeButtonPresent) {
       result.errors.push('Popup open-home button was not detected.');
     }
+    if (!result.popup?.initial?.promptsButtonPresent || !result.popup?.initial?.optimizerButtonPresent || !result.popup?.initial?.contextButtonPresent || !result.popup?.initial?.exportButtonPresent) {
+      result.errors.push('Popup primary feature launchers were not detected.');
+    }
     if (!result.popup?.settingsState?.modalOpen || !result.popup?.settingsState?.themePresetControlsPresent) {
       result.errors.push('Popup settings modal did not expose theme preset controls correctly.');
+    }
+    if (!result.popup?.settingsState?.hudControlsPresent || !result.popup?.settingsState?.relaunchTourPresent) {
+      result.errors.push('Popup settings modal did not expose HUD controls and relaunch actions correctly.');
     }
     if (result.popup?.initial?.modalOpen) {
       result.errors.push('Popup settings modal should not auto-open on launch.');

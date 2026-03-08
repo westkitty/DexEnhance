@@ -16,24 +16,23 @@
       --dex-muted: #b4c2d3;
       --dex-accent: #7cc2ff;
       --dex-success: #39c57a;
+      --dex-warning: #e8b34d;
+      --dex-danger: #ff7d7d;
       --dex-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
     }
 
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      min-width: 360px;
-      min-height: 520px;
-      font-family: system-ui, -apple-system, 'Avenir Next', 'Segoe UI', sans-serif;
-      background: linear-gradient(180deg, #111720 0%, #151b23 100%);
+      min-width: 392px;
+      min-height: 620px;
+      font-family: system-ui, -apple-system, "Avenir Next", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1f2936, #121820 56%);
       color: var(--dex-ink);
     }
 
-    button, input {
-      font: inherit;
-    }
-
-    button:focus-visible, input:focus-visible {
+    button, input, select { font: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
       outline: 2px solid var(--dex-accent);
       outline-offset: 2px;
     }
@@ -47,7 +46,7 @@
       box-shadow: var(--dex-shadow);
     }
 
-    .brand-row, .brand, .brand-actions, .feature-grid, .settings-row, .tour-actions {
+    .brand-row, .brand, .brand-actions, .settings-row, .surface-grid, .feature-toggle-list, .theme-preset-grid {
       display: flex;
       gap: 10px;
       align-items: center;
@@ -56,21 +55,20 @@
 
     .brand-row { justify-content: space-between; }
     .brand img, .tour-modal__brand img {
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
       object-fit: contain;
       border: 1px solid var(--dex-border-strong);
       background: #111720;
     }
 
-    h1, h2, h3, p { margin: 0; }
-
-    .muted, .tour-sub, .feature-card p, .settings-note, .feature-toggle-desc, .popup-status-summary {
+    h1, h2, h3, p, strong { margin: 0; }
+    .muted, .tour-sub, .surface-card p, .settings-note, .feature-toggle-desc, .popup-status-summary {
       color: var(--dex-muted);
     }
 
-    .tour-btn, .btn, .theme-preset {
+    .btn, .theme-preset, .surface-card__button, .surface-shortcuts__button {
       min-height: 42px;
       border: 1px solid var(--dex-border);
       border-radius: 12px;
@@ -81,32 +79,57 @@
       font-weight: 700;
     }
 
-    .tour-btn.primary, .btn.primary, .theme-preset.is-active {
+    .btn.primary, .theme-preset.is-active, .surface-card__button.primary {
       background: var(--dex-accent);
       border-color: var(--dex-accent);
       color: #07131d;
     }
 
-    .feature-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      margin-top: 12px;
-    }
-
-    .feature-card, .feature-toggle-row, .theme-preset {
+    .status-panel, .surface-card, .surface-shortcuts, .feature-toggle-row, .theme-preset, .settings-block {
       border: 1px solid var(--dex-border);
       border-radius: 14px;
       background: var(--dex-surface-contrast);
       padding: 12px;
     }
 
-    .tips {
+    .status-panel {
+      display: grid;
+      gap: 8px;
       margin-top: 12px;
-      border: 1px solid var(--dex-border);
-      border-radius: 14px;
-      background: #111720;
-      padding: 12px;
     }
+
+    .surface-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-top: 12px;
+    }
+
+    .surface-card {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+    }
+
+    .surface-card__label {
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--dex-muted);
+    }
+
+    .surface-shortcuts {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .surface-shortcuts__row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .surface-shortcuts__button { width: 100%; }
 
     .modal-backdrop {
       position: fixed;
@@ -119,13 +142,11 @@
       padding: 12px;
     }
 
-    .modal-backdrop.is-open {
-      display: flex;
-    }
+    .modal-backdrop.is-open { display: flex; }
 
     .tour-modal {
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
       max-height: calc(100vh - 24px);
       overflow: auto;
       border-radius: 18px;
@@ -136,16 +157,22 @@
     }
 
     .tour-modal__brand { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
-    .settings-field, .feature-toggle-list, .theme-preset-grid { display: grid; gap: 10px; margin-top: 12px; }
-    .theme-preset-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .settings-label, .feature-toggle-title { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dex-muted); }
+    .settings-field, .feature-toggle-list, .theme-preset-grid, .settings-grid { display: grid; gap: 10px; margin-top: 12px; }
+    .theme-preset-grid, .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .settings-label, .feature-toggle-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--dex-muted);
+    }
     .feature-toggle-row { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; }
     .feature-toggle-row input[type="checkbox"] { accent-color: var(--dex-accent); margin-top: 3px; }
-    .tour-actions { margin-top: 14px; }
     .status-line { margin-top: 10px; color: var(--dex-success); font-size: 12px; }
+    .slider { width: 100%; accent-color: var(--dex-accent); }
 
     @media (max-width: 420px) {
-      .feature-grid, .theme-preset-grid { grid-template-columns: 1fr; }
+      .surface-grid, .theme-preset-grid, .settings-grid, .surface-shortcuts__row { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -156,49 +183,77 @@
         <img src="../icons/icon128.png" alt="DexEnhance logo" />
         <div>
           <h1>DexEnhance</h1>
-          <p class="muted">Command palette shell for ChatGPT and Gemini.</p>
+          <p class="muted">Popup launcher and control surface for ChatGPT and Gemini.</p>
         </div>
       </div>
       <div class="brand-actions">
-        <button id="open-settings" class="tour-btn" type="button">Settings</button>
-        <button id="open-home" class="tour-btn primary" type="button">Open Home</button>
+        <button id="open-settings" class="btn" type="button">Settings</button>
+        <button id="open-home" class="btn primary" type="button">Open Hub</button>
       </div>
     </div>
 
-    <p id="popup-status-summary" class="popup-status-summary">Loading status…</p>
+    <section class="status-panel" aria-label="Popup status">
+      <strong>Current Status</strong>
+      <p id="popup-status-summary" class="popup-status-summary">Loading status…</p>
+    </section>
 
-    <section class="feature-grid" aria-label="Primary capabilities">
-      <article class="feature-card">
-        <h3>Command Palette</h3>
-        <p>`Cmd/Ctrl+K` opens a keyboard-first launcher for navigation, export, diagnostics, and context actions.</p>
+    <section class="surface-grid" aria-label="Major feature launchers">
+      <article class="surface-card">
+        <span class="surface-card__label">Workspace</span>
+        <h3>Prompts and folders</h3>
+        <p>Prompt library, visible variable substitution, current chat assignment, trash, restore, and delete forever.</p>
+        <button class="surface-card__button primary" type="button" data-open-surface="prompts">Open Prompts</button>
       </article>
-      <article class="feature-card">
-        <h3>Single Drawer</h3>
-        <p>Prompts, queue, optimizer, export, and settings now share one opaque workspace.</p>
+      <article class="surface-card">
+        <span class="surface-card__label">Queue</span>
+        <h3>Queue manager</h3>
+        <p>Pending count, active sending state, remove, clear, reorder, and FIFO flow.</p>
+        <button class="surface-card__button" type="button" data-open-surface="queue">Open Queue</button>
       </article>
-      <article class="feature-card">
-        <h3>Prompt + Folder Workspace</h3>
-        <p>Reusable prompts and chat organization stay reachable without floating windows.</p>
+      <article class="surface-card">
+        <span class="surface-card__label">Optimizer</span>
+        <h3>Prompt optimizer</h3>
+        <p>Deterministic rewrite, same-tab AI refine, and hidden-tab AI refine.</p>
+        <button class="surface-card__button" type="button" data-open-surface="optimizer">Open Optimizer</button>
       </article>
-      <article class="feature-card">
-        <h3>Undo-first Actions</h3>
-        <p>Reversible deletes resolve immediately and expose Undo through the toast system.</p>
+      <article class="surface-card">
+        <span class="surface-card__label">Context</span>
+        <h3>Semantic clipboard</h3>
+        <p>Ingest current context, rank matches, preview the preamble, and inject it.</p>
+        <button class="surface-card__button" type="button" data-open-surface="context">Open Context</button>
+      </article>
+      <article class="surface-card">
+        <span class="surface-card__label">Export</span>
+        <h3>Conversation export</h3>
+        <p>Deterministic branded PDF and DOCX export for the active thread.</p>
+        <button class="surface-card__button" type="button" data-open-surface="export">Open Export</button>
+      </article>
+      <article class="surface-card">
+        <span class="surface-card__label">Utilities</span>
+        <h3>Code canvas and tour</h3>
+        <p>Open Code Canvas from the hub and relaunch the quick tour at any time.</p>
+        <button class="surface-card__button" type="button" data-open-surface="tour">Start Quick Tour</button>
       </article>
     </section>
 
-    <section class="tips" aria-label="Quick tips">
-      <strong>Quick tips</strong>
-      <p>Use Shift-click on the corner launcher to reopen the last drawer view directly. Use the popup only for launch and feature toggles.</p>
+    <section class="surface-shortcuts" aria-label="Quick shortcuts">
+      <strong>Quick shortcuts</strong>
+      <div class="surface-shortcuts__row">
+        <button class="surface-shortcuts__button" type="button" data-open-surface="hub">Hub</button>
+        <button class="surface-shortcuts__button" type="button" data-open-surface="workspace">Workspace</button>
+        <button class="surface-shortcuts__button" type="button" data-open-surface="canvas">Canvas</button>
+      </div>
+      <p class="muted">Popup stays intentionally narrow: launch surfaces, tune HUD settings, and recover the in-page UI.</p>
     </section>
   </main>
 
   <div id="settings-modal" class="modal-backdrop" aria-hidden="true">
-    <section class="tour-modal" aria-label="DexEnhance Popup Settings">
+    <section class="tour-modal" aria-label="DexEnhance popup settings">
       <div class="tour-modal__brand">
         <img src="../icons/icon128.png" alt="DexEnhance logo" />
         <div>
-          <h2>Shell Settings</h2>
-          <p class="tour-sub">Preset themes, layout resets, and feature module toggles for both hosts.</p>
+          <h2>Launcher Settings</h2>
+          <p class="tour-sub">HUD customization, token overlay mode, recovery, relaunch, and shipped-feature toggles.</p>
         </div>
       </div>
 
@@ -211,45 +266,63 @@
         </div>
       </div>
 
-      <div class="settings-row">
-        <button id="reset-layout" class="btn" type="button">Reset Layout</button>
-        <button id="reset-theme" class="btn" type="button">Reset Theme</button>
+      <div class="settings-grid">
+        <div class="settings-block">
+          <span class="settings-label">Accent hue</span>
+          <input id="accent-hue" class="slider" type="range" min="0" max="360" step="1" />
+        </div>
+        <div class="settings-block">
+          <span class="settings-label">Transparency</span>
+          <input id="transparency" class="slider" type="range" min="0.74" max="1" step="0.01" />
+        </div>
+        <div class="settings-block">
+          <span class="settings-label">FAB size</span>
+          <input id="fab-size" class="slider" type="range" min="54" max="92" step="1" />
+        </div>
+        <div class="settings-block">
+          <span class="settings-label">FAB behavior</span>
+          <select id="fab-behavior">
+            <option value="quick_actions">Quick actions first</option>
+            <option value="hub_first">Hub first</option>
+          </select>
+        </div>
+        <div class="settings-block">
+          <span class="settings-label">Token overlay mode</span>
+          <select id="token-overlay-mode">
+            <option value="compact">Compact</option>
+            <option value="expanded">Expanded</option>
+          </select>
+        </div>
       </div>
 
       <div class="feature-toggle-list">
         <label class="feature-toggle-row">
-          <input id="feature-ghostOverlay" type="checkbox" />
-          <div><p class="feature-toggle-title">Ghost Overlay</p><p class="feature-toggle-desc">Keep experimental overlay hooks available.</p></div>
-        </label>
-        <label class="feature-toggle-row">
-          <input id="feature-observerAgent" type="checkbox" />
-          <div><p class="feature-toggle-title">Observer Agent</p><p class="feature-toggle-desc">Enable DOM observer assist routines.</p></div>
-        </label>
-        <label class="feature-toggle-row">
           <input id="feature-semanticClipboard" type="checkbox" />
-          <div><p class="feature-toggle-title">Semantic Clipboard</p><p class="feature-toggle-desc">Collect recent context for inject-context actions.</p></div>
+          <div><p class="feature-toggle-title">Semantic Clipboard</p><p class="feature-toggle-desc">Required shipped feature toggle.</p></div>
         </label>
         <label class="feature-toggle-row">
           <input id="feature-popoutCanvas" type="checkbox" />
-          <div><p class="feature-toggle-title">Pop-out Canvas</p><p class="feature-toggle-desc">Open runnable code bundles in a dedicated window.</p></div>
+          <div><p class="feature-toggle-title">Code Canvas</p><p class="feature-toggle-desc">Required shipped feature toggle and explicit entry path.</p></div>
         </label>
         <label class="feature-toggle-row">
-          <input id="feature-macroRecorder" type="checkbox" />
-          <div><p class="feature-toggle-title">Macro Recorder</p><p class="feature-toggle-desc">Preserve macro recorder hooks for future work.</p></div>
+          <input id="feature-tokenOverlay" type="checkbox" />
+          <div><p class="feature-toggle-title">Token Overlay</p><p class="feature-toggle-desc">Always-available model and token overlay when enabled.</p></div>
         </label>
-        <label class="feature-toggle-row">
-          <input id="feature-conversationMapper" type="checkbox" />
-          <div><p class="feature-toggle-title">Conversation Mapper</p><p class="feature-toggle-desc">Preserve conversation mapping hooks for future work.</p></div>
-        </label>
-        <label class="feature-toggle-row">
-          <input id="feature-promptUnitTesting" type="checkbox" />
-          <div><p class="feature-toggle-title">Prompt Unit Testing</p><p class="feature-toggle-desc">Preserve prompt validation hooks for future work.</p></div>
-        </label>
+      </div>
+
+      <div class="settings-row">
+        <button id="recover-ui" class="btn" type="button">Recover UI</button>
+        <button id="reset-layout" class="btn" type="button">Reset Layout</button>
+        <button id="reset-theme" class="btn" type="button">Reset Theme</button>
+      </div>
+      <div class="settings-row">
+        <button id="relaunch-onboarding" class="btn" type="button">Relaunch Onboarding</button>
+        <button id="relaunch-tour" class="btn primary" type="button">Start Quick Tour</button>
       </div>
 
       <p id="settings-status" class="status-line">Loading settings…</p>
 
-      <div class="tour-actions">
+      <div class="settings-row">
         <button id="settings-close" class="btn primary" type="button">Close</button>
       </div>
     </section>

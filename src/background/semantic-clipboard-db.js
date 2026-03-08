@@ -466,3 +466,21 @@ export async function getSemanticClipboardStats() {
     queryCacheCount: cacheCount,
   };
 }
+
+export async function clearSemanticClipboard() {
+  const db = await getDb();
+  const transaction = db.transaction([STORE_TAB_CONTEXTS, STORE_EMBEDDING_CHUNKS, STORE_QUERY_CACHE], 'readwrite');
+  const tabStore = transaction.objectStore(STORE_TAB_CONTEXTS);
+  const chunkStore = transaction.objectStore(STORE_EMBEDDING_CHUNKS);
+  const queryStore = transaction.objectStore(STORE_QUERY_CACHE);
+
+  tabStore.clear();
+  chunkStore.clear();
+  queryStore.clear();
+
+  await transactionDone(transaction);
+
+  return {
+    cleared: true,
+  };
+}

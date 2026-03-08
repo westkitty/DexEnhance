@@ -126,4 +126,13 @@ export class ChatGPTAdapter extends ChatInterface {
     if (!text) return '';
     return this._hashText(text.slice(0, 2048));
   }
+
+  /** @returns {{id: string, url: string, title: string}|null} */
+  getCurrentChatReference() {
+    const url = window.location.href;
+    const path = window.location.pathname || '';
+    const id = path.split('/').filter(Boolean).pop() || path || url;
+    const title = document.title || 'ChatGPT conversation';
+    return { id, url, title };
+  }
 }

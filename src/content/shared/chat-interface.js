@@ -9,6 +9,8 @@ export class ChatInterface {
       generatingStart: new Set(),
       generatingEnd: new Set(),
       newChat: new Set(),
+      chatChanged: new Set(),
+      composerReady: new Set(),
     };
 
     this._buttonObserver = null;
@@ -38,6 +40,45 @@ export class ChatInterface {
   /** @returns {string} Stable last assistant turn id, or empty string when unavailable */
   getLatestAssistantTurnId() { return ''; }
 
+  /** @returns {{id: string, url: string, title: string}|null} */
+  getCurrentChatReference() {
+    return {
+      id: window.location.pathname || window.location.href,
+      url: window.location.href,
+      title: document.title || '',
+    };
+  }
+
+  /** @param {string} text */
+  setComposerValue(text) {
+    const input = this.getTextarea();
+    if (!(input instanceof HTMLElement)) return false;
+    input.focus();
+    if ('value' in input && typeof input.value === 'string') {
+      input.value = text;
+    } else {
+      input.textContent = text;
+    }
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  submitComposer() {
+    const submit = this.getSubmitButton();
+    if (!(submit instanceof HTMLElement)) return false;
+    submit.click();
+    return true;
+  }
+
+  clearComposer() {
+    return this.setComposerValue('');
+  }
+
+  mountAnchor() {
+    return document.body || document.documentElement || null;
+  }
+
   /**
    * Register callback for generating-start event.
    * @param {(payload: {isGenerating: true}) => void} callback
@@ -66,6 +107,16 @@ export class ChatInterface {
   onNewChat(callback) {
     this._handlers.newChat.add(callback);
     return () => this._handlers.newChat.delete(callback);
+  }
+
+  onChatChanged(callback) {
+    this._handlers.chatChanged.add(callback);
+    return () => this._handlers.chatChanged.delete(callback);
+  }
+
+  onComposerReady(callback) {
+    this._handlers.composerReady.add(callback);
+    return () => this._handlers.composerReady.delete(callback);
   }
 
   startObservers() {
@@ -118,6 +169,10 @@ export class ChatInterface {
           mutationCount: mutations.length,
           at: Date.now(),
         });
+        this._emit('chatChanged', {
+          chat: this.getCurrentChatReference(),
+          at: Date.now(),
+        });
       });
 
       this._chatObserver.observe(chatContainer, {
@@ -132,6 +187,11 @@ export class ChatInterface {
     if (document.body) {
       this._buttonHostObserver = new MutationObserver(() => {
         attachButtonObserver();
+        if (this.getTextarea()) {
+          this._emit('composerReady', {
+            at: Date.now(),
+          });
+        }
       });
       this._buttonHostObserver.observe(document.body, {
         childList: true,

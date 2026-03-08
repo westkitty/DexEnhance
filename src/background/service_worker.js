@@ -15,6 +15,7 @@ import {
 } from '../lib/feature-settings.js';
 import { clearRules, updateRules } from './api_interceptor.js';
 import {
+  clearSemanticClipboard,
   buildSemanticClipboardPreamble,
   getSemanticClipboardStats,
   querySemanticClipboard,
@@ -1081,6 +1082,12 @@ async function handleMessage(message, sender) {
       }
       return ok(await getSemanticClipboardStats());
 
+    case MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_CLEAR:
+      if ((await getFeatureSettings()).modules.semanticClipboard.enabled !== true) {
+        return fail('Semantic Clipboard is disabled in feature settings.');
+      }
+      return ok(await clearSemanticClipboard());
+
     case MESSAGE_ACTIONS.API_RULES_UPDATE: {
       const rules = message.rules;
       if (!Array.isArray(rules)) {
@@ -1107,6 +1114,21 @@ async function handleMessage(message, sender) {
       }
       await chrome.tabs.sendMessage(tabId, {
         action: MESSAGE_ACTIONS.UI_OPEN_HOME,
+      }).catch(() => {});
+      return ok();
+    }
+
+    case MESSAGE_ACTIONS.UI_OPEN_SURFACE: {
+      const tabId = Number(message.tabId ?? sender?.tab?.id);
+      if (!Number.isFinite(tabId)) {
+        return fail('UI_OPEN_SURFACE requires a valid tabId.');
+      }
+      await chrome.tabs.sendMessage(tabId, {
+        action: MESSAGE_ACTIONS.UI_OPEN_SURFACE,
+        payload: {
+          surface: typeof message.surface === 'string' ? message.surface : '',
+          options: typeof message.options === 'object' && message.options !== null ? message.options : {},
+        },
       }).catch(() => {});
       return ok();
     }
@@ -1142,15 +1164,27 @@ chrome.runtime.onInstalled.addListener((details) => {
         [STORAGE_KEYS.FEATURE_SETTINGS]: normalizeFeatureSettings({}),
         [HUD_SETTINGS_KEY]: {
           themePreset: 'graphite',
+          accentHue: 202,
+          transparency: 0.96,
           panels: {},
           visibility: {
             welcome: true,
             launcher: true,
+            quickHub: false,
+            tour: false,
           },
           drawer: {
             side: 'right',
             width: 420,
-            lastView: 'prompts',
+            lastView: 'overview',
+          },
+          fab: {
+            behavior: 'quick_actions',
+            expanded: false,
+          },
+          tokenOverlay: {
+            enabled: true,
+            mode: 'compact',
           },
         },
       })

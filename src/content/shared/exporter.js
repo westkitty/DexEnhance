@@ -10,6 +10,15 @@ function timestampLabel() {
   return now.toISOString().replace(/[:.]/g, '-');
 }
 
+function brandedFilename(siteLabel, extension) {
+  const normalizedSite = String(siteLabel || 'chat')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'chat';
+  return `dexenhance-${normalizedSite}-${timestampLabel()}.${extension}`;
+}
+
 function triggerBlobDownload(blob, filename) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -69,7 +78,7 @@ export function exportToPdf(turns, options) {
   }
 
   const blob = doc.output('blob');
-  triggerBlobDownload(blob, `dexenhance-${options.siteLabel.toLowerCase()}-${timestampLabel()}.pdf`);
+  triggerBlobDownload(blob, brandedFilename(options.siteLabel, 'pdf'));
 }
 
 /**
@@ -115,5 +124,5 @@ export async function exportToDocx(turns, options) {
   });
 
   const blob = await Packer.toBlob(doc);
-  triggerBlobDownload(blob, `dexenhance-${options.siteLabel.toLowerCase()}-${timestampLabel()}.docx`);
+  triggerBlobDownload(blob, brandedFilename(options.siteLabel, 'docx'));
 }

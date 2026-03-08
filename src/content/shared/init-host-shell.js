@@ -48,13 +48,22 @@ import { DexLauncher } from '../../ui/components/DexLauncher.jsx';
 import { CommandPalette } from '../../ui/components/CommandPalette.jsx';
 import { DexDrawer } from '../../ui/components/DexDrawer.jsx';
 import { DrawerStatusBar } from '../../ui/components/DrawerStatusBar.jsx';
+import { QuickHubWindow } from '../../ui/components/QuickHubWindow.jsx';
+import { TokenOverlay } from '../../ui/components/TokenOverlay.jsx';
+import { SemanticClipboardPanel } from '../../ui/components/SemanticClipboardPanel.jsx';
+import { FeatureTour } from '../../ui/components/FeatureTour.jsx';
+import { StatusPanel } from '../../ui/components/StatusPanel.jsx';
 
 const ONBOARDING_SEEN_KEY = 'onboardingSeenVersion';
 const ONBOARDING_VERSION = '2026-03-06-shell-v1';
+const TOUR_SEEN_KEY = 'tourSeenVersion';
+const TOUR_VERSION = '2026-03-08-vnext-tour';
 const DRAWER_TABS = [
+  { id: 'overview', label: 'Overview' },
   { id: 'prompts', label: 'Prompts' },
   { id: 'queue', label: 'Queue' },
   { id: 'optimizer', label: 'Optimize' },
+  { id: 'context', label: 'Context' },
   { id: 'export', label: 'Export' },
   { id: 'settings', label: 'Settings' },
 ];
@@ -123,13 +132,21 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
   let queueSizeState = 0;
   let queueController = null;
   let queueRuntimeState = null;
+  let promptCountState = 0;
+  let semanticStatsState = { chunkCount: 0, sourceCount: 0, queryCacheCount: 0 };
+  let currentFolderState = { folderId: null, folderName: '' };
   let welcomeVisible = false;
   let welcomeZipping = false;
   let welcomeZipFallbackTimer = null;
   let paletteOpen = false;
   let drawerOpen = false;
-  let activeDrawerView = 'prompts';
+  let activeDrawerView = 'overview';
   let promptWorkspaceSection = 'prompts';
+  let launcherExpanded = false;
+  let quickHubCollapsed = false;
+  let quickHubPinned = false;
+  let tourCollapsed = false;
+  let tourPinned = false;
   let tokenModel = null;
   let tokenCount = null;
   let tokenSource = null;
@@ -231,6 +248,8 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     for (const [key, value] of Object.entries(tokens)) {
       ui.mountPoint.style.setProperty(`--dex-${key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`, String(value));
     }
+    ui.mountPoint.style.setProperty('--dex-accent-hue', String(Math.round(Number(hudSettings.accentHue || 202))));
+    ui.mountPoint.style.setProperty('--dex-surface-opacity', String(Number(hudSettings.transparency || 0.96).toFixed(2)));
   };
 
   const scheduleHudSettingsPersist = () => {
@@ -265,6 +284,14 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
 
   const setLauncherVisibility = (visible) => {
     setHudSettings(updatePanelVisibilityInSettings(hudSettings, 'launcher', visible, getViewport()));
+  };
+
+  const setQuickHubVisibility = (visible) => {
+    setHudSettings(updatePanelVisibilityInSettings(hudSettings, 'quickHub', visible, getViewport()));
+  };
+
+  const setTourVisibility = (visible) => {
+    setHudSettings(updatePanelVisibilityInSettings(hudSettings, 'tour', visible, getViewport()));
   };
 
   const runAdapterHealthCheck = ({ notify = false } = {}) => {
@@ -386,13 +413,66 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     renderUI();
   };
 
+  const openQuickHub = () => {
+    launcherExpanded = false;
+    setQuickHubVisibility(true);
+  };
+
+  const closeQuickHub = () => {
+    setQuickHubVisibility(false);
+  };
+
+  const openTour = () => {
+    setTourVisibility(true);
+  };
+
+  const closeTour = () => {
+    setTourVisibility(false);
+  };
+
+  const refreshPromptCount = async () => {
+    const response = await sendRuntimeMessage(MESSAGE_ACTIONS.PROMPT_LIST, {});
+    if (response.ok && Array.isArray(response.data)) {
+      promptCountState = response.data.length;
+      renderUI();
+    }
+  };
+
+  const refreshSemanticStats = async () => {
+    const response = await sendRuntimeMessage(MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_STATS, {});
+    if (response.ok) {
+      semanticStatsState = response.data || semanticStatsState;
+      renderUI();
+    }
+  };
+
+  const refreshCurrentFolderState = async () => {
+    const chatUrl = window.location.href;
+    const [mappingRes, treeRes] = await Promise.all([
+      sendRuntimeMessage(MESSAGE_ACTIONS.FOLDER_GET_BY_CHAT_URL, { chatUrl }),
+      sendRuntimeMessage(MESSAGE_ACTIONS.FOLDER_TREE_GET, { includeDeleted: true }),
+    ]);
+    const folderId = mappingRes.ok ? mappingRes.data?.folderId || null : null;
+    const folders = treeRes.ok && Array.isArray(treeRes.data?.folders) ? treeRes.data.folders : [];
+    const folder = folders.find((item) => item.id === folderId) || null;
+    currentFolderState = {
+      folderId,
+      folderName: folder?.name || '',
+    };
+    renderUI();
+  };
+
   const openDrawer = (view, options = {}) => {
     if (view === 'prompts') {
       promptWorkspaceSection = options.promptSection === 'folders' ? 'folders' : 'prompts';
     }
-    activeDrawerView = DRAWER_TABS.some((tab) => tab.id === view) ? view : 'prompts';
+    activeDrawerView = DRAWER_TABS.some((tab) => tab.id === view) ? view : 'overview';
     paletteOpen = false;
     drawerOpen = true;
+    if (view === 'context') void refreshSemanticStats();
+    if (view === 'prompts') {
+      void Promise.all([refreshPromptCount(), refreshCurrentFolderState()]);
+    }
     setHudSettings({
       ...hudSettings,
       drawer: {
@@ -403,7 +483,60 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
   };
 
   const openLastDrawerView = () => {
-    openDrawer(hudSettings.drawer?.lastView || activeDrawerView || 'prompts');
+    openDrawer(hudSettings.drawer?.lastView || activeDrawerView || 'overview');
+  };
+
+  const markTourSeen = async () => {
+    const setRes = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_SET, {
+      items: {
+        [TOUR_SEEN_KEY]: TOUR_VERSION,
+      },
+    });
+    if (!setRes.ok) {
+      toastFailure({
+        operation: 'tour.persist_seen',
+        title: 'Could not save quick tour state',
+        error: new Error(setRes.error || 'Storage write failed'),
+      });
+    }
+  };
+
+  const completeTour = async () => {
+    await markTourSeen();
+    closeTour();
+  };
+
+  const openSurface = (surface, options = {}) => {
+    switch (surface) {
+      case 'home':
+      case 'hub':
+        openQuickHub();
+        break;
+      case 'palette':
+        openPalette();
+        break;
+      case 'tour':
+        openTour();
+        break;
+      case 'workspace':
+        openDrawer('prompts', { promptSection: 'folders' });
+        break;
+      case 'prompts':
+      case 'queue':
+      case 'optimizer':
+      case 'context':
+      case 'export':
+      case 'settings':
+      case 'overview':
+        openDrawer(surface, options);
+        break;
+      case 'canvas':
+        void runPopoutCanvasOpenLatest();
+        break;
+      default:
+        openQuickHub();
+        break;
+    }
   };
 
   const markOnboardingSeen = async () => {
@@ -429,8 +562,9 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     welcomeVisible = false;
     welcomeZipping = false;
     setLauncherVisibility(true);
+    setQuickHubVisibility(true);
     await markOnboardingSeen();
-    openPalette();
+    renderUI();
   };
 
   const handleWelcomeGetStarted = () => {
@@ -542,6 +676,8 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
         title: document.title || `${siteLabel} Conversation`,
         fullText: mergedText,
         maxTrackedTabs: featureSettings.modules.semanticClipboard.maxTrackedTabs,
+      }).then(() => {
+        void refreshSemanticStats();
       });
     }, 900);
   };
@@ -549,6 +685,7 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
   adapter.onNewChat(() => {
     void popoutCanvasController.maybeAutoOpenFromLatestTurn();
     scheduleSemanticClipboardIngest();
+    void refreshCurrentFolderState();
   });
 
   const handleExport = async (format) => {
@@ -604,6 +741,89 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     }
   };
 
+  const queuePromptText = (text, originModule = 'prompt_library') => {
+    const normalized = typeof text === 'string' ? text.trim() : '';
+    if (!normalized) {
+      throw new Error('No prompt text available to queue.');
+    }
+    const item = queueController?.enqueue(normalized, originModule);
+    if (!item) {
+      throw new Error('Queue could not accept the prompt.');
+    }
+    showDexToast({
+      type: 'success',
+      title: 'Prompt queued',
+      message: 'The prompt is now visible in Queue Manager.',
+    });
+    openDrawer('queue');
+    return item;
+  };
+
+  const sendPromptText = (text) => {
+    const normalized = typeof text === 'string' ? text.trim() : '';
+    if (!normalized) {
+      throw new Error('No prompt text available to send.');
+    }
+    const wrote = adapter.setComposerValue(normalized);
+    if (!wrote) {
+      throw new Error('No composer is available for direct send.');
+    }
+    if (adapter.isGenerating()) {
+      adapter.clearComposer();
+      queuePromptText(normalized, 'direct_send_fallback');
+      return;
+    }
+    const submitted = adapter.submitComposer();
+    if (!submitted) {
+      throw new Error('DexEnhance could not submit the current composer.');
+    }
+    showDexToast({
+      type: 'success',
+      title: 'Prompt sent',
+      message: 'The prompt was written into the composer and submitted.',
+    });
+  };
+
+  const ingestCurrentContext = async () => {
+    const latestAssistantText = adapter.getLatestAssistantTurnText();
+    const currentComposerText = readCurrentComposerText(adapter);
+    const mergedText = [
+      latestAssistantText ? `ASSISTANT: ${latestAssistantText}` : '',
+      currentComposerText ? `USER_DRAFT: ${currentComposerText}` : '',
+    ].filter(Boolean).join('\n');
+    if (!mergedText.trim()) {
+      throw new Error('There is no current thread content available to ingest.');
+    }
+    const response = await ingestSemanticClipboardContext({
+      sourceUrl: window.location.href,
+      title: document.title || `${siteLabel} Conversation`,
+      fullText: mergedText,
+      maxTrackedTabs: featureSettings.modules.semanticClipboard.maxTrackedTabs,
+    });
+    if (!response.ok) {
+      throw new Error(response.error || 'Semantic Clipboard ingest failed.');
+    }
+    await refreshSemanticStats();
+    showDexToast({
+      type: 'success',
+      title: 'Context ingested',
+      message: 'Semantic Clipboard updated its local context store.',
+    });
+  };
+
+  const clearSemanticStore = async () => {
+    const response = await sendRuntimeMessage(MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_CLEAR, {});
+    if (!response.ok) {
+      throw new Error(response.error || 'Semantic Clipboard clear failed.');
+    }
+    await refreshSemanticStats();
+    showDexToast({
+      type: 'success',
+      title: 'Semantic store cleared',
+      message: 'DexEnhance removed the local semantic clipboard cache.',
+    });
+  };
+
   const reInjectUi = () => {
     const reinjected = injectApiBridge();
     adapter.startObservers();
@@ -627,12 +847,21 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
 
   const buildCommands = () => [
     {
+      id: 'open-overview',
+      group: 'Navigate',
+      title: 'Open Overview',
+      subtitle: 'Hub summary, queue status, and current chat context',
+      keywords: ['overview hub status'],
+      shortcut: 'Cmd/Ctrl+1',
+      action: () => openDrawer('overview'),
+    },
+    {
       id: 'open-prompts',
       group: 'Navigate',
       title: 'Open Prompt Library',
       subtitle: 'Saved prompts and prompt CRUD',
       keywords: ['prompt library templates prompts'],
-      shortcut: 'Cmd/Ctrl+1',
+      shortcut: 'Cmd/Ctrl+2',
       action: () => openDrawer('prompts', { promptSection: 'prompts' }),
     },
     {
@@ -649,7 +878,7 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       title: 'Open Queue Manager',
       subtitle: 'Queued prompts, retries, and reordering',
       keywords: ['queue send retry reorder'],
-      shortcut: 'Cmd/Ctrl+2',
+      shortcut: 'Cmd/Ctrl+3',
       action: () => openDrawer('queue'),
     },
     {
@@ -658,8 +887,17 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       title: 'Open Prompt Optimizer',
       subtitle: 'Deterministic rewrite and AI refinement',
       keywords: ['optimizer refine rewrite'],
-      shortcut: 'Cmd/Ctrl+3',
+      shortcut: 'Cmd/Ctrl+4',
       action: () => openDrawer('optimizer'),
+    },
+    {
+      id: 'open-context',
+      group: 'Navigate',
+      title: 'Open Semantic Clipboard',
+      subtitle: 'Ingest, query, and inject local context',
+      keywords: ['semantic clipboard context query'],
+      shortcut: 'Cmd/Ctrl+5',
+      action: () => openDrawer('context'),
     },
     {
       id: 'open-export',
@@ -667,7 +905,7 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       title: 'Open Export',
       subtitle: 'PDF and DOCX output',
       keywords: ['export pdf docx'],
-      shortcut: 'Cmd/Ctrl+4',
+      shortcut: 'Cmd/Ctrl+6',
       action: () => openDrawer('export'),
     },
     {
@@ -676,8 +914,16 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       title: 'Open Settings',
       subtitle: 'Theme preset and shell layout',
       keywords: ['settings theme layout drawer launcher'],
-      shortcut: 'Cmd/Ctrl+5',
+      shortcut: 'Cmd/Ctrl+7',
       action: () => openDrawer('settings'),
+    },
+    {
+      id: 'open-tour',
+      group: 'Navigate',
+      title: 'Start Quick Tour',
+      subtitle: 'Walk through the visible DexEnhance features',
+      keywords: ['tour onboarding help'],
+      action: () => openTour(),
     },
     {
       id: 'inject-context',
@@ -755,8 +1001,10 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
 
   const activeDrawerTitle = () => {
     switch (activeDrawerView) {
+      case 'overview': return 'Overview';
       case 'queue': return 'Queue Manager';
       case 'optimizer': return 'Prompt Optimizer';
+      case 'context': return 'Semantic Clipboard';
       case 'export': return 'Export Conversation';
       case 'settings': return 'DexEnhance Settings';
       case 'prompts':
@@ -766,6 +1014,24 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
   };
 
   const renderDrawerBody = () => {
+    if (activeDrawerView === 'overview') {
+      return h(StatusPanel, {
+        hostLabel: siteLabel,
+        adapterHealth: adapterHealthState,
+        workerHealth: workerHealthState,
+        queueState: queueRuntimeState,
+        tokenState: {
+          model: tokenModel,
+          count: tokenCount,
+          source: tokenSource,
+          updatedAt: tokenUpdatedAt,
+        },
+        featureSettings,
+        onCopyDiagnostics: copyStatusDiagnostics,
+        onReinjectUi: reInjectUi,
+        onReloadAdapter: reloadAdapter,
+      });
+    }
     if (activeDrawerView === 'queue') {
       return h(QueueManager, { queueController, siteLabel });
     }
@@ -790,20 +1056,82 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     if (activeDrawerView === 'export') {
       return h(ExportDialog, { visible: true, onExport: handleExport });
     }
+    if (activeDrawerView === 'context') {
+      return h(SemanticClipboardPanel, {
+        visible: true,
+        onIngestCurrentContext: ingestCurrentContext,
+        onInsertPreamble: (text) => {
+          const applied = prependPreambleToComposer(adapter, text, readCurrentComposerText(adapter));
+          if (!applied) {
+            toastFailure({
+              operation: 'semantic_clipboard.insert',
+              title: 'Could not insert Semantic Clipboard preamble',
+              error: new Error('No composer textarea detected'),
+            });
+          }
+        },
+        onClearRequested: clearSemanticStore,
+      });
+    }
     if (activeDrawerView === 'settings') {
       return h(HUDSettingsPanel, {
         visible: true,
         themePreset: hudSettings.themePreset,
         onThemePresetChange: (themePreset) => setHudSettings(updateThemeInSettings(hudSettings, { themePreset }, getViewport())),
+        accentHue: hudSettings.accentHue,
+        onAccentHueChange: (accentHue) => setHudSettings(updateThemeInSettings(hudSettings, { accentHue }, getViewport())),
+        transparency: hudSettings.transparency,
+        onTransparencyChange: (transparency) => setHudSettings(updateThemeInSettings(hudSettings, { transparency }, getViewport())),
         launcherSize: panelState('launcher').width,
         onLauncherSizeChange: (size) => setPanel('launcher', { ...panelState('launcher'), width: size, height: size }),
+        fabBehavior: hudSettings.fab?.behavior || 'quick_actions',
+        onFabBehaviorChange: (behavior) => setHudSettings(updateThemeInSettings(hudSettings, { fab: { ...hudSettings.fab, behavior } }, getViewport())),
         drawerWidth: hudSettings.drawer.width,
         onDrawerWidthChange: (width) => setPanel('drawer', { ...panelState('drawer'), width }),
+        tokenOverlayEnabled: featureSettings.modules.tokenOverlay?.enabled === true,
+        tokenOverlayMode: hudSettings.tokenOverlay?.mode || 'compact',
+        onToggleTokenOverlay: async (enabled) => {
+          const response = await sendRuntimeMessage(MESSAGE_ACTIONS.FEATURE_SETTINGS_UPDATE_MODULE, {
+            moduleId: 'tokenOverlay',
+            patch: { enabled },
+          });
+          if (response.ok) {
+            featureSettings = normalizeFeatureSettings(response.data);
+            renderUI();
+          }
+        },
+        onTokenOverlayModeChange: (mode) => setHudSettings(updateThemeInSettings(hudSettings, { tokenOverlay: { ...hudSettings.tokenOverlay, mode } }, getViewport())),
+        featureToggles: [
+          { id: 'semanticClipboard', label: 'Semantic Clipboard', enabled: featureSettings.modules.semanticClipboard?.enabled === true },
+          { id: 'popoutCanvas', label: 'Code Canvas', enabled: featureSettings.modules.popoutCanvas?.enabled === true },
+          { id: 'tokenOverlay', label: 'Token Overlay', enabled: featureSettings.modules.tokenOverlay?.enabled === true },
+        ],
+        onToggleFeature: async (moduleId, enabled) => {
+          const response = await sendRuntimeMessage(MESSAGE_ACTIONS.FEATURE_SETTINGS_UPDATE_MODULE, {
+            moduleId,
+            patch: { enabled },
+          });
+          if (response.ok) {
+            featureSettings = normalizeFeatureSettings(response.data);
+            renderUI();
+          }
+        },
+        onRecoverWindows: () => setHudSettings({
+          ...hudSettings,
+          panels: {
+            ...hudSettings.panels,
+            quickHub: defaultPanelState('quickHub', getViewport()),
+            launcher: defaultPanelState('launcher', getViewport()),
+            tour: defaultPanelState('tour', getViewport()),
+          },
+        }),
         onResetLayout: () => setHudSettings({
           ...hudSettings,
           panels: {
             welcome: defaultPanelState('welcome', getViewport()),
             launcher: defaultPanelState('launcher', getViewport()),
+            quickHub: defaultPanelState('quickHub', getViewport()),
+            tour: defaultPanelState('tour', getViewport()),
             drawer: defaultPanelState('drawer', getViewport()),
           },
           drawer: {
@@ -811,7 +1139,25 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
             width: defaultPanelState('drawer', getViewport()).width,
           },
         }),
-        onResetTheme: () => setHudSettings(updateThemeInSettings(hudSettings, { themePreset: DEFAULT_HUD_SETTINGS.themePreset }, getViewport())),
+        onResetTheme: () => setHudSettings(updateThemeInSettings(hudSettings, {
+          themePreset: DEFAULT_HUD_SETTINGS.themePreset,
+          accentHue: DEFAULT_HUD_SETTINGS.accentHue,
+          transparency: DEFAULT_HUD_SETTINGS.transparency,
+          tokenOverlay: DEFAULT_HUD_SETTINGS.tokenOverlay,
+          fab: DEFAULT_HUD_SETTINGS.fab,
+        }, getViewport())),
+        onRelaunchOnboarding: async () => {
+          await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_REMOVE, { keys: ONBOARDING_SEEN_KEY });
+          welcomeVisible = true;
+          welcomeZipping = false;
+          setQuickHubVisibility(false);
+          setLauncherVisibility(false);
+          renderUI();
+        },
+        onRelaunchTour: async () => {
+          await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_REMOVE, { keys: TOUR_SEEN_KEY });
+          openTour();
+        },
       });
     }
     return h(PromptLibrary, {
@@ -831,6 +1177,13 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
         }
         closeDrawer();
       },
+      onQueue: (text) => {
+        queuePromptText(text, 'prompt_library');
+      },
+      onSend: (text) => {
+        sendPromptText(text);
+      },
+      currentFolderLabel: currentFolderState.folderName,
     });
   };
 
@@ -860,8 +1213,76 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
             iconUrl,
             panelState: panelState('launcher'),
             queueSize: queueSizeState,
+            expanded: launcherExpanded,
+            fabBehavior: hudSettings.fab?.behavior || 'quick_actions',
+            onToggleExpanded: () => {
+              launcherExpanded = !launcherExpanded;
+              renderUI();
+            },
+            onOpenHub: openQuickHub,
             onOpenPalette: openPalette,
             onOpenLastView: openLastDrawerView,
+            quickActions: [
+              { id: 'prompts', label: 'Prompts', onClick: () => openDrawer('prompts', { promptSection: 'prompts' }) },
+              { id: 'queue', label: 'Queue', onClick: () => openDrawer('queue') },
+              { id: 'optimizer', label: 'Optimize', onClick: () => openDrawer('optimizer') },
+              { id: 'context', label: 'Context', onClick: () => openDrawer('context') },
+              { id: 'export', label: 'Export', onClick: () => openDrawer('export') },
+              { id: 'canvas', label: 'Canvas', onClick: () => { void runPopoutCanvasOpenLatest(); } },
+              { id: 'tour', label: 'Tour', onClick: openTour },
+            ],
+          })
+        : null,
+      !welcomeVisible
+        ? h(QuickHubWindow, {
+            key: 'quick-hub',
+            visible: hudSettings.visibility.quickHub === true,
+            panelState: panelState('quickHub'),
+            collapsed: quickHubCollapsed,
+            pinned: quickHubPinned,
+            siteLabel,
+            promptCount: promptCountState,
+            queueCount: queueRuntimeState?.items?.length || 0,
+            queueState: queueRuntimeState?.currentSendingId ? 'sending' : queueRuntimeState?.paused ? 'paused' : queueRuntimeState?.lastError ? 'error' : 'idle',
+            semanticCount: semanticStatsState?.chunkCount || 0,
+            currentFolderLabel: currentFolderState.folderName || 'Unassigned',
+            tokenLabel: tokenCount != null ? `${tokenCount} tokens` : '',
+            onPanelStateCommit: (next) => setPanel('quickHub', next),
+            onToggleCollapse: () => {
+              quickHubCollapsed = !quickHubCollapsed;
+              renderUI();
+            },
+            onTogglePin: () => {
+              quickHubPinned = !quickHubPinned;
+              renderUI();
+            },
+            onClose: closeQuickHub,
+            onOpenView: openSurface,
+            onQueueSendNext: () => queueController?.sendNow(),
+            onQueueClear: () => queueController?.clearAll(),
+            onOpenCanvas: () => { void runPopoutCanvasOpenLatest(); },
+            onOpenTour: openTour,
+          })
+        : null,
+      !welcomeVisible
+        ? h(FeatureTour, {
+            key: 'feature-tour',
+            visible: hudSettings.visibility.tour === true,
+            panelState: panelState('tour'),
+            collapsed: tourCollapsed,
+            pinned: tourPinned,
+            onPanelStateCommit: (next) => setPanel('tour', next),
+            onToggleCollapse: () => {
+              tourCollapsed = !tourCollapsed;
+              renderUI();
+            },
+            onTogglePin: () => {
+              tourPinned = !tourPinned;
+              renderUI();
+            },
+            onClose: closeTour,
+            onComplete: () => { void completeTour(); },
+            onOpenView: openSurface,
           })
         : null,
       h(CommandPalette, {
@@ -888,13 +1309,47 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
           hostLabel: siteLabel,
           queueCount: queueRuntimeState?.items?.length || 0,
           queuePaused: queueRuntimeState?.paused === true,
+          currentSendingId: queueRuntimeState?.currentSendingId || '',
           tokenCount,
+          tokenModel,
           tokenSource,
           tokenUpdatedAt,
           adapterHealthy: adapterHealthState.healthy !== false,
           workerHealthy: !workerHealthState.lastError,
         }),
       }, renderDrawerBody()),
+      !welcomeVisible
+        ? h('aside', { class: 'dex-current-chat-chip', role: 'status', 'aria-live': 'polite' }, [
+            h('strong', null, 'Current chat'),
+            h('span', null, currentFolderState.folderName || 'Unassigned'),
+            h('div', { class: 'dex-folder-actions' }, [
+              h('button', { type: 'button', class: 'dex-link-btn', onClick: () => openDrawer('prompts', { promptSection: 'folders' }) }, currentFolderState.folderName ? 'Change' : 'Assign'),
+              currentFolderState.folderId
+                ? h('button', {
+                    type: 'button',
+                    class: 'dex-link-btn danger',
+                    onClick: async () => {
+                      const response = await sendRuntimeMessage(MESSAGE_ACTIONS.FOLDER_UNASSIGN_CHAT, { chatUrl: window.location.href });
+                      if (response.ok) {
+                        await refreshCurrentFolderState();
+                      }
+                    },
+                  }, 'Unassign')
+                : null,
+            ]),
+          ])
+        : null,
+      h(TokenOverlay, {
+        key: 'token-overlay',
+        visible: !welcomeVisible && featureSettings.modules.tokenOverlay?.enabled === true && hudSettings.tokenOverlay?.enabled !== false,
+        model: tokenModel || '',
+        tokens: tokenCount,
+        source: tokenSource || '',
+        updatedAt: tokenUpdatedAt || 0,
+        mode: hudSettings.tokenOverlay?.mode || 'compact',
+        hasData: Boolean(tokenModel || tokenCount != null),
+        onToggleMode: (mode) => setHudSettings(updateThemeInSettings(hudSettings, { tokenOverlay: { ...hudSettings.tokenOverlay, mode } }, getViewport())),
+      }),
       h(DexToastViewport, { key: 'dex-toast-viewport' }),
     ]), ui.mountPoint);
   };
@@ -907,7 +1362,7 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       return;
     }
 
-    if (metaCombo && /^[1-5]$/.test(event.key)) {
+    if (metaCombo && /^[1-7]$/.test(event.key)) {
       event.preventDefault();
       const index = Number(event.key) - 1;
       const tab = DRAWER_TABS[index];
@@ -947,8 +1402,12 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     }
     if (message?.action === MESSAGE_ACTIONS.UI_OPEN_HOME) {
       setLauncherVisibility(true);
-      drawerOpen = false;
-      openPalette();
+      openQuickHub();
+      return false;
+    }
+    if (message?.action === MESSAGE_ACTIONS.UI_OPEN_SURFACE) {
+      setLauncherVisibility(true);
+      openSurface(message.payload?.surface, message.payload?.options || {});
       return false;
     }
     return false;
@@ -971,10 +1430,15 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
 
   const onboardingState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: ONBOARDING_SEEN_KEY });
   const hasSeenOnboarding = onboardingState.ok && onboardingState.data === ONBOARDING_VERSION;
+  const tourState = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_GET_ONE, { key: TOUR_SEEN_KEY });
+  const hasSeenTour = tourState.ok && tourState.data === TOUR_VERSION;
   welcomeVisible = !hasSeenOnboarding;
   welcomeZipping = false;
   if (!hasSeenOnboarding) {
     hudSettings = updatePanelVisibilityInSettings(hudSettings, 'launcher', false, getViewport());
+  }
+  if (!hasSeenTour) {
+    hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tour', true, getViewport());
   }
   applyThemePreset();
 
@@ -1029,6 +1493,14 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
   });
   queueSizeState = queueController.getQueueSize();
   queueRuntimeState = queueController.getState();
+  void Promise.all([
+    refreshPromptCount(),
+    refreshSemanticStats(),
+    refreshCurrentFolderState(),
+  ]);
+  adapter.onChatChanged(() => {
+    void refreshCurrentFolderState();
+  });
 
   scheduleAdapterHealthCheck({ notify: false });
   void pingServiceWorker({ notifyOnFailure: false });

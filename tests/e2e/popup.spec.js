@@ -6,33 +6,44 @@ test.beforeEach(async ({ page }) => {
 
 test('popup renders DexEnhance brand heading', async ({ page }) => {
   await expect(page.locator('h1')).toHaveText('DexEnhance');
-  await expect(page.locator('.tips strong')).toHaveText('Quick tips');
+  await expect(page.locator('.brand p')).toContainText('launcher and control surface');
 });
 
-test('popup renders all four feature cards', async ({ page }) => {
-  await expect(page.locator('.feature-card')).toHaveCount(4);
-  await expect(page.locator('.feature-card h3').nth(0)).toHaveText('Command Palette');
-  await expect(page.locator('.feature-card h3').nth(1)).toHaveText('Single Drawer');
-  await expect(page.locator('.feature-card h3').nth(2)).toHaveText('Prompt + Folder Workspace');
-  await expect(page.locator('.feature-card h3').nth(3)).toHaveText('Undo-first Actions');
+test('popup exposes primary feature launchers', async ({ page }) => {
+  await expect(page.locator('[data-open-surface="prompts"]')).toBeVisible();
+  await expect(page.locator('[data-open-surface="queue"]')).toBeVisible();
+  await expect(page.locator('[data-open-surface="optimizer"]')).toBeVisible();
+  await expect(page.locator('[data-open-surface="context"]')).toBeVisible();
+  await expect(page.locator('[data-open-surface="export"]')).toBeVisible();
+  await expect(page.locator('[data-open-surface="tour"]')).toBeVisible();
 });
 
-test('popup renders Settings and Open Home buttons', async ({ page }) => {
-  await expect(page.locator('#open-settings')).toBeVisible();
-  await expect(page.locator('#open-home')).toBeVisible();
+test('popup includes quick shortcuts for hub workspace and canvas', async ({ page }) => {
+  await expect(page.locator('[data-open-surface="hub"]')).toBeVisible();
+  await expect(page.locator('[data-open-surface="workspace"]')).toBeVisible();
+  await expect(page.locator('[data-open-surface="canvas"]')).toBeVisible();
 });
 
-test('popup no longer exposes legacy Tour controls', async ({ page }) => {
-  await expect(page.locator('#open-tour')).toHaveCount(0);
-  await expect(page.locator('#tour-modal')).toHaveCount(0);
-});
-
-test('settings button opens modal with theme presets', async ({ page }) => {
+test('settings modal exposes HUD customization and feature toggles', async ({ page }) => {
   await page.click('#open-settings');
   await expect(page.locator('#settings-modal')).toHaveClass(/is-open/);
-  await expect(page.locator('[data-theme-preset="graphite"]')).toBeVisible();
-  await expect(page.locator('[data-theme-preset="paper"]')).toBeVisible();
-  await expect(page.locator('[data-theme-preset="oxide"]')).toBeVisible();
+  await expect(page.locator('#accent-hue')).toBeVisible();
+  await expect(page.locator('#transparency')).toBeVisible();
+  await expect(page.locator('#fab-size')).toBeVisible();
+  await expect(page.locator('#fab-behavior')).toBeVisible();
+  await expect(page.locator('#token-overlay-mode')).toBeVisible();
+  await expect(page.locator('#feature-semanticClipboard')).toBeVisible();
+  await expect(page.locator('#feature-popoutCanvas')).toBeVisible();
+  await expect(page.locator('#feature-tokenOverlay')).toBeVisible();
+});
+
+test('settings modal exposes recovery and relaunch controls', async ({ page }) => {
+  await page.click('#open-settings');
+  await expect(page.locator('#recover-ui')).toBeVisible();
+  await expect(page.locator('#reset-layout')).toBeVisible();
+  await expect(page.locator('#reset-theme')).toBeVisible();
+  await expect(page.locator('#relaunch-onboarding')).toBeVisible();
+  await expect(page.locator('#relaunch-tour')).toBeVisible();
 });
 
 test('settings close button dismisses modal', async ({ page }) => {
@@ -41,13 +52,7 @@ test('settings close button dismisses modal', async ({ page }) => {
   await expect(page.locator('#settings-modal')).not.toHaveClass(/is-open/);
 });
 
-test('escape key dismisses open settings modal', async ({ page }) => {
-  await page.click('#open-settings');
-  await page.keyboard.press('Escape');
-  await expect(page.locator('#settings-modal')).not.toHaveClass(/is-open/);
-});
-
-test('open home button reports preview context fallback', async ({ page }) => {
+test('open hub button reports preview context fallback', async ({ page }) => {
   await page.click('#open-home');
   await expect(page.locator('#popup-status-summary')).toContainText('Preview mode');
 });

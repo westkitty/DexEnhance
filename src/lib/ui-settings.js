@@ -4,27 +4,43 @@ const SAFE_MARGIN = 8;
 const MIN_DRAWER_WIDTH = 320;
 const MAX_DRAWER_WIDTH = 720;
 const MIN_LAUNCHER_SIZE = 54;
-const MAX_LAUNCHER_SIZE = 84;
+const MAX_LAUNCHER_SIZE = 92;
 const VALID_THEME_PRESETS = new Set(['graphite', 'paper', 'oxide']);
-const VALID_DRAWER_VIEWS = new Set(['prompts', 'queue', 'optimizer', 'export', 'settings']);
+const VALID_DRAWER_VIEWS = new Set(['overview', 'prompts', 'queue', 'optimizer', 'context', 'export', 'settings', 'tour']);
+const VALID_TOKEN_OVERLAY_MODES = new Set(['compact', 'expanded']);
+const VALID_FAB_BEHAVIORS = new Set(['quick_actions', 'hub_first']);
 
 export const PANEL_IDS = Object.freeze([
   'welcome',
   'launcher',
+  'quickHub',
+  'tour',
   'drawer',
 ]);
 
 export const DEFAULT_HUD_SETTINGS = Object.freeze({
   themePreset: 'graphite',
+  accentHue: 202,
+  transparency: 0.96,
   panels: {},
   visibility: {
     welcome: true,
     launcher: true,
+    quickHub: false,
+    tour: false,
   },
   drawer: {
     side: 'right',
     width: 420,
-    lastView: 'prompts',
+    lastView: 'overview',
+  },
+  fab: {
+    behavior: 'quick_actions',
+    expanded: false,
+  },
+  tokenOverlay: {
+    enabled: true,
+    mode: 'compact',
   },
 });
 
@@ -60,12 +76,24 @@ function normalizeDrawerSide(value) {
   return value === 'left' ? 'left' : DEFAULT_HUD_SETTINGS.drawer.side;
 }
 
+function normalizeFabBehavior(value) {
+  return VALID_FAB_BEHAVIORS.has(value) ? value : DEFAULT_HUD_SETTINGS.fab.behavior;
+}
+
+export function normalizeTokenOverlayMode(value) {
+  return VALID_TOKEN_OVERLAY_MODES.has(value) ? value : DEFAULT_HUD_SETTINGS.tokenOverlay.mode;
+}
+
 export function panelMinSize(panelId) {
   switch (panelId) {
     case 'welcome':
       return { minWidth: 316, minHeight: 364 };
     case 'launcher':
       return { minWidth: MIN_LAUNCHER_SIZE, minHeight: MIN_LAUNCHER_SIZE };
+    case 'quickHub':
+      return { minWidth: 300, minHeight: 260 };
+    case 'tour':
+      return { minWidth: 360, minHeight: 320 };
     case 'drawer':
       return { minWidth: MIN_DRAWER_WIDTH, minHeight: 320 };
     default:
@@ -95,6 +123,28 @@ export function defaultPanelState(panelId, viewport) {
         y: Math.max(SAFE_MARGIN, height - size - 18),
         width: size,
         height: size,
+        opacity: 1,
+      };
+    }
+    case 'quickHub': {
+      const panelWidth = Math.min(380, Math.max(320, Math.round(width * 0.28)));
+      const panelHeight = 360;
+      return {
+        x: Math.max(SAFE_MARGIN, width - panelWidth - 104),
+        y: Math.max(40, height - panelHeight - 100),
+        width: panelWidth,
+        height: panelHeight,
+        opacity: 1,
+      };
+    }
+    case 'tour': {
+      const panelWidth = Math.min(420, width - SAFE_MARGIN * 4);
+      const panelHeight = 390;
+      return {
+        x: centerX(panelWidth, width),
+        y: Math.max(40, centerY(panelHeight, height)),
+        width: panelWidth,
+        height: panelHeight,
         opacity: 1,
       };
     }
@@ -152,13 +202,19 @@ export function clampPanelState(panelState, viewport, minWidth = 180, minHeight 
     y: clamp(panelState?.y, SAFE_MARGIN, Math.max(SAFE_MARGIN, vh - height - SAFE_MARGIN)),
     width,
     height,
-    opacity: clamp(panelState?.opacity, 0.92, 1),
+    opacity: clamp(panelState?.opacity, 0.74, 1),
   };
 }
 
 function migrateLegacyPanel(sourcePanels, panelId, viewport) {
   if (panelId === 'launcher') {
     return sourcePanels?.launcher || sourcePanels?.fab || defaultPanelState('launcher', viewport);
+  }
+  if (panelId === 'quickHub') {
+    return sourcePanels?.quickHub || sourcePanels?.sidebar || defaultPanelState('quickHub', viewport);
+  }
+  if (panelId === 'tour') {
+    return sourcePanels?.tour || sourcePanels?.welcome || defaultPanelState('tour', viewport);
   }
   if (panelId === 'drawer') {
     const legacySource = sourcePanels?.drawer || sourcePanels?.promptLibrary || sourcePanels?.sidebar || sourcePanels?.settings || null;
@@ -189,6 +245,8 @@ function normalizeVisibility(source = {}) {
   return {
     welcome: source.welcome === true,
     launcher: source.launcher === true || source.fab === true || source.launcher == null,
+    quickHub: source.quickHub === true,
+    tour: source.tour === true,
   };
 }
 
@@ -197,6 +255,8 @@ export function normalizeHudSettings(rawSettings, viewport) {
   const sourcePanels = typeof source.panels === 'object' && source.panels !== null ? source.panels : {};
   const normalized = {
     themePreset: normalizeThemePreset(source.themePreset),
+    accentHue: clamp(source.accentHue, 0, 360, DEFAULT_HUD_SETTINGS.accentHue),
+    transparency: clamp(source.transparency, 0.74, 1, DEFAULT_HUD_SETTINGS.transparency),
     panels: {},
     visibility: normalizeVisibility(source.visibility),
     drawer: {
@@ -207,6 +267,14 @@ export function normalizeHudSettings(rawSettings, viewport) {
         MAX_DRAWER_WIDTH
       ),
       lastView: normalizeDrawerView(source.drawer?.lastView),
+    },
+    fab: {
+      behavior: normalizeFabBehavior(source.fab?.behavior),
+      expanded: source.fab?.expanded === true,
+    },
+    tokenOverlay: {
+      enabled: source.tokenOverlay?.enabled !== false,
+      mode: normalizeTokenOverlayMode(source.tokenOverlay?.mode),
     },
   };
 
@@ -261,7 +329,7 @@ export function updatePanelInSettings(settings, panelId, patch, viewport) {
 
 export function updatePanelVisibilityInSettings(settings, panelId, isOpen, viewport) {
   const current = normalizeHudSettings(settings, viewport);
-  if (panelId !== 'welcome' && panelId !== 'launcher') return current;
+  if (!['welcome', 'launcher', 'quickHub', 'tour'].includes(panelId)) return current;
   return {
     ...current,
     visibility: {
@@ -277,6 +345,14 @@ export function updateThemeInSettings(settings, patch, viewport) {
   return normalizeHudSettings({
     ...current,
     ...sourcePatch,
+    tokenOverlay: {
+      ...current.tokenOverlay,
+      ...(typeof sourcePatch.tokenOverlay === 'object' && sourcePatch.tokenOverlay !== null ? sourcePatch.tokenOverlay : {}),
+    },
+    fab: {
+      ...current.fab,
+      ...(typeof sourcePatch.fab === 'object' && sourcePatch.fab !== null ? sourcePatch.fab : {}),
+    },
   }, viewport);
 }
 
@@ -300,7 +376,7 @@ export function resetPanelInSettings(settings, panelId, viewport) {
 }
 
 export function panelOpacityValue(value) {
-  return clamp(value, 0.92, 1);
+  return clamp(value, 0.74, 1);
 }
 
 export function themePresetTokens(preset) {

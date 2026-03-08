@@ -128,6 +128,7 @@ export function PromptOptimizerModal({
   if (!visible) return null;
 
   const hasResult = !!(localPrompt || finalPrompt);
+  const surfaceState = busy ? 'loading' : error ? 'error' : hasResult ? 'success' : 'empty';
 
   return h('section', { class: 'dex-drawer-view dex-form', 'aria-label': `Hybrid prompt optimizer for ${site}` }, [
     h(ContextualHint, {
@@ -136,6 +137,18 @@ export function PromptOptimizerModal({
       title: 'Optimizer hint',
       message: 'Start with local optimization first. Enable AI refinement only when you need model-specific wording.',
     }),
+    h('div', { class: `dex-state-panel dex-state-panel--${surfaceState}` }, [
+      h('strong', null, 'Optimizer state'),
+      h('p', { class: 'dex-folder-state' },
+        surfaceState === 'loading'
+          ? 'Loading optimized prompt…'
+          : surfaceState === 'error'
+            ? 'Error: optimization failed.'
+            : surfaceState === 'success'
+              ? `Success: output ready via ${methodUsed}.`
+              : 'Empty state: enter a prompt and run optimization.'
+      ),
+    ]),
     h('label', { class: 'dex-sidebar__label' }, 'Source Prompt'),
     h('textarea', {
       class: 'dex-textarea',

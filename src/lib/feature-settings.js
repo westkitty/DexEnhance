@@ -4,8 +4,9 @@ export const FEATURE_SETTINGS_SCHEMA_VERSION = 1;
 const DEFAULT_MODULE_SETTINGS = Object.freeze({
   ghostOverlay: Object.freeze({ enabled: false }),
   observerAgent: Object.freeze({ enabled: false, notificationsEnabled: true }),
-  semanticClipboard: Object.freeze({ enabled: false, maxTrackedTabs: 5, topK: 8 }),
-  popoutCanvas: Object.freeze({ enabled: false, autoOpenOnCodeDetection: false }),
+  semanticClipboard: Object.freeze({ enabled: true, maxTrackedTabs: 5, topK: 8 }),
+  popoutCanvas: Object.freeze({ enabled: true, autoOpenOnCodeDetection: false }),
+  tokenOverlay: Object.freeze({ enabled: true, compactMode: true }),
   macroRecorder: Object.freeze({ enabled: false, captureKeystrokes: false }),
   conversationMapper: Object.freeze({ enabled: false, clusterMode: 'temporal' }),
   promptUnitTesting: Object.freeze({ enabled: false, maxBatchSize: 8 }),
@@ -22,6 +23,7 @@ const MODULE_FIELD_ALLOWLIST = Object.freeze({
   observerAgent: ['enabled', 'notificationsEnabled'],
   semanticClipboard: ['enabled', 'maxTrackedTabs', 'topK'],
   popoutCanvas: ['enabled', 'autoOpenOnCodeDetection'],
+  tokenOverlay: ['enabled', 'compactMode'],
   macroRecorder: ['enabled', 'captureKeystrokes'],
   conversationMapper: ['enabled', 'clusterMode'],
   promptUnitTesting: ['enabled', 'maxBatchSize'],
@@ -49,14 +51,19 @@ function normalizeModuleSettings(moduleId, value) {
       };
     case 'semanticClipboard':
       return {
-        enabled: source.enabled === true,
+        enabled: source.enabled == null ? true : source.enabled === true,
         maxTrackedTabs: clampInt(source.maxTrackedTabs, 1, 20, 5),
         topK: clampInt(source.topK, 1, 20, 8),
       };
     case 'popoutCanvas':
       return {
-        enabled: source.enabled === true,
+        enabled: source.enabled == null ? true : source.enabled === true,
         autoOpenOnCodeDetection: source.autoOpenOnCodeDetection === true,
+      };
+    case 'tokenOverlay':
+      return {
+        enabled: source.enabled !== false,
+        compactMode: source.compactMode !== false,
       };
     case 'macroRecorder':
       return {
@@ -84,6 +91,7 @@ function emptyModules() {
     observerAgent: normalizeModuleSettings('observerAgent', {}),
     semanticClipboard: normalizeModuleSettings('semanticClipboard', {}),
     popoutCanvas: normalizeModuleSettings('popoutCanvas', {}),
+    tokenOverlay: normalizeModuleSettings('tokenOverlay', {}),
     macroRecorder: normalizeModuleSettings('macroRecorder', {}),
     conversationMapper: normalizeModuleSettings('conversationMapper', {}),
     promptUnitTesting: normalizeModuleSettings('promptUnitTesting', {}),

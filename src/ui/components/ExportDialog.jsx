@@ -7,12 +7,15 @@ export function ExportDialog({ visible, onExport }) {
   const [format, setFormat] = useState('pdf');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('empty');
 
   async function handleExport() {
     setBusy(true);
     setError('');
+    setStatus('loading');
     try {
       await onExport?.(format);
+      setStatus('success');
       showDexToast({
         type: 'success',
         title: 'Export complete',
@@ -20,6 +23,7 @@ export function ExportDialog({ visible, onExport }) {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      setStatus('error');
       showDexToast({
         type: 'error',
         title: 'Export failed',
@@ -47,6 +51,18 @@ export function ExportDialog({ visible, onExport }) {
       message: 'PDF is best for fixed snapshots. DOCX is best when you plan to annotate or edit later.',
     }),
     h('p', { class: 'dex-form__desc' }, 'Export the active conversation for docs, sharing, or decision logs.'),
+    h('div', { class: `dex-state-panel dex-state-panel--${status}` }, [
+      h('strong', null, 'Export state'),
+      h('p', { class: 'dex-folder-state' },
+        status === 'loading'
+          ? 'Loading export…'
+          : status === 'success'
+            ? `Success: ${format.toUpperCase()} download started.`
+            : status === 'error'
+              ? 'Error: export failed.'
+              : 'Empty state: choose a format and export the current conversation.'
+      ),
+    ]),
     h('label', { class: 'dex-sidebar__label' }, 'Format'),
     h('select', {
       class: 'dex-input',

@@ -394,6 +394,12 @@ export function FolderTree({ currentChatUrl }) {
   }
 
   return h('section', { class: 'dex-folder-tree', 'aria-label': 'Chat organization' }, [
+    h('div', { class: `dex-state-panel dex-state-panel--${activeFolderId ? 'success' : 'empty'}` }, [
+      h('strong', null, 'Current chat assignment'),
+      h('p', { class: 'dex-folder-state' }, activeFolderId
+        ? `This chat is assigned to a folder. Use Assign Here, Unassign Chat, Trash, Restore, and Delete Forever below.`
+        : 'This chat is unassigned. Choose a folder below or create a new one.'),
+    ]),
     h('div', { class: 'dex-folder-toolbar' }, [
       h('button', {
         type: 'button',

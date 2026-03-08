@@ -5,10 +5,15 @@ export function DexLauncher({
   iconUrl = '',
   panelState,
   queueSize = 0,
+  expanded = false,
+  fabBehavior = 'quick_actions',
+  quickActions = [],
+  onToggleExpanded,
+  onOpenHub,
   onOpenPalette,
   onOpenLastView,
 }) {
-  const size = Math.max(54, Math.min(84, Number(panelState?.width || 64)));
+  const size = Math.max(54, Math.min(92, Number(panelState?.width || 64)));
   const style = {
     left: `${Math.round(Number(panelState?.x || (window.innerWidth - size - 18)))}px`,
     top: `${Math.round(Number(panelState?.y || (window.innerHeight - size - 18)))}px`,
@@ -16,18 +21,35 @@ export function DexLauncher({
     height: `${size}px`,
   };
 
-  return h('div', { class: 'dex-launcher', style }, [
+  return h('div', { class: `dex-launcher${expanded ? ' is-expanded' : ''}`, style }, [
+    expanded
+      ? h('div', { class: 'dex-launcher__rail', role: 'toolbar', 'aria-label': 'DexEnhance quick actions' },
+          quickActions.map((action) => h('button', {
+            key: action.id,
+            type: 'button',
+            class: 'dex-launcher__action',
+            title: action.label,
+            'aria-label': action.label,
+            onClick: () => {
+              action.onClick?.();
+              onToggleExpanded?.();
+            },
+          }, action.label))
+        )
+      : null,
     h('button', {
       type: 'button',
       class: 'dex-launcher__button',
-      'aria-label': `Open DexEnhance command palette on ${site}`,
-      title: 'Open DexEnhance command palette',
-      onClick: (event) => {
-        if (event.shiftKey) {
-          onOpenLastView?.();
+      'aria-label': fabBehavior === 'hub_first'
+        ? `Open DexEnhance hub on ${site}`
+        : `Toggle DexEnhance quick actions on ${site}`,
+      title: fabBehavior === 'hub_first' ? 'Open DexEnhance hub' : 'Toggle DexEnhance quick actions',
+      onClick: () => {
+        if (fabBehavior === 'hub_first') {
+          onOpenHub?.();
           return;
         }
-        onOpenPalette?.();
+        onToggleExpanded?.();
       },
     }, [
       iconUrl
@@ -41,12 +63,28 @@ export function DexLauncher({
         ? h('span', { class: 'dex-launcher__badge', 'aria-label': `${queueSize} queued item${queueSize === 1 ? '' : 's'}` }, String(queueSize))
         : null,
     ]),
-    h('button', {
-      type: 'button',
-      class: 'dex-launcher__peek',
-      'aria-label': 'Open last drawer view',
-      title: 'Open last drawer view',
-      onClick: () => onOpenLastView?.(),
-    }, 'Open'),
+    h('div', { class: 'dex-launcher__secondary' }, [
+      h('button', {
+        type: 'button',
+        class: 'dex-launcher__peek',
+        'aria-label': 'Open DexEnhance hub',
+        title: 'Open DexEnhance hub',
+        onClick: () => onOpenHub?.(),
+      }, 'Hub'),
+      h('button', {
+        type: 'button',
+        class: 'dex-launcher__peek',
+        'aria-label': 'Open last drawer view',
+        title: 'Open last drawer view',
+        onClick: () => onOpenLastView?.(),
+      }, 'Last'),
+      h('button', {
+        type: 'button',
+        class: 'dex-launcher__peek',
+        'aria-label': 'Open command palette',
+        title: 'Open command palette',
+        onClick: () => onOpenPalette?.(),
+      }, 'Cmd'),
+    ]),
   ]);
 }

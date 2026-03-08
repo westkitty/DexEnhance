@@ -30,8 +30,11 @@ export function PromptLibrary({
   visible,
   onClose,
   onInsert,
+  onQueue,
+  onSend,
   currentChatUrl = '',
   initialSection = 'prompts',
+  currentFolderLabel = '',
 }) {
   const [prompts, setPrompts] = useState([]);
   const [search, setSearch] = useState('');
@@ -47,6 +50,7 @@ export function PromptLibrary({
   const [tagsText, setTagsText] = useState('');
   const [activeVariablePromptId, setActiveVariablePromptId] = useState('');
   const [variableValues, setVariableValues] = useState({});
+  const [actionStatus, setActionStatus] = useState({ tone: 'empty', message: 'No prompt action run yet.' });
   const pendingDeletesRef = useRef(new Map());
 
   const notifyError = (operation, err) => {
@@ -207,15 +211,41 @@ export function PromptLibrary({
       return;
     }
     onInsert?.(prompt.body);
+    setActionStatus({ tone: 'success', message: `Inserted "${prompt.title}" into the composer.` });
     onClose?.();
   }
 
-  function submitVariablePrompt(prompt) {
+  function resolveVariablePrompt(prompt) {
     const text = fillPromptVariables(prompt, variableValues);
-    setActiveVariablePromptId('');
-    setVariableValues({});
-    onInsert?.(text);
-    onClose?.();
+    return text;
+  }
+
+  function runResolvedPrompt(prompt, mode = 'insert') {
+    const text = resolveVariablePrompt(prompt);
+    if (!text.trim()) {
+      setActionStatus({ tone: 'error', message: 'Resolved prompt is empty. Fill the variables first.' });
+      return;
+    }
+    try {
+      setActiveVariablePromptId('');
+      setVariableValues({});
+      if (mode === 'queue') {
+        onQueue?.(text);
+        setActionStatus({ tone: 'success', message: `Queued "${prompt.title}".` });
+        return;
+      }
+      if (mode === 'send') {
+        onSend?.(text);
+        setActionStatus({ tone: 'success', message: `Sent "${prompt.title}".` });
+        onClose?.();
+        return;
+      }
+      onInsert?.(text);
+      setActionStatus({ tone: 'success', message: `Inserted "${prompt.title}" into the composer.` });
+      onClose?.();
+    } catch (error) {
+      setActionStatus({ tone: 'error', message: error instanceof Error ? error.message : String(error) });
+    }
   }
 
   if (!visible) return null;
@@ -240,7 +270,9 @@ export function PromptLibrary({
             hintId: 'folder-workspace',
             visible: true,
             title: 'Chat organization',
-            message: 'Assign the current conversation to a folder without leaving the active thread.',
+            message: currentFolderLabel
+              ? `Current chat is assigned to "${currentFolderLabel}". Trash, restore, and permanent delete remain available here.`
+              : 'Assign the current conversation to a folder without leaving the active thread.',
           }),
           h(FolderTree, { currentChatUrl }),
         ])
@@ -312,7 +344,11 @@ export function PromptLibrary({
             : null,
           loading ? h('div', { class: 'dex-folder-state', role: 'status' }, 'Loading prompts…') : null,
           error ? h('div', { class: 'dex-folder-state error', role: 'alert' }, error) : null,
-          h('p', { class: 'dex-folder-state' }, 'Use {{variable}} in prompt bodies. Variable inputs open inline beneath the selected prompt.'),
+          h('div', { class: `dex-state-panel dex-state-panel--${actionStatus.tone}` }, [
+            h('strong', null, 'Prompt action state'),
+            h('p', { class: 'dex-folder-state' }, actionStatus.message),
+          ]),
+          h('p', { class: 'dex-folder-state' }, 'Use {{variable}} in prompt bodies. Variable prompts expose a visible form, resolved preview, insert, queue, and send actions.'),
           !loading && filteredPrompts.length === 0
             ? h('div', { class: 'dex-folder-state' }, search ? `No prompts matching "${search}".` : 'No prompts in this tier yet.')
             : null,
@@ -352,8 +388,14 @@ export function PromptLibrary({
                           }),
                         ]))
                       ),
+                      h('div', { class: 'dex-status-card dex-status-card--neutral' }, [
+                        h('strong', null, 'Resolved preview'),
+                        h('pre', { class: 'dex-toast__details' }, resolveVariablePrompt(prompt) || 'Fill the variables to preview the compiled prompt.'),
+                      ]),
                       h('div', { class: 'dex-form__actions' }, [
-                        h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => submitVariablePrompt(prompt) }, 'Insert'),
+                        h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => runResolvedPrompt(prompt, 'insert') }, 'Insert'),
+                        h('button', { type: 'button', class: 'dex-link-btn', onClick: () => runResolvedPrompt(prompt, 'queue') }, 'Queue'),
+                        h('button', { type: 'button', class: 'dex-link-btn', onClick: () => runResolvedPrompt(prompt, 'send') }, 'Send'),
                         h('button', { type: 'button', class: 'dex-link-btn', onClick: () => { setActiveVariablePromptId(''); setVariableValues({}); } }, 'Cancel'),
                       ]),
                     ])
