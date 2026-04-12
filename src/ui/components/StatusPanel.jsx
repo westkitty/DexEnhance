@@ -33,60 +33,65 @@ export function StatusPanel({
   const bannerText = 'Host adapter mismatch detected. Run diagnostics or re-inject UI.';
 
   return h('section', { class: 'dex-status-panel', 'aria-label': 'DexEnhance Status' }, [
-    h('header', { class: 'dex-status-panel__head' }, [
+    h('header', { class: 'dex-status-panel__head', style: { marginBottom: '24px' } }, [
       h('div', { class: 'dex-status-panel__persona' }, [
         h(PersonaAvatar, { model, isGenerating, size: 'large' }),
-        h('strong', null, 'Dex Persona'),
-        h('div', { class: 'dex-folder-state' }, isGenerating ? 'The model is currently thinking…' : 'The model is idle and ready.'),
+        h('div', null, [
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+            h('strong', { style: { fontSize: '18px' } }, model.toUpperCase()),
+            h('span', { class: `dex-tag ${adapterHealth?.healthy ? 'dex-tag--success' : 'dex-tag--warn'}` }, healthLabel),
+          ]),
+          h('div', { class: 'dex-form__hint' }, isGenerating ? 'Computing responses…' : 'Awaiting your command.'),
+        ]),
       ]),
-      h('span', { class: `dex-folder-count${healthClass}` }, healthLabel),
     ]),
 
-    showBanner
-      ? h('div', { class: 'dex-status-banner', role: 'status' }, bannerText)
-      : null,
-
-    h('div', { class: 'dex-status-grid' }, [
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Host'), h('strong', null, hostLabel || 'Unknown')]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'UI injected'), h('strong', null, boolLabel(adapterHealth?.uiInjected))]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Textarea selector'), h('strong', null, boolLabel(adapterHealth?.hasTextarea))]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Submit selector'), h('strong', null, boolLabel(adapterHealth?.hasSubmitButton))]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Chat list selector'), h('strong', null, boolLabel(adapterHealth?.hasChatList))]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Adapter note'), h('strong', null, adapterHealth?.reason || 'None')]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Adapter check'), h('strong', null, timeLabel(adapterHealth?.lastCheckedAt))]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Worker ping'), h('strong', null, timeLabel(workerHealth?.lastPingAt))]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Worker failure'), h('strong', null, timeLabel(workerHealth?.lastFailureAt))]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Queue mode'), h('strong', null, queueState?.paused ? 'Paused' : 'Running')]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Queue count'), h('strong', null, String(queueState?.items?.length || 0))]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Queue last item'), h('strong', null, queueState?.lastProcessedItem?.id || 'None')]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Queue last error'), h('strong', null, queueState?.lastError?.message || 'None')]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Token source'), h('strong', null, tokenState?.source || 'None')]),
-      h('div', { class: 'dex-status-row' }, [h('span', null, 'Token refresh'), h('strong', null, timeLabel(tokenState?.updatedAt))]),
+    showBanner && h('div', { class: 'dex-toast dex-toast--warning', style: { marginBottom: '16px' } }, [
+      h('div', { class: 'dex-toast__message' }, bannerText),
     ]),
 
-    h('div', { class: 'dex-status-modules' }, [
-      h('strong', null, 'Modules'),
-      h('div', { class: 'dex-folder-state' },
-        Object.entries(modules).map(([id, config]) => `${id}: ${config?.enabled === true ? 'on' : 'off'}`).join(' • ')
+    h('div', { class: 'dex-status-card-grid' }, [
+      h('div', { class: 'dex-status-card dex-status-card--glow' }, [
+        h('span', { class: 'dex-status-card__label' }, 'Host System'),
+        h('strong', { class: 'dex-status-card__value' }, hostLabel || 'Unknown'),
+      ]),
+      h('div', { class: 'dex-status-card' }, [
+        h('span', { class: 'dex-status-card__label' }, 'UI Sync'),
+        h('strong', { class: 'dex-status-card__value' }, adapterHealth?.uiInjected ? '✅ Linked' : '❌ Failed'),
+      ]),
+      h('div', { class: 'dex-status-card' }, [
+        h('span', { class: 'dex-status-card__label' }, 'Prompt Queue'),
+        h('strong', { class: 'dex-status-card__value' }, `${queueState?.items?.length || 0} active`),
+      ]),
+      h('div', { class: 'dex-status-card' }, [
+        h('span', { class: 'dex-status-card__label' }, 'Tokens Cached'),
+        h('strong', { class: 'dex-status-card__value' }, tokenState?.count != null ? `🪙 ${tokenState.count}` : '---'),
+      ]),
+    ]),
+
+    h('div', { class: 'dex-status-modules', style: { marginTop: '24px' } }, [
+      h('label', { class: 'dex-sidebar__label' }, 'Active Modules'),
+      h('div', { style: { display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' } },
+        Object.entries(modules).map(([id, config]) => 
+          h('span', { 
+            class: `dex-tag ${config?.enabled === true ? 'is-active' : ''}`, 
+            style: { opacity: config?.enabled === true ? 1 : 0.4 } 
+          }, id)
+        )
       ),
     ]),
 
-    h('div', { class: 'dex-folder-actions' }, [
+    h('div', { class: 'dex-folder-actions', style: { marginTop: '24px' } }, [
       h('button', {
         type: 'button',
-        class: 'dex-link-btn',
+        class: 'dex-link-btn dex-link-btn--accent',
         onClick: () => onCopyDiagnostics?.(),
-      }, 'Copy diagnostics'),
+      }, 'Export Diagnostics'),
       h('button', {
         type: 'button',
         class: 'dex-link-btn',
         onClick: () => onReinjectUi?.(),
-      }, 'Re-inject UI'),
-      h('button', {
-        type: 'button',
-        class: 'dex-link-btn',
-        onClick: () => onReloadAdapter?.(),
-      }, 'Reload adapter'),
+      }, 'Refresh Bridge'),
     ]),
   ]);
 }

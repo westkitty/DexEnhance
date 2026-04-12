@@ -75,47 +75,55 @@ export function SemanticClipboardPanel({
       title: 'Semantic Clipboard',
       message: 'Ingest the current thread context locally, query matching chunks, then inject the generated preamble into the composer.',
     }),
-    h('div', { class: 'dex-status-card dex-status-card--neutral' }, [
-      h('strong', null, 'Semantic store'),
-      h('span', { class: 'dex-status-card__value' }, `${Number(stats?.chunkCount || 0)} chunks`),
-      h('p', { class: 'dex-folder-state' }, hasChunks ? 'Context is ready for ranked retrieval.' : 'Nothing has been ingested yet.'),
-      h('div', { class: 'dex-folder-actions' }, [
-        h('button', {
-          type: 'button',
-          class: 'dex-link-btn dex-link-btn--accent',
-          disabled: busyIngest,
-          onClick: async () => {
-            setBusyIngest(true);
-            try {
-              await onIngestCurrentContext?.();
-              const nextStats = await fetchStats();
-              setStats(nextStats);
-              setQueryState((current) => ({ ...current, status: 'success', error: '' }));
-            } catch (error) {
-              setQueryState((current) => ({ ...current, status: 'error', error: error instanceof Error ? error.message : String(error) }));
-            } finally {
-              setBusyIngest(false);
-            }
-          },
-        }, busyIngest ? 'Ingesting…' : 'Ingest Current Context'),
-        h('button', {
-          type: 'button',
-          class: 'dex-link-btn danger',
-          disabled: busyClear,
-          onClick: async () => {
-            setBusyClear(true);
-            try {
-              await onClearRequested?.();
-              setStats(await fetchStats());
-              setQueryState({ loading: false, error: '', results: [], preamble: '', status: 'empty' });
-            } catch (error) {
-              setQueryState((current) => ({ ...current, status: 'error', error: error instanceof Error ? error.message : String(error) }));
-            } finally {
-              setBusyClear(false);
-            }
-          },
-        }, busyClear ? 'Clearing…' : 'Clear Store'),
+    h('div', { class: 'dex-status-card-grid', style: { marginBottom: '16px' } }, [
+      h('div', { class: 'dex-status-card dex-status-card--glow' }, [
+        h('span', { class: 'dex-status-card__label' }, 'Semantic Memory'),
+        h('strong', { class: 'dex-status-card__value' }, `${Number(stats?.chunkCount || 0)} chunks`),
+        h('div', { class: 'dex-folder-state' }, hasChunks ? 'Optimized for retrieval.' : 'Store is empty.'),
       ]),
+      h('div', { class: 'dex-status-card' }, [
+        h('span', { class: 'dex-status-card__label' }, 'Persistence'),
+        h('strong', { class: 'dex-status-card__value' }, 'IndexedDB'),
+        h('div', { class: 'dex-folder-state' }, 'Local-first encrypted.'),
+      ]),
+    ]),
+
+    h('div', { class: 'dex-folder-actions', style: { marginBottom: '24px' } }, [
+      h('button', {
+        type: 'button',
+        class: 'dex-link-btn dex-link-btn--accent',
+        disabled: busyIngest,
+        onClick: async () => {
+          setBusyIngest(true);
+          try {
+            await onIngestCurrentContext?.();
+            const nextStats = await fetchStats();
+            setStats(nextStats);
+            setQueryState((current) => ({ ...current, status: 'success', error: '' }));
+          } catch (error) {
+            setQueryState((current) => ({ ...current, status: 'error', error: error instanceof Error ? error.message : String(error) }));
+          } finally {
+            setBusyIngest(false);
+          }
+        },
+      }, busyIngest ? 'Ingesting…' : 'Sync Current Thread'),
+      h('button', {
+        type: 'button',
+        class: 'dex-link-btn danger',
+        disabled: busyClear,
+        onClick: async () => {
+          setBusyClear(true);
+          try {
+            await onClearRequested?.();
+            setStats(await fetchStats());
+            setQueryState({ loading: false, error: '', results: [], preamble: '', status: 'empty' });
+          } catch (error) {
+            setQueryState((current) => ({ ...current, status: 'error', error: error instanceof Error ? error.message : String(error) }));
+          } finally {
+            setBusyClear(false);
+          }
+        },
+      }, 'Reset Memory'),
     ]),
 
     h('div', { class: 'dex-status-card dex-status-card--neutral' }, [
