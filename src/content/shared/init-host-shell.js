@@ -53,6 +53,7 @@ import { TokenOverlay } from '../../ui/components/TokenOverlay.jsx';
 import { SemanticClipboardPanel } from '../../ui/components/SemanticClipboardPanel.jsx';
 import { FeatureTour } from '../../ui/components/FeatureTour.jsx';
 import { StatusPanel } from '../../ui/components/StatusPanel.jsx';
+import { diagnostics } from '../../lib/diagnostics-buffer.js';
 
 const ONBOARDING_SEEN_KEY = 'onboardingSeenVersion';
 const ONBOARDING_VERSION = '2026-03-06-shell-v1';
@@ -700,7 +701,7 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     exportToPdf(turns, { siteLabel });
   };
 
-  const runHybridOptimization = async ({ sourcePrompt, aiRefinementEnabled, refinementMode }) => {
+  const runHybridOptimization = async ({ sourcePrompt, aiRefinementEnabled, refinementMode, includeSemanticContext }) => {
     const normalizedSource = typeof sourcePrompt === 'string' ? sourcePrompt.trim() : '';
     if (!normalizedSource) throw new Error('Enter a prompt before running optimization.');
 
@@ -711,9 +712,23 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       return { localPrompt, finalPrompt: localPrompt, methodUsed: 'local_only' };
     }
 
-    if (refinementMode === 'hidden_tab') {
+    if (aiRefinementEnabled && refinementMode === 'hidden_tab') {
       try {
-        const response = await sendRuntimeMessage(MESSAGE_ACTIONS.OPTIMIZER_REFINE_HIDDEN_TAB, { site: siteKey, prompt: localPrompt });
+        let extraContext = '';
+        if (includeSemanticContext) {
+          const semanticRes = await buildSemanticClipboardPreamble({
+            queryText: localPrompt,
+            topK: featureSettings.modules.semanticClipboard.topK,
+            maxTrackedTabs: featureSettings.modules.semanticClipboard.maxTrackedTabs,
+          });
+          if (semanticRes.ok) extraContext = semanticRes.data?.preamble || '';
+        }
+
+        const response = await sendRuntimeMessage(MESSAGE_ACTIONS.OPTIMIZER_REFINE_HIDDEN_TAB, { 
+          site: siteKey, 
+          prompt: localPrompt,
+          extraContext
+        });
         if (!response.ok) throw new Error(response.error || 'Hidden-tab refinement failed.');
         const refinedPrompt = typeof response.data?.refinedPrompt === 'string' ? response.data.refinedPrompt.trim() : '';
         if (!refinedPrompt) throw new Error('Hidden-tab refinement returned empty text.');
@@ -729,7 +744,16 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     }
 
     try {
-      const result = await runAiRefinementInCurrentTab({ adapter, localPrompt });
+      let extraContext = '';
+      if (includeSemanticContext) {
+        const semanticRes = await buildSemanticClipboardPreamble({
+          queryText: localPrompt,
+          topK: featureSettings.modules.semanticClipboard.topK,
+          maxTrackedTabs: featureSettings.modules.semanticClipboard.maxTrackedTabs,
+        });
+        if (semanticRes.ok) extraContext = semanticRes.data?.preamble || '';
+      }
+      const result = await runAiRefinementInCurrentTab({ adapter, localPrompt, extraContext });
       return { localPrompt, finalPrompt: result.refinedPrompt, methodUsed: 'same_tab' };
     } catch (error) {
       return {
@@ -1441,6 +1465,32 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     hudSettings = updatePanelVisibilityInSettings(hudSettings, 'tour', true, getViewport());
   }
   applyThemePreset();
+
+  const safeModeRes = await sendRuntimeMessage(MESSAGE_ACTIONS.SAFE_MODE_GET);
+  const safeModeActive = safeModeRes.ok && safeModeRes.data?.active === true;
+  if (safeModeActive) {
+    featureSettings = {
+      ...featureSettings,
+      modules: {
+        ...featureSettings.modules,
+        semanticClipboard: { ...featureSettings.modules.semanticClipboard, enabled: false },
+        popoutCanvas: { ...featureSettings.modules.popoutCanvas, enabled: false },
+        tokenOverlay: { ...featureSettings.modules.tokenOverlay, enabled: false },
+      }
+    };
+    showDexToast({
+      type: 'warning',
+      title: 'DexEnhance Safe Mode Active',
+      message: 'Optional modules are disabled to ensure host stability.',
+      durationMs: 8000,
+    });
+  }
+
+  diagnostics.log('shell', 'init', {
+    site: siteKey,
+    safeMode: safeModeActive,
+    version: chrome.runtime.getManifest().version,
+  });
 
   watchFeatureSettings((nextSettings) => {
     featureSettings = nextSettings;

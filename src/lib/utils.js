@@ -39,3 +39,31 @@ export function estimateTokens(str) {
   if (typeof str !== 'string' || str.length === 0) return 0;
   return Math.ceil(str.length / 4);
 }
+
+/**
+ * Create a simple unique ID.
+ * @returns {string}
+ */
+export function createId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `dex_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Normalize a Chat URL by removing parameters and hash.
+ * @param {string} chatUrl
+ * @returns {string}
+ */
+export function normalizeChatUrl(chatUrl) {
+  if (typeof chatUrl !== 'string') return '';
+  const trimmed = chatUrl.trim();
+  if (!trimmed) return '';
+  try {
+    const parsed = new URL(trimmed);
+    return `${parsed.origin}${parsed.pathname}`;
+  } catch {
+    return trimmed;
+  }
+}

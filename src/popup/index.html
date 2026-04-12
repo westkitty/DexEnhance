@@ -320,6 +320,36 @@
         <button id="relaunch-tour" class="btn primary" type="button">Start Quick Tour</button>
       </div>
 
+      <div class="settings-field">
+        <span class="settings-label">Data & Portability</span>
+        <div class="settings-block">
+          <p class="settings-note" id="quota-status">Storage usage: calculating…</p>
+          <div style="height: 4px; background: var(--dex-surface-contrast); border-radius: 2px; margin: 4px 0; border: 1px solid var(--dex-border);">
+            <div id="quota-bar" style="height: 100%; width: 0%; background: var(--dex-accent); border-radius: 2px; transition: width 0.3s ease;"></div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <button id="backup-export" class="btn" type="button">Export Backup</button>
+          <button id="backup-import" class="btn" type="button">Import Backup</button>
+          <input type="file" id="backup-file-input" style="display: none;" accept=".json" />
+        </div>
+        <p class="settings-note">Backups include all prompts, folders, and settings.</p>
+      </div>
+
+      <div class="settings-field">
+        <span class="settings-label">Troubleshooting</span>
+        <label class="feature-toggle-row">
+          <input id="safe-mode-toggle" type="checkbox" />
+          <div>
+            <p class="feature-toggle-title">Emergency Safe Mode</p>
+            <p class="feature-toggle-desc">Disables all optional modules for host stability if the site crashes.</p>
+          </div>
+        </label>
+        <div class="settings-row">
+          <button id="download-diagnostics" class="btn" type="button">Download Diagnostics</button>
+        </div>
+      </div>
+
       <p id="settings-status" class="status-line">Loading settings…</p>
 
       <div class="settings-row">

@@ -198,6 +198,23 @@ export function PromptLibrary({
     setCurrentSection('prompts');
   }
 
+  async function branchPrompt(prompt) {
+    try {
+      const newPrompt = {
+        title: `${prompt.title} (v${(prompt.version || 1) + 1})`,
+        body: prompt.body,
+        tags: prompt.tags,
+        version: (prompt.version || 1) + 1,
+        parentVersionId: prompt.id,
+      };
+      await callAction(MESSAGE_ACTIONS.PROMPT_CREATE, { prompt: newPrompt });
+      await refresh();
+      showDexToast({ type: 'success', title: 'Prompt branched', message: `Created new version of "${prompt.title}".` });
+    } catch (err) {
+      notifyError('prompt_branch', err);
+    }
+  }
+
   function openVariableEditor(prompt) {
     const vars = Array.isArray(prompt.variables) ? prompt.variables : [];
     setActiveVariablePromptId(prompt.id);
@@ -359,7 +376,10 @@ export function PromptLibrary({
               return h('article', { key: prompt.id, class: 'dex-prompt-card' }, [
                 h('div', { class: 'dex-prompt-card__head' }, [
                   h('strong', null, prompt.title),
-                  variables.length > 0 ? h('span', { class: 'dex-folder-count' }, `${variables.length} var${variables.length === 1 ? '' : 's'}`) : null,
+                  h('div', { class: 'dex-prompt-card__meta' }, [
+                    prompt.version > 1 ? h('span', { class: 'dex-folder-count' }, `v${prompt.version}`) : null,
+                    variables.length > 0 ? h('span', { class: 'dex-folder-count' }, `${variables.length} var${variables.length === 1 ? '' : 's'}`) : null,
+                  ]),
                 ]),
                 h('p', { class: 'dex-prompt-card__body' }, prompt.body),
                 h('div', { class: 'dex-prompt-tags' },
@@ -372,6 +392,7 @@ export function PromptLibrary({
                     onClick: () => insertPrompt(prompt),
                   }, variables.length > 0 ? 'Fill Variables' : 'Insert'),
                   h('button', { type: 'button', class: 'dex-link-btn', onClick: () => startEdit(prompt) }, 'Edit'),
+                  h('button', { type: 'button', class: 'dex-link-btn', onClick: () => branchPrompt(prompt) }, 'Branch'),
                   h('button', { type: 'button', class: 'dex-link-btn danger', onClick: () => schedulePromptDelete(prompt.id) }, 'Delete'),
                 ]),
                 isVariablePrompt

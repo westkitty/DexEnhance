@@ -33,6 +33,14 @@ const featureToggleEls = {
   tokenOverlay: document.getElementById('feature-tokenOverlay'),
 };
 
+const backupExportButton = document.getElementById('backup-export');
+const backupImportButton = document.getElementById('backup-import');
+const backupFileInput = document.getElementById('backup-file-input');
+const quotaStatusEl = document.getElementById('quota-status');
+const quotaBarEl = document.getElementById('quota-bar');
+const safeModeToggleEl = document.getElementById('safe-mode-toggle');
+const downloadDiagnosticsButton = document.getElementById('download-diagnostics');
+
 let hudSettings = normalizeHudSettings({}, { width: 1280, height: 760 });
 let featureSettings = normalizeFeatureSettings({});
 
@@ -134,6 +142,91 @@ async function withActiveSupportedTab(action) {
   return action(tabId, tabUrl);
 }
 
+async function checkQuota() {
+  if (!hasChromeRuntimeApi) return;
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_QUOTA_CHECK);
+  if (response.ok && quotaStatusEl && quotaBarEl) {
+    const { usageLabel, quotaLabel, usagePercent, status } = response.data;
+    quotaStatusEl.textContent = `Storage usage: ${usageLabel} / ${quotaLabel}`;
+    quotaBarEl.style.width = `${Math.min(100, usagePercent)}%`;
+    quotaBarEl.style.background = status === 'critical' ? 'var(--dex-danger)' : status === 'warning' ? 'var(--dex-warning)' : 'var(--dex-accent)';
+  }
+}
+
+async function exportBackup() {
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.BACKUP_EXPORT);
+  if (response.ok) {
+    const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dexenhance-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('Backup exported successfully.');
+  } else {
+    setStatus(`Export failed: ${response.error || 'unknown error'}`);
+  }
+}
+
+async function importBackup(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const payload = JSON.parse(String(e.target.result || '{}'));
+      const response = await sendRuntimeMessage(MESSAGE_ACTIONS.BACKUP_IMPORT, { payload });
+      if (response.ok) {
+        setStatus('Backup imported successfully. Refreshing...');
+        await Promise.all([loadHudSettings(), loadFeatureSettings(), checkQuota()]);
+      } else {
+        setStatus(`Import failed: ${response.error || 'unknown error'}`);
+      }
+    } catch (err) {
+      setStatus('Import failed: Invalid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+async function loadSafeMode() {
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.SAFE_MODE_GET);
+  if (response.ok && safeModeToggleEl) {
+    safeModeToggleEl.checked = response.data.active === true;
+  }
+}
+
+async function toggleSafeMode(active) {
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.SAFE_MODE_TOGGLE, { active });
+  if (response.ok) {
+    setStatus(`Safe Mode ${active ? 'enabled' : 'disabled'}. Reload host tabs to apply.`);
+  } else {
+    setStatus(`Safe Mode toggle failed: ${response.error || 'unknown error'}`);
+  }
+}
+
+async function downloadDiagnostics() {
+  const response = await sendRuntimeMessage(MESSAGE_ACTIONS.DIAGNOSTICS_GET);
+  if (response.ok) {
+    const log = response.data || [];
+    const blob = new Blob([JSON.stringify({
+      version: chrome.runtime.getManifest().version,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      log
+    }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `dexenhance-diagnostics-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setStatus('Diagnostics log exported.');
+  } else {
+    setStatus(`Diagnostics export failed: ${response.error || 'unknown error'}`);
+  }
+}
+
 async function openSurface(surface) {
   return withActiveSupportedTab(async (tabId) => {
     const response = await sendRuntimeMessage(MESSAGE_ACTIONS.UI_OPEN_SURFACE, { tabId, surface });
@@ -173,7 +266,7 @@ surfaceButtons.forEach((button) => {
 
 openSettingsButton?.addEventListener('click', () => {
   setModalOpen(settingsModalEl, true);
-  void Promise.all([loadHudSettings(), loadFeatureSettings()]);
+  void Promise.all([loadHudSettings(), loadFeatureSettings(), checkQuota(), loadSafeMode()]);
 });
 
 closeSettingsButton?.addEventListener('click', () => {
@@ -279,12 +372,32 @@ relaunchTourButton?.addEventListener('click', async () => {
   setStatus('Quick tour flag cleared.');
   await openSurface('tour');
 });
-
 for (const [moduleId, inputEl] of Object.entries(featureToggleEls)) {
   inputEl?.addEventListener('change', (event) => {
     void updateFeatureToggle(moduleId, event.currentTarget.checked === true);
   });
 }
+
+backupExportButton?.addEventListener('click', () => {
+  void exportBackup();
+});
+
+backupImportButton?.addEventListener('click', () => {
+  backupFileInput?.click();
+});
+
+backupFileInput?.addEventListener('change', (event) => {
+  const file = event.target.files?.[0];
+  if (file) void importBackup(file);
+});
+
+safeModeToggleEl?.addEventListener('change', (event) => {
+  void toggleSafeMode(event.currentTarget.checked === true);
+});
+
+downloadDiagnosticsButton?.addEventListener('click', () => {
+  void downloadDiagnostics();
+});
 
 settingsModalEl?.addEventListener('click', (event) => {
   if (event.target === settingsModalEl) {

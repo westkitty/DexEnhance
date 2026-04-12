@@ -10,5 +10,7 @@ output/playwright/session/
 test-results/
 playwright-report/
 
-# Generated Firefox package artifact
-DexEnhance-v1-firefox.zip
+# Generated artifacts and backups
+backup/
+*backup*
+

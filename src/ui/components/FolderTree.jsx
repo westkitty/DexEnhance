@@ -1,5 +1,6 @@
 import { h } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import { searchFolders } from '../../lib/domain-logic.js';
 import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.js';
 import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
 
@@ -19,6 +20,7 @@ export function FolderTree({ currentChatUrl }) {
   const [folders, setFolders] = useState([]);
   const [activeFolderId, setActiveFolderId] = useState(null);
   const [showTrash, setShowTrash] = useState(false);
+  const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeMenuId, setActiveMenuId] = useState(null);
@@ -71,10 +73,13 @@ export function FolderTree({ currentChatUrl }) {
     return visited;
   }
 
-  const visibleFolders = useMemo(
-    () => folders.filter((folder) => (showTrash ? folder.deletedAt !== null : folder.deletedAt === null)).sort(sortByCreatedAt),
-    [folders, showTrash]
-  );
+  const visibleFolders = useMemo(() => {
+    let base = folders.filter((folder) => (showTrash ? folder.deletedAt !== null : folder.deletedAt === null));
+    if (search.trim()) {
+      return searchFolders(base, search);
+    }
+    return base.sort(sortByCreatedAt);
+  }, [folders, showTrash, search]);
 
   const childrenByParentId = useMemo(() => {
     const map = new Map();
@@ -401,6 +406,13 @@ export function FolderTree({ currentChatUrl }) {
         : 'This chat is unassigned. Choose a folder below or create a new one.'),
     ]),
     h('div', { class: 'dex-folder-toolbar' }, [
+      h('input', {
+        class: 'dex-input dex-folder-search',
+        placeholder: 'Search folders…',
+        value: search,
+        'aria-label': 'Search folders',
+        onInput: (event) => setSearch(event.currentTarget.value),
+      }),
       h('button', {
         type: 'button',
         class: 'dex-link-btn dex-link-btn--accent',
@@ -412,7 +424,10 @@ export function FolderTree({ currentChatUrl }) {
       h('button', {
         type: 'button',
         class: 'dex-link-btn',
-        onClick: () => setShowTrash((value) => !value),
+        onClick: () => {
+          setShowTrash((value) => !value);
+          setSearch('');
+        },
       }, showTrash ? 'Show Active' : 'Show Trash'),
       activeFolderId
         ? h('button', { type: 'button', class: 'dex-link-btn', onClick: () => unassignCurrentChat() }, 'Unassign Chat')

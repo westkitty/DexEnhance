@@ -97,11 +97,16 @@ export function deterministicRewritePrompt(rawPrompt) {
   ].join('\n').trim();
 }
 
-function createRefinementMetaPrompt(localPrompt) {
+function createRefinementMetaPrompt(localPrompt, extraContext = '') {
+  const contextBlock = extraContext.trim()
+    ? `\n\nSupporting Context:\n${extraContext.trim()}\n\nUse this context to ensure technical accuracy and relevance.`
+    : '';
+
   return [
     'You are a prompt optimization engine.',
     'Rewrite the prompt below into the best possible single prompt for a high-quality model response.',
     'Preserve user intent. Remove ambiguity. Add explicit structure and constraints when helpful.',
+    contextBlock,
     'Return ONLY the optimized prompt between tags with no other text.',
     `${REFINEMENT_OPEN_TAG}`,
     '[optimized prompt here]',
@@ -109,7 +114,7 @@ function createRefinementMetaPrompt(localPrompt) {
     '',
     'Prompt to optimize:',
     localPrompt,
-  ].join('\n');
+  ].join('\n').trim();
 }
 
 function extractOptimizedPrompt(responseText) {
@@ -205,7 +210,7 @@ async function waitUntilIdle(adapter, timeoutMs = 15000) {
   throw new Error('AI is still generating. Wait for completion and try again.');
 }
 
-export async function runAiRefinementInCurrentTab({ adapter, localPrompt, timeoutMs = 90000 }) {
+export async function runAiRefinementInCurrentTab({ adapter, localPrompt, extraContext = '', timeoutMs = 90000 }) {
   const normalized = normalizeWhitespace(localPrompt);
   if (!normalized) {
     throw new Error('No prompt provided for AI refinement.');
@@ -219,7 +224,7 @@ export async function runAiRefinementInCurrentTab({ adapter, localPrompt, timeou
   }
 
   const before = captureAssistantSnapshot();
-  const payload = createRefinementMetaPrompt(normalized);
+  const payload = createRefinementMetaPrompt(normalized, extraContext);
 
   const wrote = writeTextToInputElement(inputEl, payload);
   if (!wrote) {
@@ -283,6 +288,7 @@ export function registerOptimizerWorkerListener({ adapter }) {
       void runAiRefinementInCurrentTab({
         adapter,
         localPrompt: message.prompt,
+        extraContext: message.extraContext || '',
         timeoutMs: Number.isFinite(Number(message.timeoutMs)) ? Number(message.timeoutMs) : 90000,
       })
         .then((result) => sendResponse({ ok: true, data: result }))

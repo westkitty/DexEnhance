@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { estimateContextUsage } from '../../lib/domain-logic.js';
 
 function formatUpdatedAt(value) {
   if (!Number.isFinite(Number(value))) return 'No recent update';
@@ -19,28 +20,37 @@ export function TokenOverlay({
 
   const compact = mode !== 'expanded';
 
-  return h('aside', {
-    class: `dex-token-overlay${compact ? ' is-compact' : ''}`,
-    role: 'status',
-    'aria-live': 'polite',
-    'aria-label': 'DexEnhance token and model overlay',
-  }, [
-    h('div', { class: 'dex-token-overlay__head' }, [
-      h('strong', null, 'Tokens'),
-      h('button', {
-        type: 'button',
-        class: 'dex-link-btn',
-        onClick: () => onToggleMode?.(compact ? 'expanded' : 'compact'),
-        'aria-label': compact ? 'Expand token overlay' : 'Collapse token overlay',
-      }, compact ? 'Expand' : 'Compact'),
-    ]),
-    hasData
-      ? h('div', { class: 'dex-token-overlay__body' }, [
-          h('div', { class: 'dex-status-row' }, [h('span', null, 'Model'), h('strong', null, model || 'Unknown')]),
-          h('div', { class: 'dex-status-row' }, [h('span', null, 'Tokens'), h('strong', null, tokens != null ? String(tokens) : 'Estimating…')]),
-          compact ? null : h('div', { class: 'dex-status-row' }, [h('span', null, 'Source'), h('strong', null, source || 'Bridge')]),
-          compact ? null : h('div', { class: 'dex-status-row' }, [h('span', null, 'Updated'), h('strong', null, formatUpdatedAt(updatedAt))]),
-        ])
-      : h('p', { class: 'dex-folder-state' }, 'No token metadata yet. DexEnhance will show model and counts when the host exposes them.'),
-  ]);
+    const usage = estimateContextUsage(tokens || 0, model);
+
+    return h('aside', {
+      class: `dex-token-overlay${compact ? ' is-compact' : ''} dex-token-overlay--${usage.status}`,
+      role: 'status',
+      'aria-live': 'polite',
+      'aria-label': 'DexEnhance token and model overlay',
+    }, [
+      h('div', { class: 'dex-token-overlay__head' }, [
+        h('strong', null, 'Tokens'),
+        h('button', {
+          type: 'button',
+          class: 'dex-link-btn',
+          onClick: () => onToggleMode?.(compact ? 'expanded' : 'compact'),
+          'aria-label': compact ? 'Expand token overlay' : 'Collapse token overlay',
+        }, compact ? 'Expand' : 'Compact'),
+      ]),
+      hasData
+        ? h('div', { class: 'dex-token-overlay__body' }, [
+            h('div', { class: 'dex-status-row' }, [h('span', null, 'Model'), h('strong', null, model || 'Unknown')]),
+            h('div', { class: 'dex-status-row' }, [h('span', null, 'Tokens'), h('strong', null, tokens != null ? String(tokens) : 'Estimating…')]),
+            h('div', { class: 'dex-status-row' }, [
+              h('span', null, 'Context'),
+              h('strong', null, `${usage.percent.toFixed(1)}%`),
+            ]),
+            h('div', { class: 'dex-context-bar-bg' }, [
+              h('div', { class: `dex-context-bar-fill dex-context-bar-fill--${usage.status}`, style: `--percent: ${usage.percent}%` }),
+            ]),
+            compact ? null : h('div', { class: 'dex-status-row' }, [h('span', null, 'Source'), h('strong', null, source || 'Bridge')]),
+            compact ? null : h('div', { class: 'dex-status-row' }, [h('span', null, 'Updated'), h('strong', null, formatUpdatedAt(updatedAt))]),
+          ])
+        : h('p', { class: 'dex-folder-state' }, 'No token metadata yet. DexEnhance will show model and counts when the host exposes them.'),
+    ]);
 }

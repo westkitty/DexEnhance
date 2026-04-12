@@ -5,14 +5,16 @@
 // 2. Do NOT use localStorage — unavailable in service worker context.
 // 3. Keep all cross-site extension state operations in this worker.
 
-import { MESSAGE_ACTIONS } from '../lib/message-protocol.js';
+import { MESSAGE_ACTIONS, ok, fail } from '../lib/message-protocol.js';
 import { DEFAULT_PROMPT_TEMPLATES, PROMPT_CATALOG_VERSION } from '../lib/default-prompts.js';
 import {
   FEATURE_SETTINGS_KEY,
+  FEATURE_SETTINGS_SCHEMA_VERSION,
   normalizeFeatureSettings,
   replaceFeatureSettings as replaceFeatureSettingsShape,
   updateFeatureModule,
 } from '../lib/feature-settings.js';
+import { diagnostics } from '../lib/diagnostics-buffer.js';
 import { clearRules, updateRules } from './api_interceptor.js';
 import {
   clearSemanticClipboard,
@@ -21,6 +23,13 @@ import {
   querySemanticClipboard,
   upsertSemanticClipboardContext,
 } from './semantic-clipboard-db.js';
+import { createId, normalizeChatUrl } from '../lib/utils.js';
+import {
+  normalizePrompt,
+  normalizeFolder,
+  collectDescendantIds,
+  promptFingerprint,
+} from '../lib/domain-logic.js';
 
 const storage = chrome.storage.local;
 const HUD_SETTINGS_KEY = 'hudUiSettingsV1';
@@ -30,6 +39,14 @@ const STORAGE_KEYS = Object.freeze({
   PROMPTS: 'prompts',
   PROMPT_CATALOG_VERSION: 'promptCatalogVersion',
   FEATURE_SETTINGS: FEATURE_SETTINGS_KEY,
+  SCHEMA_VERSIONS: 'schemaVersions',
+  SAFE_MODE: 'safeModeActive',
+});
+
+const CURRENT_SCHEMA_VERSIONS = Object.freeze({
+  folders: 1,
+  prompts: 1,
+  featureSettings: FEATURE_SETTINGS_SCHEMA_VERSION,
 });
 
 const CANVAS_SESSION_TTL_MS = 15 * 60 * 1000;
@@ -86,42 +103,9 @@ function isRecord(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function createId() {
-  if (globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID();
-  }
-  return `dex_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-}
 
-function normalizeChatUrl(chatUrl) {
-  if (typeof chatUrl !== 'string') return '';
-  const trimmed = chatUrl.trim();
-  if (!trimmed) return '';
-  try {
-    const parsed = new URL(trimmed);
-    return `${parsed.origin}${parsed.pathname}`;
-  } catch {
-    return trimmed;
-  }
-}
 
-function parseVariablesFromPromptBody(body) {
-  if (typeof body !== 'string') return [];
-  const pattern = /{{\s*([a-zA-Z0-9_.-]+)\s*}}/g;
-  const names = new Set();
-  let match = pattern.exec(body);
-  while (match) {
-    if (match[1]) names.add(match[1]);
-    match = pattern.exec(body);
-  }
-  return [...names];
-}
 
-function promptFingerprint(prompt) {
-  const title = typeof prompt?.title === 'string' ? prompt.title.trim().toLowerCase() : '';
-  const body = typeof prompt?.body === 'string' ? prompt.body.trim() : '';
-  return `${title}::${body}`;
-}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -430,6 +414,42 @@ async function ensureFeatureSettingsInitialized() {
   return normalized;
 }
 
+async function migrateState() {
+  const raw = await storage.get(STORAGE_KEYS.SCHEMA_VERSIONS);
+  const versions = isRecord(raw[STORAGE_KEYS.SCHEMA_VERSIONS]) ? raw[STORAGE_KEYS.SCHEMA_VERSIONS] : {};
+  let changed = false;
+
+  // 1. Folders migration (v0 -> v1)
+  if (!versions.folders) {
+    console.log('[DexEnhance] Migrating folders to v1...');
+    const state = await loadFolderState();
+    await saveFolderState(state);
+    versions.folders = 1;
+    changed = true;
+  }
+
+  // 2. Prompts migration (v0 -> v1)
+  if (!versions.prompts) {
+    console.log('[DexEnhance] Migrating prompts to v1...');
+    const prompts = await loadPromptState();
+    await savePromptState(prompts);
+    versions.prompts = 1;
+    changed = true;
+  }
+
+  // 3. Feature Settings migration
+  if (!versions.featureSettings || versions.featureSettings < FEATURE_SETTINGS_SCHEMA_VERSION) {
+    await ensureFeatureSettingsInitialized();
+    versions.featureSettings = FEATURE_SETTINGS_SCHEMA_VERSION;
+    changed = true;
+  }
+
+  if (changed) {
+    await storage.set({ [STORAGE_KEYS.SCHEMA_VERSIONS]: versions });
+    console.log('[DexEnhance] Migration complete. New versions:', versions);
+  }
+}
+
 async function updateFeatureSettingsModule(moduleId, patch) {
   const current = await getFeatureSettings();
   const next = updateFeatureModule(current, moduleId, patch);
@@ -582,38 +602,7 @@ async function runHiddenTabRefinement({ site, prompt }) {
   }
 }
 
-/**
- * @param {any} prompt
- * @returns {{id:string,title:string,body:string,tags:string[],variables:string[],createdAt:number}}
- */
-function normalizePrompt(prompt) {
-  const id = typeof prompt?.id === 'string' && prompt.id ? prompt.id : createId();
-  const title = typeof prompt?.title === 'string' && prompt.title.trim() ? prompt.title.trim() : 'Untitled Prompt';
-  const body = typeof prompt?.body === 'string' ? prompt.body : '';
-  const tags = Array.isArray(prompt?.tags)
-    ? [...new Set(prompt.tags.map((tag) => String(tag).trim()).filter(Boolean))]
-    : [];
-  const createdAt = Number.isFinite(prompt?.createdAt) ? Number(prompt.createdAt) : Date.now();
-  const variables = parseVariablesFromPromptBody(body);
-  return { id, title, body, tags, variables, createdAt };
-}
 
-/**
- * @param {any} folder
- * @returns {{id:string,name:string,parentId:string|null,chatUrls:string[],createdAt:number,deletedAt:number|null}}
- */
-function normalizeFolder(folder) {
-  const id = typeof folder?.id === 'string' && folder.id ? folder.id : createId();
-  const name = typeof folder?.name === 'string' && folder.name.trim() ? folder.name.trim() : 'Untitled Folder';
-  const parentId = typeof folder?.parentId === 'string' && folder.parentId ? folder.parentId : null;
-  const createdAt = Number.isFinite(folder?.createdAt) ? Number(folder.createdAt) : Date.now();
-  const deletedAt = Number.isFinite(folder?.deletedAt) ? Number(folder.deletedAt) : null;
-
-  const urls = Array.isArray(folder?.chatUrls) ? folder.chatUrls : [];
-  const chatUrls = [...new Set(urls.map((url) => normalizeChatUrl(url)).filter(Boolean))];
-
-  return { id, name, parentId, chatUrls, createdAt, deletedAt };
-}
 
 async function loadFolderState() {
   const state = await storage.get([STORAGE_KEYS.FOLDERS, STORAGE_KEYS.CHAT_FOLDER_MAP]);
@@ -682,26 +671,7 @@ async function saveFolderState({ folders, chatFolderMap }) {
   });
 }
 
-function collectDescendantIds(folders, rootId) {
-  const byParent = new Map();
-  for (const folder of folders) {
-    if (!folder.parentId) continue;
-    const bucket = byParent.get(folder.parentId) || [];
-    bucket.push(folder.id);
-    byParent.set(folder.parentId, bucket);
-  }
 
-  const visited = new Set();
-  const queue = [rootId];
-  while (queue.length > 0) {
-    const current = queue.shift();
-    if (!current || visited.has(current)) continue;
-    visited.add(current);
-    const children = byParent.get(current) || [];
-    for (const childId of children) queue.push(childId);
-  }
-  return visited;
-}
 
 async function getFolderTree(includeDeleted) {
   const state = await loadFolderState();
@@ -1133,9 +1103,83 @@ async function handleMessage(message, sender) {
       return ok();
     }
 
+    case MESSAGE_ACTIONS.BACKUP_EXPORT:
+      return ok(await exportBackup());
+
+    case MESSAGE_ACTIONS.BACKUP_IMPORT:
+      return ok(await importBackup(message.payload));
+
+    case MESSAGE_ACTIONS.STORAGE_QUOTA_CHECK:
+      return ok(await checkStorageQuota());
+
+    case MESSAGE_ACTIONS.SAFE_MODE_TOGGLE: {
+      const active = message.active === true;
+      await storage.set({ [STORAGE_KEYS.SAFE_MODE]: active });
+      return ok({ active });
+    }
+
+    case MESSAGE_ACTIONS.SAFE_MODE_GET: {
+      const data = await storage.get(STORAGE_KEYS.SAFE_MODE);
+      return ok({ active: data[STORAGE_KEYS.SAFE_MODE] === true });
+    }
+
+    case MESSAGE_ACTIONS.DIAGNOSTICS_LOG:
+      diagnostics.log(message.category, message.action, message.data);
+      return ok();
+
+    case MESSAGE_ACTIONS.DIAGNOSTICS_GET:
+      return ok(diagnostics.getEntries());
+
     default:
-      return fail(`Unsupported action: ${String(action)}`);
+      return fail(`Unknown message action: ${String(action)}`);
   }
+}
+
+async function exportBackup() {
+  const data = await storage.get(null);
+  return {
+    version: 1,
+    exportedAt: Date.now(),
+    data,
+  };
+}
+
+async function importBackup(payload) {
+  if (!isRecord(payload) || !isRecord(payload.data)) {
+    throw new Error('Invalid backup payload.');
+  }
+  
+  // Safe Mode check could be added here later
+  
+  await storage.clear();
+  await storage.set(payload.data);
+  
+  // Always migrate after import to ensure current schema compliance
+  await migrateState();
+  
+  return { success: true };
+}
+
+async function checkStorageQuota() {
+  const data = await storage.get(null);
+  const json = JSON.stringify(data);
+  const bytes = new TextEncoder().encode(json).length;
+  // chrome.storage.local quota is typically 5MB per extension unless unlimitedStorage is set
+  const quotaBytes = 5 * 1024 * 1024; 
+  
+  const usagePercent = (bytes / quotaBytes) * 100;
+  let status = 'healthy';
+  if (usagePercent > 85) status = 'critical';
+  else if (usagePercent > 60) status = 'warning';
+  
+  return {
+    bytes,
+    quotaBytes,
+    usageLabel: `${(bytes / 1024).toFixed(1)} KB`,
+    quotaLabel: `${(quotaBytes / 1024 / 1024).toFixed(0)} MB`,
+    usagePercent,
+    status
+  };
 }
 
 // ─── Event: Extension Installed / Updated ────────────────────────────────────
@@ -1191,17 +1235,16 @@ chrome.runtime.onInstalled.addListener((details) => {
       .catch((error) => {
         console.error('[DexEnhance] Failed to write default install settings:', error);
       });
-  } else {
-    void ensureFeatureSettingsInitialized().catch((error) => {
-      console.error('[DexEnhance] Failed to normalize feature settings after update:', error);
+    void migrateState().catch((error) => {
+      console.error('[DexEnhance] Migration failure after update:', error);
     });
   }
 });
 
 chrome.runtime.onStartup.addListener(() => {
   void ensureCanvasSweepAlarm().catch(() => {});
-  void ensureFeatureSettingsInitialized().catch((error) => {
-    console.error('[DexEnhance] Failed to normalize feature settings on startup:', error);
+  void migrateState().catch((error) => {
+    console.error('[DexEnhance] Migration failure on startup:', error);
   });
 });
 
@@ -1253,6 +1296,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
     .catch((error) => {
       console.error('[DexEnhance] Message handling error:', error, 'tab:', sender.tab?.id);
+// Log the failure context for debugging purposes
+const errorContext = {
+  module: 'background/service_worker',
+  operation: String(message?.action || 'unknown'),
+  host: sender?.tab?.url || sender?.url || '',
+  url: sender?.tab?.url || sender?.url || '',
+  version: chrome.runtime.getManifest()?.version || 'unknown',
+  error: error instanceof Error ? error.message : String(error),
+  stack: error instanceof Error ? (error.stack || '') : '',
+};
+console.error('[DexEnhance] Structured Error Context:', errorContext);
       void relayToastToSender(sender, {
         type: 'error',
         title: 'DexEnhance background error',

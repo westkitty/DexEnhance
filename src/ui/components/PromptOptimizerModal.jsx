@@ -8,6 +8,7 @@ const SETTINGS_KEY = 'optimizerSettings';
 const DEFAULT_SETTINGS = Object.freeze({
   aiRefinementEnabled: false,
   refinementMode: 'same_tab',
+  includeSemanticContext: false,
 });
 
 function normalizeSettings(value) {
@@ -15,6 +16,7 @@ function normalizeSettings(value) {
   return {
     aiRefinementEnabled: source.aiRefinementEnabled === true,
     refinementMode: source.refinementMode === 'hidden_tab' ? 'hidden_tab' : 'same_tab',
+    includeSemanticContext: source.includeSemanticContext === true,
   };
 }
 
@@ -85,6 +87,7 @@ export function PromptOptimizerModal({
         sourcePrompt,
         aiRefinementEnabled: settings.aiRefinementEnabled,
         refinementMode: settings.refinementMode,
+        includeSemanticContext: settings.includeSemanticContext,
       });
       const local = result?.localPrompt || '';
       const final = result?.finalPrompt || local;
@@ -191,6 +194,20 @@ export function PromptOptimizerModal({
               ? 'Same-tab mode is simpler and faster, but the optimization request appears in your current thread.'
               : 'Hidden-tab mode isolates context and closes automatically, but is more brittle and may fail if UI changes.'
           ),
+          h('label', { class: 'dex-optimizer__toggle' }, [
+            h('input', {
+              type: 'checkbox',
+              checked: settings.includeSemanticContext,
+              onChange: (event) => {
+                void persistSettings({
+                  ...settings,
+                  includeSemanticContext: event.currentTarget.checked,
+                });
+              },
+            }),
+            h('span', null, 'Include Semantic Clipboard context (Tasks & Knowledge)'),
+          ]),
+          h('p', { class: 'dex-form__hint' }, 'Pulls relevant snippets from other threads to guide the refinement.'),
         ])
       : h('p', { class: 'dex-form__hint' }, 'Local deterministic rewrite only. No AI call is made.'),
     h('div', { class: 'dex-form__actions' }, [
