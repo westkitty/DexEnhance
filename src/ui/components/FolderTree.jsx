@@ -306,8 +306,11 @@ export function FolderTree({ currentChatUrl }) {
                 }
               },
             })
-          : h('span', { class: 'dex-folder-name' }, folder.name),
-        !isRenaming ? h('span', { class: 'dex-folder-count' }, `${folder.chatUrls?.length || 0}`) : null,
+          : h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+              h('span', { style: { fontSize: '16px' } }, folder.deletedAt ? '🗑️' : childrenByParentId.has(folder.id) ? '📂' : '📁'),
+              h('span', { class: 'dex-folder-name', style: { fontSize: '14px' } }, folder.name),
+            ]),
+        !isRenaming ? h('span', { class: 'dex-tag', style: { marginLeft: 'auto' } }, `${folder.chatUrls?.length || 0} chats`) : null,
         isRenaming
           ? h('div', { class: 'dex-folder-rename-actions' }, [
               h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => commitRename(folder) }, 'Save'),
@@ -399,11 +402,14 @@ export function FolderTree({ currentChatUrl }) {
   }
 
   return h('section', { class: 'dex-folder-tree', 'aria-label': 'Chat organization' }, [
-    h('div', { class: `dex-state-panel dex-state-panel--${activeFolderId ? 'success' : 'empty'}` }, [
-      h('strong', null, 'Current chat assignment'),
+    h('div', { class: `dex-status-card ${activeFolderId ? 'dex-status-card--glow' : ''}`, style: { marginBottom: '16px' } }, [
+      h('span', { class: 'dex-status-card__label' }, 'Chat Context'),
+      h('strong', { class: 'dex-status-card__value' }, activeFolderId
+        ? `Organized`
+        : 'Unassigned'),
       h('p', { class: 'dex-folder-state' }, activeFolderId
-        ? `This chat is assigned to a folder. Use Assign Here, Unassign Chat, Trash, Restore, and Delete Forever below.`
-        : 'This chat is unassigned. Choose a folder below or create a new one.'),
+        ? `This conversation is safely categorized. Actions like Restore or Delete are managed below.`
+        : 'This chat is drifting. Assign it to a folder to track context over time.'),
     ]),
     h('div', { class: 'dex-folder-toolbar' }, [
       h('input', {

@@ -373,18 +373,18 @@ export function PromptLibrary({
             filteredPrompts.map((prompt) => {
               const isVariablePrompt = activeVariablePromptId === prompt.id;
               const variables = Array.isArray(prompt.variables) ? prompt.variables : [];
-              return h('article', { key: prompt.id, class: 'dex-prompt-card' }, [
-                h('div', { class: 'dex-prompt-card__head' }, [
-                  h('strong', null, prompt.title),
+              return h('article', { key: prompt.id, class: `dex-status-card dex-prompt-card tier-${prompt.tags?.[0] || 'none'}` }, [
+                h('div', { class: 'dex-prompt-card__head', style: { marginBottom: '8px' } }, [
+                  h('strong', { style: { fontSize: '15px' } }, prompt.title),
                   h('div', { class: 'dex-prompt-card__meta' }, [
-                    prompt.version > 1 ? h('span', { class: 'dex-folder-count' }, `v${prompt.version}`) : null,
-                    variables.length > 0 ? h('span', { class: 'dex-folder-count' }, `${variables.length} var${variables.length === 1 ? '' : 's'}`) : null,
+                    prompt.version > 1 ? h('span', { class: 'dex-tag' }, `v${prompt.version}`) : null,
+                    variables.length > 0 ? h('span', { class: 'dex-tag is-active' }, `${variables.length} VARS`) : null,
                   ]),
                 ]),
-                h('p', { class: 'dex-prompt-card__body' }, prompt.body),
-                h('div', { class: 'dex-prompt-tags' },
-                  (prompt.tags || []).map((tag) => h('span', { class: 'dex-tag', key: `${prompt.id}-${tag}` }, tag))
+                h('div', { class: 'dex-prompt-tags', style: { marginBottom: '12px' } },
+                  (prompt.tags || []).map((tag) => h('span', { class: `dex-tag dex-tag--${tag}`, key: `${prompt.id}-${tag}` }, tag))
                 ),
+                h('p', { class: 'dex-prompt-card__body', style: { opacity: 0.8, fontSize: '13px', lineHeight: '1.6' } }, prompt.body),
                 h('div', { class: 'dex-folder-actions' }, [
                   h('button', {
                     type: 'button',
@@ -409,9 +409,9 @@ export function PromptLibrary({
                           }),
                         ]))
                       ),
-                      h('div', { class: 'dex-status-card dex-status-card--neutral' }, [
-                        h('strong', null, 'Resolved preview'),
-                        h('pre', { class: 'dex-toast__details' }, resolveVariablePrompt(prompt) || 'Fill the variables to preview the compiled prompt.'),
+                      h('div', { class: 'dex-status-card dex-status-card--glow', style: { marginTop: '16px' } }, [
+                        h('span', { class: 'dex-status-card__label' }, 'Resolved Preview'),
+                        h('pre', { class: 'dex-toast__details', style: { background: 'rgba(0,0,0,0.2)', maxHeight: '120px' } }, resolveVariablePrompt(prompt) || 'Fill variables to compile…'),
                       ]),
                       h('div', { class: 'dex-form__actions' }, [
                         h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => runResolvedPrompt(prompt, 'insert') }, 'Insert'),

@@ -771,9 +771,16 @@ select.dex-input {
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
-  padding: 10px 12px;
-  border: 1px solid var(--dex-border);
+  padding: 12px 14px;
+  border: var(--dex-glass-border);
+  background: var(--dex-surface-raised);
+  border-radius: var(--dex-radius-sm);
+  transition: var(--dex-transition);
+}
+
+.dex-folder-row:hover {
   background: var(--dex-surface-contrast);
+  transform: translateX(4px);
 }
 
 .dex-folder-row.is-active {
