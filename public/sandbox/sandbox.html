@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DexEnhance Sandbox Stage</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: transparent;
+      color: #333;
+    }
+    #root {
+      min-height: 100px;
+    }
+    .dex-error {
+      background: #fff5f5;
+      color: #c53030;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #feb2b2;
+      font-family: monospace;
+      font-size: 13px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <!-- Note: We will postMessage the code to this page -->
+  <!-- The transpiler and runtime will be injected here via sandbox-runtime.js -->
+  <script src="./sandbox-runtime.js"></script>
+</body>
+</html>

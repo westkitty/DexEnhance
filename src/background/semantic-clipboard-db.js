@@ -1,9 +1,10 @@
 const DB_NAME = 'dexenhance_semantic_clipboard_v1';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORE_TAB_CONTEXTS = 'tab_contexts';
 const STORE_EMBEDDING_CHUNKS = 'embedding_chunks';
 const STORE_QUERY_CACHE = 'query_cache';
+const STORE_CHECKPOINTS = 'checkpoints';
 
 const DEFAULT_EMBEDDING_MODEL = 'dex-local-hash-384';
 const DEFAULT_EMBEDDING_DIM = 384;
@@ -182,6 +183,15 @@ function getDb() {
       });
       setupIndexes(queryCache, [
         { name: 'by_created_at', keyPath: 'createdAt' },
+      ]);
+
+      const checkpoints = createStoreIfMissing(db, upgradeTx, STORE_CHECKPOINTS, {
+        keyPath: 'id',
+        autoIncrement: true,
+      });
+      setupIndexes(checkpoints, [
+        { name: 'by_url', keyPath: 'url' },
+        { name: 'by_timestamp', keyPath: 'timestamp' },
       ]);
     };
 
@@ -434,7 +444,9 @@ export async function buildSemanticClipboardPreamble({
   const lines = ['Relevant context from your local Semantic Clipboard:'];
   result.matches.forEach((match, index) => {
     const score = Number.isFinite(match.score) ? match.score.toFixed(4) : '0.0000';
-    lines.push(`[${index + 1}] (${score}) ${match.sourceUrl}`);
+    const isSnippet = String(match.sourceUrl || '').startsWith('dex-snippet://');
+    const sourceLabel = isSnippet ? '[Pinned Code]' : match.sourceUrl;
+    lines.push(`[${index + 1}] (${score}) ${sourceLabel}`);
     lines.push(truncateForPreamble(match.chunkText, 360));
   });
 
@@ -483,4 +495,49 @@ export async function clearSemanticClipboard() {
   return {
     cleared: true,
   };
+}
+export async function saveConversationCheckpoint({ url, title, turns }) {
+  const db = await getDb();
+  const transaction = db.transaction([STORE_CHECKPOINTS], 'readwrite');
+  const store = transaction.objectStore(STORE_CHECKPOINTS);
+
+  const checkpoint = {
+    url,
+    title,
+    turns,
+    timestamp: Date.now(),
+  };
+
+  const id = await requestToPromise(store.add(checkpoint));
+  await transactionDone(transaction);
+  return { id, ...checkpoint };
+}
+
+export async function listConversationCheckpoints({ url }) {
+  const db = await getDb();
+  const transaction = db.transaction([STORE_CHECKPOINTS], 'readonly');
+  const store = transaction.objectStore(STORE_CHECKPOINTS);
+  const index = store.index('by_url');
+
+  const checkpoints = [];
+  const cursorRequest = index.openCursor(IDBKeyRange.only(url), 'prev');
+  let cursor = await requestToPromise(cursorRequest);
+
+  while (cursor) {
+    checkpoints.push(cursor.value);
+    cursor = await requestToPromise(cursor.continue());
+  }
+
+  await transactionDone(transaction);
+  return checkpoints;
+}
+
+export async function deleteConversationCheckpoint(id) {
+  const db = await getDb();
+  const transaction = db.transaction([STORE_CHECKPOINTS], 'readwrite');
+  const store = transaction.objectStore(STORE_CHECKPOINTS);
+
+  await requestToPromise(store.delete(Number(id)));
+  await transactionDone(transaction);
+  return true;
 }

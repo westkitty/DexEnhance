@@ -1,5 +1,5 @@
-import { h } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
+import { PersonaAvatar } from './PersonaAvatar.jsx';
 
 export function DexDrawer({
   open,
@@ -12,8 +12,11 @@ export function DexDrawer({
   onClose,
   onSelectView,
   onWidthChange,
+  onSaveCheckpoint,
   children,
   statusBar = null,
+  model = 'dex',
+  isGenerating = false,
 }) {
   const handleRef = useRef(null);
 
@@ -55,14 +58,25 @@ export function DexDrawer({
     h('div', { class: 'dex-drawer__frame' }, [
       h('header', { class: 'dex-drawer__header' }, [
         h('div', { class: 'dex-drawer__title-wrap' }, [
-          h('strong', { class: 'dex-drawer__title' }, title || 'DexEnhance'),
-          h('span', { class: 'dex-drawer__host' }, hostLabel),
+          h(PersonaAvatar, { model, isGenerating, size: 'small' }),
+          h('div', null, [
+            h('strong', { class: 'dex-drawer__title' }, title || 'DexEnhance'),
+            h('span', { class: 'dex-drawer__host' }, hostLabel),
+          ]),
         ]),
-        h('button', {
-          type: 'button',
-          class: 'dex-link-btn',
-          onClick: () => onClose?.(),
-        }, 'Close'),
+        h('div', { class: 'dex-drawer__header-actions' }, [
+          h('button', {
+            type: 'button',
+            class: 'dex-link-btn dex-link-btn--accent',
+            style: { minHeight: '30px', padding: '4px 10px', fontSize: '11px' },
+            onClick: () => onSaveCheckpoint?.(),
+          }, 'Snapshot'),
+          h('button', {
+            type: 'button',
+            class: 'dex-link-btn',
+            onClick: () => onClose?.(),
+          }, 'Close'),
+        ]),
       ]),
       h('nav', { class: 'dex-drawer__tabs', 'aria-label': 'Drawer views' },
         viewTabs.map((tab) => h('button', {

@@ -1978,3 +1978,49 @@ Make the changes directly in-repo, keep them minimal and auditable, and update a
 - edit error: {"content":[{"type":"text","text":"Could not find the exact text in .gitignore. The old text must match exactly including all whitespace and newlines."}],"details":{}}
 
 ---
+
+---
+## Work Unit — 2026-04-12T15:08:45Z
+
+### Pass 5 Completion: Model Personification
+- **Objective**: Personify AI models via animated SVG avatars that react to chat states.
+- **Implementation**:
+  - NEW `PersonaAvatar.jsx` with model-specific skins (Gemini, ChatGPT, Dex).
+  - INTEGRATED reactive states (Idle, Thinking, Speaking) into `DexDrawer` and `StatusPanel`.
+  - BROADCASTED `adapter.isGenerating()` state via 600ms polling loop in `init-host-shell.js`.
+  - VERIFIED: All unit tests pass; UI animations confirmed non-blocking.
+
+### DIRECTIONAL AUDIT 01 (Passes 1-5)
+**Mission Integrity Check:**
+- [x] **Extension Purpose**: DexEnhance remains a local-first, privacy-focused power-user utility. No external dependencies added.
+- [x] **MV3 Constraints**: Fully compliant. All logic resides in service worker or content scripts within Shadow DOM.
+- [x] **Shadow DOM boundaries**: Intact. Avatars and status panels are strictly isolated from host CSS.
+- [x] **Host Integrations**: ChatGPT and Gemini adapters remain explicit and modular. 
+- [x] **Local-First Guarantees**: Intact. All data (folders, prompts, diagnostics, backups) stays on-device.
+- [x] **Architectural Drift**: None. Consistent use of Preact, CSS keyframes, and the message-protocol.
+- [x] **Rollback Readiness**: Restorable from Git or the new Backup/Restore utility.
+- [x] **Documentation**: BIBLE, Change Registry, and Factory Log are current.
+
+**Verdict**: Project is in a healthy, disciplined state. Architecture is scaling well with the new reactive features.
+
+### Pass 6 Completion: Component Snapshot Context
+- **Objective**: Allow developers to "pin" code snippets to the local semantic store for context-aware AI interactions.
+- **Implementation**: Added manual ingestion UI to `SemanticClipboardPanel` and refined preamble labeling.
+
+### Pass 7 Completion: Live Sandbox Stage
+- **Objective**: Secure real-time rendering of React components using a sandboxed iframe.
+- **Implementation**: HTM + Preact runtime, `iframe` bridge, and a dedicated "Stage" tab.
+
+### Pass 8 Completion: Tailwind Style-Sync
+- **Objective**: Dedicated design utility for AI-powered CSS/Tailwind generation.
+- **Implementation**: `StyleSyncPanel` with natural language transformation and "Gaia OS" design presets.
+
+### Pass 9 Completion: Conversation Branching
+- **Objective**: Local checkpointing and "Git-like" versioning for AI chats.
+- **Implementation**: IndexedDB storage, `CheckpointManager` UI, and automated code-restore bridge.
+
+### Pass 10 Completion: Local Unit Test Generator
+- **Objective**: Instantly generate Bun/Preact unit tests for components in the Sandbox Stage.
+- **Implementation**: "Generate Tests" action in SandboxStage and specialized AI meta-prompting.
+
+**Final Phase Verdict**: DexEnhance has evolved into a full-cycle developer assistance platform. All waves are complete, verified, and architecturally sound.

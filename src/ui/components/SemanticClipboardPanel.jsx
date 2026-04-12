@@ -26,7 +26,10 @@ export function SemanticClipboardPanel({
   const [queryState, setQueryState] = useState({ loading: false, error: '', results: [], preamble: '', status: 'empty' });
   const [busyIngest, setBusyIngest] = useState(false);
   const [busyClear, setBusyClear] = useState(false);
+  const [busySnippet, setBusySnippet] = useState(false);
   const [topK, setTopK] = useState(5);
+  const [snippetText, setSnippetText] = useState('');
+  const [snippetLabel, setSnippetLabel] = useState('');
 
   useEffect(() => {
     if (!visible) return;
@@ -112,6 +115,53 @@ export function SemanticClipboardPanel({
             }
           },
         }, busyClear ? 'Clearing…' : 'Clear Store'),
+      ]),
+    ]),
+
+    h('div', { class: 'dex-status-card dex-status-card--neutral' }, [
+      h('strong', null, 'Component Snapshot'),
+      h('p', { class: 'dex-folder-state' }, 'Snap a React component or code block directly into the local store.'),
+      h('input', {
+        type: 'text',
+        class: 'dex-input',
+        style: { marginBottom: '8px' },
+        placeholder: 'Snippet Label (e.g. Navbar.jsx)',
+        value: snippetLabel,
+        onInput: (event) => setSnippetLabel(event.currentTarget.value),
+      }),
+      h('textarea', {
+        class: 'dex-textarea',
+        style: { minHeight: '120px', fontSize: '12px', fontFamily: 'monospace' },
+        placeholder: 'Paste your component code here...',
+        value: snippetText,
+        onInput: (event) => setSnippetText(event.currentTarget.value),
+      }),
+      h('div', { class: 'dex-folder-actions', style: { marginTop: '8px' } }, [
+        h('button', {
+          type: 'button',
+          class: 'dex-link-btn dex-link-btn--accent',
+          disabled: busySnippet || !snippetText.trim(),
+          onClick: async () => {
+            setBusySnippet(true);
+            try {
+              const response = await sendRuntimeMessage(MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_INGEST_SNIPPET, {
+                codeText: snippetText,
+                label: snippetLabel,
+              });
+              if (response.ok) {
+                setStats(await fetchStats());
+                setSnippetText('');
+                setSnippetLabel('');
+              } else {
+                throw new Error(response.error);
+              }
+            } catch (error) {
+              setQueryState((current) => ({ ...current, status: 'error', error: error instanceof Error ? error.message : String(error) }));
+            } finally {
+              setBusySnippet(false);
+            }
+          },
+        }, busySnippet ? 'Snapping…' : 'Snap Context'),
       ]),
     ]),
     h('label', { class: 'dex-sidebar__label' }, 'Query'),

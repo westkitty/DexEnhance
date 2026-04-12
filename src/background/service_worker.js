@@ -17,11 +17,10 @@ import {
 import { diagnostics } from '../lib/diagnostics-buffer.js';
 import { clearRules, updateRules } from './api_interceptor.js';
 import {
-  clearSemanticClipboard,
-  buildSemanticClipboardPreamble,
-  getSemanticClipboardStats,
-  querySemanticClipboard,
   upsertSemanticClipboardContext,
+  saveConversationCheckpoint,
+  listConversationCheckpoints,
+  deleteConversationCheckpoint,
 } from './semantic-clipboard-db.js';
 import { createId, normalizeChatUrl } from '../lib/utils.js';
 import {
@@ -1020,6 +1019,35 @@ async function handleMessage(message, sender) {
       }));
     }
 
+    case MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_INGEST_SNIPPET: {
+      const settings = await getFeatureSettings();
+      if (settings.modules.semanticClipboard.enabled !== true) {
+        return fail('Semantic Clipboard is disabled in feature settings.');
+      }
+      const codeText = typeof message.codeText === 'string' ? message.codeText.trim() : '';
+      const label = typeof message.label === 'string' ? message.label.trim() : 'Manual Snippet';
+      if (!codeText) return fail('SEMANTIC_CLIPBOARD_INGEST_SNIPPET requires non-empty codeText.');
+
+      // Simple chunking for manual snippets
+      const chunkSize = 1500;
+      const chunks = [];
+      for (let i = 0; i < codeText.length; i += chunkSize) {
+        chunks.push({
+          chunkText: codeText.slice(i, i + chunkSize),
+          startOffset: i,
+          endOffset: Math.min(i + chunkSize, codeText.length),
+        });
+      }
+
+      await ensureSemanticEmbeddingRuntime().catch(() => {});
+      return ok(await upsertSemanticClipboardContext({
+        sourceUrl: `dex-snippet://${createId()}`,
+        title: `Snippet: ${label}`,
+        chunks,
+        maxTrackedTabs: settings.modules.semanticClipboard.maxTrackedTabs,
+      }));
+    }
+
     case MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_QUERY: {
       const settings = await getFeatureSettings();
       if (settings.modules.semanticClipboard.enabled !== true) {
@@ -1057,6 +1085,15 @@ async function handleMessage(message, sender) {
         return fail('Semantic Clipboard is disabled in feature settings.');
       }
       return ok(await clearSemanticClipboard());
+
+    case MESSAGE_ACTIONS.CONVERSATION_SAVE_CHECKPOINT:
+      return saveConversationCheckpoint(message).then(ok).catch((err) => fail(err.message));
+
+    case MESSAGE_ACTIONS.CONVERSATION_LIST_CHECKPOINTS:
+      return listConversationCheckpoints(message).then(ok).catch((err) => fail(err.message));
+
+    case MESSAGE_ACTIONS.CONVERSATION_DELETE_CHECKPOINT:
+      return deleteConversationCheckpoint(message.id).then(ok).catch((err) => fail(err.message));
 
     case MESSAGE_ACTIONS.API_RULES_UPDATE: {
       const rules = message.rules;

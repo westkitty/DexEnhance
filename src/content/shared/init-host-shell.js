@@ -53,6 +53,9 @@ import { TokenOverlay } from '../../ui/components/TokenOverlay.jsx';
 import { SemanticClipboardPanel } from '../../ui/components/SemanticClipboardPanel.jsx';
 import { FeatureTour } from '../../ui/components/FeatureTour.jsx';
 import { StatusPanel } from '../../ui/components/StatusPanel.jsx';
+import { SandboxStage } from '../../ui/components/SandboxStage.jsx';
+import { StyleSyncPanel } from '../../ui/components/StyleSyncPanel.jsx';
+import { CheckpointManager } from '../../ui/components/CheckpointManager.jsx';
 import { diagnostics } from '../../lib/diagnostics-buffer.js';
 
 const ONBOARDING_SEEN_KEY = 'onboardingSeenVersion';
@@ -65,6 +68,9 @@ const DRAWER_TABS = [
   { id: 'queue', label: 'Queue' },
   { id: 'optimizer', label: 'Optimize' },
   { id: 'context', label: 'Context' },
+  { id: 'stage', label: 'Stage' },
+  { id: 'styles', label: 'Styles' },
+  { id: 'history', label: 'History' },
   { id: 'export', label: 'Export' },
   { id: 'settings', label: 'Settings' },
 ];
@@ -132,12 +138,16 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
 
   let queueSizeState = 0;
   let queueController = null;
+  let sandboxCode = "() => html`<div><h3>Hello from Stage!</h3><p>Edit this code to see live changes.</p></div>` ";
+  let sandboxTests = '';
   let queueRuntimeState = null;
   let promptCountState = 0;
   let semanticStatsState = { chunkCount: 0, sourceCount: 0, queryCacheCount: 0 };
   let currentFolderState = { folderId: null, folderName: '' };
   let welcomeVisible = false;
   let welcomeZipping = false;
+  let isGeneratingState = false;
+  let modelType = siteKey;
   let welcomeZipFallbackTimer = null;
   let paletteOpen = false;
   let drawerOpen = false;
@@ -373,6 +383,16 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     if (healthCheckTimer) window.clearTimeout(healthCheckTimer);
     healthCheckTimer = window.setTimeout(() => runAdapterHealthCheck({ notify }), 220);
   };
+
+  const updateGeneratingState = () => {
+    const generating = adapter.isGenerating();
+    if (generating !== isGeneratingState) {
+      isGeneratingState = generating;
+      renderUI();
+    }
+  };
+
+  window.setInterval(updateGeneratingState, 600);
 
   const pingServiceWorker = async ({ notifyOnFailure = false } = {}) => {
     const ping = await sendRuntimeMessage(MESSAGE_ACTIONS.PING, {}, { timeoutMs: 3600 });
@@ -681,6 +701,100 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
         void refreshSemanticStats();
       });
     }, 900);
+  };
+
+    }, 900);
+  };
+
+  const handleSaveCheckpoint = async () => {
+    const turns = parseConversation();
+    if (turns.length === 0) {
+      showDexToast({ type: 'warning', title: 'Empty Conversation', message: 'There are no messages to snapshot yet.' });
+      return;
+    }
+    const title = prompt('Name this checkpoint:', `Snapshot ${new Date().toLocaleTimeString()}`);
+    if (title === null) return;
+
+    const response = await sendRuntimeMessage(MESSAGE_ACTIONS.CONVERSATION_SAVE_CHECKPOINT, {
+      url: window.location.href,
+      title: title || `Snapshot ${Date.now()}`,
+      turns
+    });
+
+    if (response.ok) {
+      showDexToast({ type: 'success', title: 'Checkpoint saved', message: `Saved "${title}" locally.` });
+      if (activeDrawerView === 'history') renderUI();
+    }
+  };
+
+  const handleRestoreCheckpoint = async (checkpoint) => {
+    if (!checkpoint.turns || checkpoint.turns.length === 0) return;
+    
+    // In Wave 9, we restore by ingesting the historical code and reasoning into the semantic clipboard
+    const historicalCode = checkpoint.turns
+      .filter(t => Array.isArray(t.codeBlocks) && t.codeBlocks.length > 0)
+      .map(t => t.codeBlocks.map(b => b.code).join('\n'))
+      .join('\n\n');
+
+    const historicalReasoning = checkpoint.turns
+      .filter(t => t.content && typeof t.content === 'string')
+      .map(t => t.content)
+      .join('\n\n');
+
+    if (historicalCode || historicalReasoning) {
+      const combinedText = [
+        historicalCode ? `### Historical Code Snapshot\n${historicalCode}` : '',
+        historicalReasoning ? `### Historical Context/Reasoning\n${historicalReasoning}` : ''
+      ].filter(Boolean).join('\n\n');
+
+      await sendRuntimeMessage(MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_INGEST_SNIPPET, {
+        url: `dex-checkpoint://${checkpoint.id}`,
+        title: `Checkpoint: ${checkpoint.title}`,
+        text: combinedText,
+      });
+      showDexToast({ 
+        type: 'success', 
+        title: 'Context Restored', 
+        message: 'Historical code and reasoning have been pinned to your Semantic Clipboard.' 
+      });
+    } else {
+      showDexToast({ 
+        type: 'info', 
+        title: 'Checkpoint Restored', 
+        message: 'This checkpoint contained no usable content.' 
+      });
+    }
+  };
+
+  const handleGenerateTests = async (componentCode) => {
+    if (!componentCode.trim()) return '';
+    try {
+      const prompt = `Generate a complete Vitest/Bun unit test suite for this Preact component:
+      ---
+      ${componentCode}
+      ---
+      Rules:
+      1. Use Bun's "expect", "describe", and "it".
+      2. Use "@testing-library/preact" for rendering and queries.
+      3. Follow Arrange-Act-Assert.
+      4. Mock any complex hooks if necessary.
+      5. Return ONLY the code for a .test.js file.`;
+
+      const response = await sendRuntimeMessage(MESSAGE_ACTIONS.OPTIMIZER_REFINE_HIDDEN_TAB, {
+        site: 'chatgpt',
+        prompt
+      });
+
+      if (!response.ok) throw new Error(response.error);
+      return response.data?.refinedPrompt || '';
+    } catch (error) {
+      toastFailure({ 
+        operation: 'test_generator.generate', 
+        title: 'Test generation failed', 
+        error 
+      });
+      return '';
+    }
   };
 
   adapter.onNewChat(() => {
@@ -1029,6 +1143,9 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       case 'queue': return 'Queue Manager';
       case 'optimizer': return 'Prompt Optimizer';
       case 'context': return 'Semantic Clipboard';
+      case 'stage': return 'Live Sandbox Stage';
+      case 'styles': return 'StyleSync Generator';
+      case 'history': return 'Conversation History';
       case 'export': return 'Export Conversation';
       case 'settings': return 'DexEnhance Settings';
       case 'prompts':
@@ -1054,6 +1171,8 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
         onCopyDiagnostics: copyStatusDiagnostics,
         onReinjectUi: reInjectUi,
         onReloadAdapter: reloadAdapter,
+        model: modelType,
+        isGenerating: isGeneratingState,
       });
     }
     if (activeDrawerView === 'queue') {
@@ -1095,6 +1214,37 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
           }
         },
         onClearRequested: clearSemanticStore,
+      });
+    }
+    if (activeDrawerView === 'stage') {
+      return h(SandboxStage, {
+        visible: true,
+        code: sandboxCode,
+        onCodeChange: (next) => {
+          sandboxCode = next;
+          renderUI();
+        },
+        tests: sandboxTests,
+        onTestsChange: (next) => {
+          sandboxTests = next;
+          renderUI();
+        },
+        onGenerateTests: handleGenerateTests,
+      });
+    }
+    if (activeDrawerView === 'styles') {
+      return h(StyleSyncPanel, {
+        visible: true,
+        onUpdateResult: (result) => {
+          // Additional safety if we ever want to persist styles
+        }
+      });
+    }
+    if (activeDrawerView === 'history') {
+      return h(CheckpointManager, {
+        visible: true,
+        currentUrl: window.location.href,
+        onRestore: handleRestoreCheckpoint,
       });
     }
     if (activeDrawerView === 'settings') {
@@ -1329,6 +1479,7 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
         onClose: closeDrawer,
         onSelectView: (viewId) => openDrawer(viewId),
         onWidthChange: (width) => setPanel('drawer', { ...panelState('drawer'), width }),
+        onSaveCheckpoint: handleSaveCheckpoint,
         statusBar: h(DrawerStatusBar, {
           hostLabel: siteLabel,
           queueCount: queueRuntimeState?.items?.length || 0,
@@ -1341,6 +1492,8 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
           adapterHealthy: adapterHealthState.healthy !== false,
           workerHealthy: !workerHealthState.lastError,
         }),
+        model: modelType,
+        isGenerating: isGeneratingState,
       }, renderDrawerBody()),
       !welcomeVisible
         ? h('aside', { class: 'dex-current-chat-chip', role: 'status', 'aria-live': 'polite' }, [

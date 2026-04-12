@@ -1066,3 +1066,101 @@ select.dex-input {
     grid-template-columns: 1fr;
   }
 }
+
+/* Dex Model Personification */
+
+.dex-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.3s ease;
+  user-select: none;
+}
+
+.dex-status-panel__persona {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 0;
+  width: 100%;
+  border-bottom: 1px solid var(--dex-border);
+  margin-bottom: 16px;
+}
+
+.dex-avatar--small { width: 32px; height: 32px; }
+.dex-avatar--medium { width: 64px; height: 64px; }
+.dex-avatar--large { width: 120px; height: 120px; }
+
+.dex-avatar__svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 0 5px rgba(0,0,0,0.2));
+}
+
+.dex-avatar__core {
+  transition: fill 0.5s ease;
+  transform-origin: center;
+}
+
+/* Base Idle: Breathing */
+.dex-avatar--dex .dex-avatar__core,
+.dex-avatar--chatgpt .dex-avatar__core,
+.dex-avatar--gemini .dex-avatar__core {
+  animation: dex-idle-breathe 4s ease-in-out infinite;
+}
+
+/* Eyes: Blinking */
+.dex-avatar__eye-l, .dex-avatar__eye-r {
+  animation: dex-blink 6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Thinking: Pulsing & Glow */
+.dex-avatar.is-thinking .dex-avatar__core {
+  animation: dex-thinking-pulse 1s ease-in-out infinite !important;
+}
+
+.dex-avatar.is-thinking .dex-avatar__svg {
+  filter: drop-shadow(0 0 12px var(--dex-accent));
+}
+
+.dex-avatar--chatgpt.is-thinking .dex-avatar__rings {
+  animation: dex-spin 3s linear infinite;
+  transform-origin: center;
+}
+
+/* Animations */
+@keyframes dex-idle-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes dex-blink {
+  0%, 45%, 55%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.1); }
+}
+
+@keyframes dex-thinking-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.15); filter: brightness(1.4); }
+}
+
+@keyframes dex-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.dex-avatar--gemini .dex-avatar__core {
+  animation: dex-gemini-morph 6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes dex-gemini-morph {
+  0%, 100% { transform: rotate(0deg) scale(1) skew(0deg); }
+  33% { transform: rotate(12deg) scale(1.1) skew(2deg); }
+  66% { transform: rotate(-12deg) scale(0.9) skew(-2deg); }
+}

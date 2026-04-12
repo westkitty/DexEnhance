@@ -1,4 +1,5 @@
 import { h } from 'preact';
+import { PersonaAvatar } from './PersonaAvatar.jsx';
 
 function timeLabel(value) {
   const timestamp = Number(value);
@@ -21,6 +22,8 @@ export function StatusPanel({
   onCopyDiagnostics,
   onReinjectUi,
   onReloadAdapter,
+  model = 'dex',
+  isGenerating = false,
 }) {
   const modules = featureSettings?.modules || {};
   const checking = adapterHealth?.settled === false && adapterHealth?.healthy === false;
@@ -31,7 +34,11 @@ export function StatusPanel({
 
   return h('section', { class: 'dex-status-panel', 'aria-label': 'DexEnhance Status' }, [
     h('header', { class: 'dex-status-panel__head' }, [
-      h('strong', null, 'Status'),
+      h('div', { class: 'dex-status-panel__persona' }, [
+        h(PersonaAvatar, { model, isGenerating, size: 'large' }),
+        h('strong', null, 'Dex Persona'),
+        h('div', { class: 'dex-folder-state' }, isGenerating ? 'The model is currently thinking…' : 'The model is idle and ready.'),
+      ]),
       h('span', { class: `dex-folder-count${healthClass}` }, healthLabel),
     ]),
 
