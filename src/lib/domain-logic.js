@@ -124,8 +124,9 @@ export function normalizeFolder(folder) {
 
   const urls = Array.isArray(folder?.chatUrls) ? folder.chatUrls : [];
   const chatUrls = [...new Set(urls.map((url) => normalizeChatUrl(url)).filter(Boolean))];
+  const context = typeof folder?.context === 'string' ? folder.context : '';
 
-  return { id, name, parentId, chatUrls, createdAt, deletedAt };
+  return { id, name, parentId, chatUrls, createdAt, deletedAt, context };
 }
 
 /**

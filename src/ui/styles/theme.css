@@ -83,7 +83,7 @@
 .dex-link-btn:hover {
   background: var(--dex-surface-raised);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(39, 179, 143, 0.2);
 }
 
 .dex-link-btn:disabled {
@@ -475,6 +475,17 @@ select.dex-input {
 .dex-drawer.is-open {
   transform: translateX(0);
 }
+
+.dex-drawer--sidebar {
+  box-shadow: -1px 0 0 0 var(--dex-border-strong); 
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), width 0.3s ease;
+  border-radius: 0;
+}
+
+.dex-drawer--sidebar.is-open {
+  box-shadow: -4px 0 32px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--dex-border);
+}
+
 
 .dex-drawer__resize-handle {
   position: absolute;
@@ -1298,3 +1309,108 @@ select.dex-input {
 .dex-drawer-stack > *:nth-child(3), .dex-status-card-grid > *:nth-child(3) { animation-delay: 0.15s; }
 .dex-drawer-stack > *:nth-child(4), .dex-status-card-grid > *:nth-child(4) { animation-delay: 0.20s; }
 .dex-drawer-stack > *:nth-child(5), .dex-status-card-grid > *:nth-child(5) { animation-delay: 0.25s; }
+
+/* Selection HUD - Gaia OS Floating Action Bar */
+.dex-selection-hud-container {
+  background: var(--dex-glass-bg, rgba(15, 23, 42, 0.85));
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid var(--dex-glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: 20px;
+  padding: 4px 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 15px var(--dex-neon-blue, #00f2fe44);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: dex-hud-pop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom center;
+}
+
+@keyframes dex-hud-pop {
+  0% { opacity: 0; transform: scale(0.8) translateY(10px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.dex-hud-bar {
+  display: flex;
+  gap: 2px;
+}
+
+.dex-hud-action-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.2s ease;
+  min-width: 64px;
+}
+
+.dex-hud-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--dex-neon-blue, #00f2fe);
+  transform: translateY(-2px);
+}
+
+.dex-hud-icon {
+  font-size: 16px;
+}
+
+.dex-hud-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.dex-hud-action-btn:hover .dex-hud-label {
+  opacity: 1;
+}
+
+/* Sidebar Layout Mode */
+.dex-drawer--sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  border-left: 1px solid var(--dex-border);
+  border-radius: 0;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+  z-index: 999999;
+}
+
+/* Folder Context Editor (RAG-lite) */
+.dex-folder-node__context-editor {
+  margin: 10px calc(var(--depth) * 12px + 12px) 10px 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--dex-border);
+  border-radius: 8px;
+  animation: dex-fade-in 0.3s ease;
+}
+
+.dex-folder-context-textarea {
+  width: 100%;
+  min-height: 120px;
+  font-family: inherit;
+  font-size: 12px;
+  margin: 8px 0;
+  resize: vertical;
+}
+
+.dex-folder-inline-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+@keyframes dex-fade-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

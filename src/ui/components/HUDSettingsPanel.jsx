@@ -22,6 +22,10 @@ export function HUDSettingsPanel({
   onDrawerWidthChange,
   tokenOverlayEnabled = true,
   tokenOverlayMode = 'compact',
+  layoutMode = 'overlay',
+  onLayoutModeChange,
+  privacyScrubbing = false,
+  onPrivacyScrubbingChange,
   onToggleTokenOverlay,
   onTokenOverlayModeChange,
   featureToggles = [],
@@ -31,6 +35,8 @@ export function HUDSettingsPanel({
   onResetTheme,
   onRelaunchOnboarding,
   onRelaunchTour,
+  onExport,
+  onImport,
 }) {
   if (!visible) return null;
 
@@ -104,6 +110,15 @@ export function HUDSettingsPanel({
         class: 'dex-panel-frame__slider',
         onInput: (event) => onDrawerWidthChange?.(Number(event.currentTarget.value)),
       }),
+      h('label', { class: 'dex-sidebar__label' }, 'Layout Mode'),
+      h('select', {
+        class: 'dex-input',
+        value: layoutMode,
+        onChange: (event) => onLayoutModeChange?.(event.currentTarget.value),
+      }, [
+        h('option', { value: 'overlay' }, 'Overlay (Drawer)'),
+        h('option', { value: 'sidebar' }, 'Sidebar (Docked)'),
+      ]),
     ]),
     h('section', { class: 'dex-settings-section' }, [
       h('h3', { class: 'dex-settings-section__title' }, 'Token overlay'),
@@ -126,7 +141,7 @@ export function HUDSettingsPanel({
       ]),
     ]),
     h('section', { class: 'dex-settings-section' }, [
-      h('h3', { class: 'dex-settings-section__title' }, 'Required features'),
+      h('h3', { class: 'dex-settings-section__title' }, '✨ Required features'),
       h('div', { class: 'dex-settings-toggle-list' },
         featureToggles.map((toggle) => h('label', { key: toggle.id, class: 'dex-feature-toggle-row' }, [
           h('input', {
@@ -137,9 +152,17 @@ export function HUDSettingsPanel({
           h('span', null, toggle.label),
         ]))
       ),
+      h('label', { class: 'dex-feature-toggle-row', style: { marginTop: '10px' } }, [
+        h('input', {
+          type: 'checkbox',
+          checked: privacyScrubbing,
+          onChange: (event) => onPrivacyScrubbingChange?.(event.currentTarget.checked),
+        }),
+        h('span', null, 'Enable Privacy Scrubber (Redact emails, cards, keys)'),
+      ]),
     ]),
     h('section', { class: 'dex-settings-section' }, [
-      h('h3', { class: 'dex-settings-section__title' }, 'Recovery and relaunch'),
+      h('h3', { class: 'dex-settings-section__title' }, '🛠 Recovery and sync'),
       h('div', { class: 'dex-form__actions' }, [
         h('button', { type: 'button', class: 'dex-link-btn', onClick: () => onRecoverWindows?.() }, 'Recover windows'),
         h('button', { type: 'button', class: 'dex-link-btn', onClick: () => onResetLayout?.() }, 'Reset layout'),
@@ -147,7 +170,11 @@ export function HUDSettingsPanel({
       ]),
       h('div', { class: 'dex-form__actions' }, [
         h('button', { type: 'button', class: 'dex-link-btn', onClick: () => onRelaunchOnboarding?.() }, 'Relaunch onboarding'),
-        h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => onRelaunchTour?.() }, 'Start quick tour'),
+        h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => onRelaunchTour?.() }, '🚀 Start quick tour'),
+      ]),
+      h('div', { class: 'dex-form__actions', style: { marginTop: '12px', borderTop: '1px solid var(--dex-border)', paddingTop: '16px' } }, [
+        h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: onExport }, '📤 Export Backup (.json)'),
+        h('button', { type: 'button', class: 'dex-link-btn', onClick: onImport }, '📥 Import Backup'),
       ]),
     ]),
   ]);

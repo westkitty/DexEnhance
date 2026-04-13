@@ -39,9 +39,11 @@ export const DEFAULT_HUD_SETTINGS = Object.freeze({
     expanded: false,
   },
   tokenOverlay: {
-    enabled: true,
+    enabled: false,
     mode: 'compact',
   },
+  layoutMode: 'overlay',
+  privacyScrubbing: false,
 });
 
 function clamp(value, min, max) {
@@ -273,9 +275,11 @@ export function normalizeHudSettings(rawSettings, viewport) {
       expanded: source.fab?.expanded === true,
     },
     tokenOverlay: {
-      enabled: source.tokenOverlay?.enabled !== false,
+      enabled: source.tokenOverlay?.enabled === true,
       mode: normalizeTokenOverlayMode(source.tokenOverlay?.mode),
     },
+    layoutMode: source.layoutMode === 'sidebar' ? 'sidebar' : 'overlay',
+    privacyScrubbing: source.privacyScrubbing === true,
   };
 
   for (const panelId of PANEL_IDS) {

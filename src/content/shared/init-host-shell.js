@@ -56,7 +56,13 @@ import { StatusPanel } from '../../ui/components/StatusPanel.jsx';
 import { SandboxStage } from '../../ui/components/SandboxStage.jsx';
 import { StyleSyncPanel } from '../../ui/components/StyleSyncPanel.jsx';
 import { CheckpointManager } from '../../ui/components/CheckpointManager.jsx';
+import { SelectionHUD } from '../../ui/components/SelectionHUD.jsx';
+import { scrubText } from '../../lib/PrivacyScrubber.js';
+import { ChainEngine } from '../../lib/chain-engine.js';
+import { fillPromptVariables } from '../../lib/prompt-utils.js';
 import { diagnostics } from '../../lib/diagnostics-buffer.js';
+import { GhostManager } from './ghost-manager.js';
+import { OmniBox } from '../../ui/components/OmniBox.jsx';
 
 const ONBOARDING_SEEN_KEY = 'onboardingSeenVersion';
 const ONBOARDING_VERSION = '2026-03-06-shell-v1';
@@ -113,24 +119,8 @@ async function logStorageRoundTrip(siteKey, siteLabel) {
     return;
   }
 
-  console.log(`[DexEnhance] ${siteLabel} storage message round-trip ok:`, getRes.data);
+  // Shell initialization ready
 }
-
-export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
-  const enabled = await getEnabledFlag(siteLabel);
-  if (!enabled) return;
-
-  const adapter = new AdapterClass();
-  adapter.startObservers();
-
-  console.log(`[DexEnhance] ${siteLabel} content script loaded`);
-  console.log(`[DexEnhance] ${siteLabel} adapter ready:`, {
-    hasTextarea: Boolean(adapter.getTextarea()),
-    hasSubmitButton: Boolean(adapter.getSubmitButton()),
-    hasChatList: Boolean(adapter.getChatListContainer()),
-    isGenerating: adapter.isGenerating(),
-  });
-  await logStorageRoundTrip(siteKey, siteLabel);
 
   const ui = createShadowRenderer({ site: siteKey });
   const iconUrl = chrome.runtime.getURL('icons/icon128.png');
@@ -141,11 +131,16 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
   let sandboxCode = "() => html`<div><h3>Hello from Stage!</h3><p>Edit this code to see live changes.</p></div>` ";
   let sandboxTests = '';
   let queueRuntimeState = null;
+  let chainEngine = null;
+  let activeChainProgress = null;
   let promptCountState = 0;
   let semanticStatsState = { chunkCount: 0, sourceCount: 0, queryCacheCount: 0 };
   let currentFolderState = { folderId: null, folderName: '' };
   let welcomeVisible = false;
   let welcomeZipping = false;
+  let omniboxVisible = false;
+  let prompts = [];
+  let chains = [];
   let isGeneratingState = false;
   let modelType = siteKey;
   let welcomeZipFallbackTimer = null;
@@ -162,6 +157,7 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
   let tokenCount = null;
   let tokenSource = null;
   let tokenUpdatedAt = null;
+  let selectionState = { visible: false, x: 0, y: 0, text: '' };
   let featureSettings = normalizeFeatureSettings({});
   let semanticIngestTimer = null;
   let adapterHealthState = {
@@ -187,6 +183,7 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
   let healthCheckTimer = null;
   let hudSettings = normalizeHudSettings({}, { width: window.innerWidth, height: window.innerHeight });
   let persistHudTimer = null;
+  let selectionState = { visible: false, x: 0, y: 0, text: '' };
 
   const getViewport = () => ({ width: window.innerWidth, height: window.innerHeight });
   const panelState = (panelId) => hudSettings.panels[panelId] || defaultPanelState(panelId, getViewport());
@@ -1262,6 +1259,10 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
         onFabBehaviorChange: (behavior) => setHudSettings(updateThemeInSettings(hudSettings, { fab: { ...hudSettings.fab, behavior } }, getViewport())),
         drawerWidth: hudSettings.drawer.width,
         onDrawerWidthChange: (width) => setPanel('drawer', { ...panelState('drawer'), width }),
+        layoutMode: hudSettings.layoutMode,
+        onLayoutModeChange: (layoutMode) => setHudSettings(updateThemeInSettings(hudSettings, { layoutMode }, getViewport())),
+        privacyScrubbing: hudSettings.privacyScrubbing === true,
+        onPrivacyScrubbingChange: (privacyScrubbing) => setHudSettings(updateThemeInSettings(hudSettings, { privacyScrubbing }, getViewport())),
         tokenOverlayEnabled: featureSettings.modules.tokenOverlay?.enabled === true,
         tokenOverlayMode: hudSettings.tokenOverlay?.mode || 'compact',
         onToggleTokenOverlay: async (enabled) => {
@@ -1332,6 +1333,43 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
           await sendRuntimeMessage(MESSAGE_ACTIONS.STORAGE_REMOVE, { keys: TOUR_SEEN_KEY });
           openTour();
         },
+        onExport: async () => {
+          try {
+            const data = await callAction(MESSAGE_ACTIONS.BACKUP_EXPORT);
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `dex-enhance-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showDexToast({ type: 'success', title: 'Backup ready', message: 'Data exported successfully.' });
+          } catch (err) {
+            toastFailure({ operation: 'backup_export', error: err });
+          }
+        },
+        onImport: () => {
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+              try {
+                const payload = JSON.parse(ev.target.result);
+                await callAction(MESSAGE_ACTIONS.BACKUP_IMPORT, { payload });
+                showDexToast({ type: 'success', title: 'Import successful', message: 'Restoring state...' });
+                setTimeout(() => window.location.reload(), 1500);
+              } catch (err) {
+                toastFailure({ operation: 'backup_import', error: err });
+              }
+            };
+            reader.readAsText(file);
+          };
+          input.click();
+        },
       });
     }
     return h(PromptLibrary, {
@@ -1340,7 +1378,11 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       initialSection: promptWorkspaceSection,
       onClose: closeDrawer,
       onInsert: (text) => {
-        const inserted = insertTextThroughAdapter(adapter, text);
+        let final = text;
+        if (hudSettings.privacyScrubbing) {
+          final = scrubText(text);
+        }
+        const inserted = insertTextThroughAdapter(adapter, final);
         if (!inserted) {
           toastFailure({
             operation: 'prompt_library.insert',
@@ -1357,15 +1399,80 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       onSend: (text) => {
         sendPromptText(text);
       },
+      onRunChain: (chain, variables) => {
+        if (!chainEngine) {
+          chainEngine = new ChainEngine({
+            adapter,
+            queueController,
+            onProgress: (progress) => {
+              activeChainProgress = progress;
+              if (progress.status === 'completed') {
+                showDexToast({ type: 'success', title: 'Chain completed', message: `Workflow "${progress.chainName}" finished.` });
+              }
+              renderUI();
+            }
+          });
+        }
+        chainEngine.startChain(chain, variables);
+      },
       currentFolderLabel: currentFolderState.folderName,
+    });
+  };
+
+  const runHudAction = async (action, text) => {
+    selectionState = { ...selectionState, visible: false };
+    renderUI();
+
+    if (action.id === 'curate') {
+      const response = await sendRuntimeMessage(MESSAGE_ACTIONS.SEMANTIC_CLIPBOARD_INGEST_SNIPPET, {
+        url: window.location.href,
+        title: `Snippet: ${text.substring(0, 30)}...`,
+        text,
+      });
+      if (response.ok) {
+        showDexToast({ type: 'success', title: 'Context saved', message: 'Snippet added to Semantic Clipboard.' });
+        void refreshSemanticStats();
+      }
+      return;
+    }
+
+    const fullPrompt = `${action.prompt}\n\nTEXT:\n"""\n${text}\n"""`;
+    const finalPrompt = hudSettings.privacyScrubbing ? scrubText(fullPrompt) : fullPrompt;
+    insertTextThroughAdapter(adapter, finalPrompt);
+    showDexToast({ type: 'info', title: 'Action triggered', message: `Executing ${action.label} on selection.` });
+  };
+
+  const renderOmniBox = () => {
+    return h(OmniBox, {
+      visible: omniboxVisible,
+      prompts,
+      chains,
+      onClose: () => {
+        omniboxVisible = false;
+        renderUI();
+      },
+      onExecutePrompt: (prompt) => {
+        const vars = Array.isArray(prompt.variables) ? prompt.variables : [];
+        if (vars.length > 0) {
+          openDrawer('prompts');
+        } else {
+          insertTextThroughAdapter(adapter, prompt.body);
+        }
+      },
+      onExecuteChain: (chain) => {
+        openDrawer('prompts');
+      }
     });
   };
 
   const renderUI = () => {
     render(h('div', null, [
-      h(WelcomeHandoffModal, {
-        key: 'welcome',
-        visible: welcomeVisible,
+      renderLauncher(),
+      renderQuickHub(),
+      renderDrawer(),
+      renderOmniBox(),
+      h(DexToastViewport, {}),
+      welcomeVisible ? h(WelcomeHandoffModal, {
         zipping: welcomeZipping,
         iconUrl: welcomeIconUrl,
         panelState: panelState('welcome'),
@@ -1467,6 +1574,13 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
         onClose: closePalette,
         onExecute: (command) => command?.action?.(),
       }),
+      h(SelectionHUD, {
+        visible: selectionState.visible,
+        x: selectionState.x,
+        y: selectionState.y,
+        selectionText: selectionState.text,
+        onAction: runHudAction,
+      }),
       h(DexDrawer, {
         key: 'drawer',
         open: drawerOpen,
@@ -1494,6 +1608,32 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
         }),
         model: modelType,
         isGenerating: isGeneratingState,
+        layoutMode: hudSettings.layoutMode,
+        privacyScrubbing: hudSettings.privacyScrubbing === true,
+        headerExtra: activeChainProgress && activeChainProgress.status === 'running' ? h('div', { 
+            class: 'dex-status-card dex-status-card--glow', 
+            style: { margin: '8px 12px', border: '1px solid var(--dex-neon-blue)', background: 'rgba(0,0,0,0.4)', borderRadius: '12px', padding: '12px' } 
+          }, [
+            h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, [
+              h('strong', { style: { fontSize: '11px', color: 'var(--dex-neon-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' } }, `⛓️ Active Chain: ${activeChainProgress.chainName}`),
+              h('button', { 
+                class: 'dex-link-btn danger', 
+                style: { padding: '2px 8px', fontSize: '10px' },
+                onClick: () => chainEngine?.cancelChain() 
+              }, 'Cancel')
+            ]),
+            h('div', { style: { fontSize: '12px', marginTop: '6px' } }, `Step ${activeChainProgress.currentStep} of ${activeChainProgress.totalSteps}`),
+            h('div', { class: 'dex-progress-bar', style: { height: '3px', background: 'rgba(255,255,255,0.1)', marginTop: '8px', borderRadius: '4px', overflow: 'hidden' } }, [
+              h('div', { 
+                style: { 
+                  height: '100%', 
+                  background: 'var(--dex-neon-blue)', 
+                  width: `${(activeChainProgress.currentStep / activeChainProgress.totalSteps) * 100}%`,
+                  transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                } 
+              })
+            ])
+          ]) : null,
       }, renderDrawerBody()),
       !welcomeVisible
         ? h('aside', { class: 'dex-current-chat-chip', role: 'status', 'aria-live': 'polite' }, [
@@ -1560,6 +1700,36 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
     }
   };
 
+  const handleSelectionChange = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+      if (selectionState.visible) {
+        selectionState = { ...selectionState, visible: false };
+        renderUI();
+      }
+      return;
+    }
+
+    const text = selection.toString().trim();
+    if (text === selectionState.text && selectionState.visible) return;
+
+    try {
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      
+      selectionState = {
+        visible: true,
+        text,
+        x: rect.left + window.scrollX + (rect.width / 2),
+        y: rect.top + window.scrollY,
+      };
+      renderUI();
+    } catch (e) {
+      // Ignored
+    }
+  };
+
+  document.addEventListener('selectionchange', handleSelectionChange);
   document.addEventListener('keydown', onGlobalKeydown, true);
 
   const bridgeInjected = injectApiBridge();
@@ -1582,13 +1752,29 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
       openQuickHub();
       return false;
     }
-    if (message?.action === MESSAGE_ACTIONS.UI_OPEN_SURFACE) {
-      setLauncherVisibility(true);
-      openSurface(message.payload?.surface, message.payload?.options || {});
+    if (message?.action === MESSAGE_ACTIONS.UI_OMNIBOX_TOGGLE) {
+      omniboxVisible = !omniboxVisible;
+      if (omniboxVisible) {
+        // Refresh data when opening
+        void refreshPromptData();
+      }
+      renderUI();
       return false;
     }
     return false;
   });
+
+  const refreshPromptData = async () => {
+    try {
+      const pRes = await sendRuntimeMessage(MESSAGE_ACTIONS.PROMPT_LIST);
+      if (pRes.ok) prompts = pRes.data;
+      const cRes = await sendRuntimeMessage(MESSAGE_ACTIONS.PROMPT_LIST, { type: 'chain' });
+      if (cRes.ok) chains = cRes.data;
+      renderUI();
+    } catch (e) {
+      // Background might be sleeping
+    }
+  };
 
   subscribeToApiBridge((payload) => {
     tokenModel = payload?.model || tokenModel;
@@ -1621,6 +1807,30 @@ export async function initHostShell({ siteKey, siteLabel, AdapterClass }) {
 
   const safeModeRes = await sendRuntimeMessage(MESSAGE_ACTIONS.SAFE_MODE_GET);
   const safeModeActive = safeModeRes.ok && safeModeRes.data?.active === true;
+  
+  // Ghost Context Menus init
+  const ghostManager = new GhostManager({
+    onAction: (actionId, code) => {
+      let promptTitle = 'Explain Code';
+      let promptBody = '';
+      
+      if (actionId === 'explain') {
+        promptBody = `Explain the following code block in detail:\n\n\`\`\`\n${code}\n\`\`\``;
+      } else if (actionId === 'optimize') {
+        promptTitle = 'Optimize Code';
+        promptBody = `Optimize the following code for performance and readability:\n\n\`\`\`\n${code}\n\`\`\``;
+      } else if (actionId === 'test') {
+        promptTitle = 'Add Tests';
+        promptBody = `Generate unit tests for the following code:\n\n\`\`\`\n${code}\n\`\`\``;
+      }
+
+      insertTextThroughAdapter(adapter, promptBody);
+      openDrawer('prompts');
+      showDexToast({ type: 'success', title: `Running ${promptTitle}`, message: 'Code context captured.' });
+    }
+  });
+  ghostManager.start();
+
   if (safeModeActive) {
     featureSettings = {
       ...featureSettings,

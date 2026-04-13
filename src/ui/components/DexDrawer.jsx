@@ -15,8 +15,10 @@ export function DexDrawer({
   onSaveCheckpoint,
   children,
   statusBar = null,
+  headerExtra = null,
   model = 'dex',
   isGenerating = false,
+  layoutMode = 'overlay',
 }) {
   const handleRef = useRef(null);
 
@@ -50,7 +52,7 @@ export function DexDrawer({
   }, [open, onWidthChange, width]);
 
   return h('aside', {
-    class: `dex-drawer${open ? ' is-open' : ''}`,
+    class: `dex-drawer${open ? ' is-open' : ''} dex-drawer--${layoutMode}`,
     style: { width: `${Math.round(width)}px` },
     'aria-hidden': open ? 'false' : 'true',
   }, [
@@ -78,6 +80,7 @@ export function DexDrawer({
           }, 'Close'),
         ]),
       ]),
+      headerExtra,
       h('nav', { class: 'dex-drawer__tabs', 'aria-label': 'Drawer views' },
         viewTabs.map((tab) => h('button', {
           key: tab.id,

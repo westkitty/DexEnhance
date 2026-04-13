@@ -4,6 +4,7 @@ import { MESSAGE_ACTIONS, sendRuntimeMessage } from '../../lib/message-protocol.
 import { FolderTree } from './FolderTree.jsx';
 import { ContextualHint } from './ContextualHint.jsx';
 import { buildDiagnostics, showDexToast } from '../runtime/dex-toast-controller.js';
+import { scrubText } from '../../lib/PrivacyScrubber.js';
 
 async function callAction(action, payload = {}) {
   const response = await sendRuntimeMessage(action, payload);
@@ -32,16 +33,19 @@ export function PromptLibrary({
   onInsert,
   onQueue,
   onSend,
+  privacyScrubbing = false,
   currentChatUrl = '',
   initialSection = 'prompts',
   currentFolderLabel = '',
 }) {
   const [prompts, setPrompts] = useState([]);
+  const [chains, setChains] = useState([]);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentSection, setCurrentSection] = useState(initialSection === 'folders' ? 'folders' : 'prompts');
+  const [activeFolderContext, setActiveFolderContext] = useState('');
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -49,8 +53,9 @@ export function PromptLibrary({
   const [body, setBody] = useState('');
   const [tagsText, setTagsText] = useState('');
   const [activeVariablePromptId, setActiveVariablePromptId] = useState('');
+  const [activeChainId, setActiveChainId] = useState('');
   const [variableValues, setVariableValues] = useState({});
-  const [actionStatus, setActionStatus] = useState({ tone: 'empty', message: 'No prompt action run yet.' });
+  const [actionStatus, setActionStatus] = useState({ tone: 'empty', message: 'No action run yet.' });
   const pendingDeletesRef = useRef(new Map());
 
   const notifyError = (operation, err) => {
@@ -94,9 +99,44 @@ export function PromptLibrary({
     }
   }
 
+  async function refreshChains() {
+    try {
+      // Chains are currently stored in local storage or a dedicated message action
+      const data = await callAction(MESSAGE_ACTIONS.PROMPT_LIST, { type: 'chain' });
+      setChains(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setChains([]);
+    }
+  }
+
   useEffect(() => {
-    if (visible) void refresh();
+    if (visible) {
+      void refresh();
+      void refreshChains();
+    }
   }, [visible]);
+
+  useEffect(() => {
+    if (!currentChatUrl || !visible) {
+      setActiveFolderContext('');
+      return;
+    }
+    async function fetchActiveFolder() {
+      try {
+        const mapping = await callAction(MESSAGE_ACTIONS.FOLDER_GET_BY_CHAT_URL, { chatUrl: currentChatUrl });
+        if (mapping?.folderId) {
+          const tree = await callAction(MESSAGE_ACTIONS.FOLDER_TREE_GET, { includeDeleted: false });
+          const folder = (tree.folders || []).find((f) => f.id === mapping.folderId);
+          setActiveFolderContext(folder?.context || '');
+        } else {
+          setActiveFolderContext('');
+        }
+      } catch (e) {
+        // Silent fallback
+      }
+    }
+    void fetchActiveFolder();
+  }, [currentChatUrl, visible, currentSection]);
 
   const filteredPrompts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -111,12 +151,14 @@ export function PromptLibrary({
   }, [prompts, search, tierFilter]);
 
   const tierCounts = useMemo(() => {
-    const counts = { all: prompts.length, common: 0, advanced: 0, epic: 0 };
+    const counts = { all: prompts.length, common: 0, advanced: 0, epic: 0, 'image-gen': 0, apps: 0 };
     for (const prompt of prompts) {
       const tags = Array.isArray(prompt.tags) ? prompt.tags : [];
       if (tags.includes('common')) counts.common += 1;
       if (tags.includes('advanced')) counts.advanced += 1;
       if (tags.includes('epic')) counts.epic += 1;
+      if (tags.includes('image-gen')) counts['image-gen'] += 1;
+      if (tags.includes('apps')) counts.apps += 1;
     }
     return counts;
   }, [prompts]);
@@ -227,18 +269,33 @@ export function PromptLibrary({
       openVariableEditor(prompt);
       return;
     }
-    onInsert?.(prompt.body);
+    }
+    let body = prompt.body;
+    if (activeFolderContext) {
+      body = `[[ CONTEXT FROM ${currentFolderLabel.toUpperCase()} ]]\n${activeFolderContext}\n\n[[ PROMPT ]]\n${body}`;
+    }
+    if (privacyScrubbing) {
+      body = scrubText(body);
+    }
+    onInsert?.(body);
     setActionStatus({ tone: 'success', message: `Inserted "${prompt.title}" into the composer.` });
     onClose?.();
   }
 
   function resolveVariablePrompt(prompt) {
-    const text = fillPromptVariables(prompt, variableValues);
+    let text = fillPromptVariables(prompt, variableValues);
+    if (activeFolderContext) {
+      text = `[[ CONTEXT FROM ${currentFolderLabel.toUpperCase()} ]]\n${activeFolderContext}\n\n[[ PROMPT ]]\n${text}`;
+    }
     return text;
   }
 
   function runResolvedPrompt(prompt, mode = 'insert') {
     const text = resolveVariablePrompt(prompt);
+    let final = text;
+    if (privacyScrubbing) {
+      final = scrubText(text);
+    }
     if (!text.trim()) {
       setActionStatus({ tone: 'error', message: 'Resolved prompt is empty. Fill the variables first.' });
       return;
@@ -247,17 +304,17 @@ export function PromptLibrary({
       setActiveVariablePromptId('');
       setVariableValues({});
       if (mode === 'queue') {
-        onQueue?.(text);
+        onQueue?.(final);
         setActionStatus({ tone: 'success', message: `Queued "${prompt.title}".` });
         return;
       }
       if (mode === 'send') {
-        onSend?.(text);
+        onSend?.(final);
         setActionStatus({ tone: 'success', message: `Sent "${prompt.title}".` });
         onClose?.();
         return;
       }
-      onInsert?.(text);
+      onInsert?.(final);
       setActionStatus({ tone: 'success', message: `Inserted "${prompt.title}" into the composer.` });
       onClose?.();
     } catch (error) {
@@ -273,12 +330,17 @@ export function PromptLibrary({
         type: 'button',
         class: `dex-segmented__button${currentSection === 'prompts' ? ' is-active' : ''}`,
         onClick: () => setCurrentSection('prompts'),
-      }, 'Prompt Library'),
+      }, 'Prompts'),
+      h('button', {
+        type: 'button',
+        class: `dex-segmented__button${currentSection === 'chains' ? ' is-active' : ''}`,
+        onClick: () => setCurrentSection('chains'),
+      }, 'Chains'),
       h('button', {
         type: 'button',
         class: `dex-segmented__button${currentSection === 'folders' ? ' is-active' : ''}`,
         onClick: () => setCurrentSection('folders'),
-      }, 'Chat Organization'),
+      }, 'Archive'),
     ]),
 
     currentSection === 'folders'
@@ -321,12 +383,12 @@ export function PromptLibrary({
             }, showForm && !editingId ? 'Hide Form' : editingId ? 'Editing Prompt' : '+ New Prompt'),
           ]),
           h('div', { class: 'dex-prompt-filter-row' },
-            ['all', 'common', 'advanced', 'epic'].map((tier) => h('button', {
+            ['all', 'common', 'advanced', 'epic', 'image-gen', 'apps'].map((tier) => h('button', {
               key: tier,
               type: 'button',
-              class: `dex-link-btn${tierFilter === tier ? ' dex-link-btn--accent' : ''}`,
+              class: `dex-link-btn\${tierFilter === tier ? ' dex-link-btn--accent' : ''}`,
               onClick: () => setTierFilter(tier),
-            }, tier === 'all' ? `All (${tierCounts.all})` : `${tier.charAt(0).toUpperCase() + tier.slice(1)} (${tierCounts[tier]})`))
+            }, tier === 'all' ? `All (\${tierCounts.all})` : `\${tier.charAt(0).toUpperCase() + tier.slice(1).replace('-', '')} (\${tierCounts[tier]})`))
           ),
           showForm
             ? h('form', { class: 'dex-form', onSubmit: submitPrompt }, [
@@ -424,6 +486,59 @@ export function PromptLibrary({
               ]);
             })
           ),
-        ]),
+        ]) : currentSection === 'chains' ? h('div', { class: 'dex-drawer-stack' }, [
+          h(ContextualHint, {
+            hintId: 'chain-engine',
+            visible: true,
+            title: 'Action Chains',
+            message: 'Multi-step AI workflows. Output from one step can be piped into the next using {{LAST_RESULT}}.',
+          }),
+          h('div', { class: 'dex-prompt-list' },
+            chains.map((chain) => {
+              const isActive = activeChainId === chain.id;
+              const allVars = [...new Set(chain.steps.flatMap(s => s.variables || []))].filter(v => v !== 'LAST_RESULT');
+              return h('article', { key: chain.id, class: 'dex-status-card dex-prompt-card tier-advanced' }, [
+                h('div', { class: 'dex-prompt-card__head' }, [
+                  h('strong', null, chain.name),
+                  h('span', { class: 'dex-tag' }, `${chain.steps.length} Steps`),
+                ]),
+                h('p', { class: 'dex-prompt-card__body', style: { fontSize: '12px' } }, chain.description),
+                h('div', { class: 'dex-folder-actions' }, [
+                  h('button', {
+                    type: 'button',
+                    class: 'dex-link-btn dex-link-btn--accent',
+                    onClick: () => {
+                      setActiveChainId(chain.id);
+                      setVariableValues(Object.fromEntries(allVars.map(v => [v, ''])));
+                    }
+                  }, 'Run Chain'),
+                ]),
+                isActive ? h('div', { class: 'dex-inline-variable-form' }, [
+                  h('strong', null, `Configure ${chain.name}`),
+                  allVars.map(v => h('div', { key: v }, [
+                    h('label', { class: 'dex-sidebar__label' }, v),
+                    h('input', {
+                      class: 'dex-input',
+                      value: variableValues[v] || '',
+                      onInput: (e) => setVariableValues(prev => ({ ...prev, [v]: e.currentTarget.value }))
+                    })
+                  ])),
+                  h('div', { class: 'dex-form__actions' }, [
+                    h('button', {
+                      type: 'button',
+                      class: 'dex-link-btn dex-link-btn--accent',
+                      onClick: () => {
+                        onRunChain?.(chain, variableValues);
+                        setActiveChainId('');
+                        onClose?.();
+                      }
+                    }, 'Start Workflow'),
+                    h('button', { type: 'button', class: 'dex-link-btn', onClick: () => setActiveChainId('') }, 'Cancel')
+                  ])
+                ]) : null
+              ]);
+            })
+          )
+        ]) : null,
   ]);
 }

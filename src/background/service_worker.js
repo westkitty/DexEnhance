@@ -7,6 +7,7 @@
 
 import { MESSAGE_ACTIONS, ok, fail } from '../lib/message-protocol.js';
 import { DEFAULT_PROMPT_TEMPLATES, PROMPT_CATALOG_VERSION } from '../lib/default-prompts.js';
+import { ALL_DEFAULT_CHAINS } from '../lib/default-chains.js';
 import {
   FEATURE_SETTINGS_KEY,
   FEATURE_SETTINGS_SCHEMA_VERSION,
@@ -29,6 +30,7 @@ import {
   collectDescendantIds,
   promptFingerprint,
 } from '../lib/domain-logic.js';
+import { extractVariables } from '../lib/prompt-utils.js';
 
 const storage = chrome.storage.local;
 const HUD_SETTINGS_KEY = 'hudUiSettingsV1';
@@ -36,7 +38,9 @@ const STORAGE_KEYS = Object.freeze({
   FOLDERS: 'folders',
   CHAT_FOLDER_MAP: 'chatFolderMap',
   PROMPTS: 'prompts',
+  CHAINS: 'chains',
   PROMPT_CATALOG_VERSION: 'promptCatalogVersion',
+  CHAIN_CATALOG_VERSION: 'chainCatalogVersion',
   FEATURE_SETTINGS: FEATURE_SETTINGS_KEY,
   SCHEMA_VERSIONS: 'schemaVersions',
   SAFE_MODE: 'safeModeActive',
@@ -93,6 +97,16 @@ async function relayToastToSender(sender, payload) {
   if (!Number.isFinite(tabId)) return;
   await relayToastToTab(tabId, payload);
 }
+
+// Global Command Listeners
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === 'toggle-omnibox') {
+    const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+    if (tab?.id) {
+      chrome.tabs.sendMessage(tab.id, { action: MESSAGE_ACTIONS.UI_OMNIBOX_TOGGLE }).catch(() => {});
+    }
+  }
+});
 
 /**
  * @param {unknown} value
@@ -657,6 +671,44 @@ async function loadPromptState() {
   return prompts;
 }
 
+async function loadChainState() {
+  const state = await storage.get([STORAGE_KEYS.CHAINS, STORAGE_KEYS.CHAIN_CATALOG_VERSION]);
+  const chains = Array.isArray(state[STORAGE_KEYS.CHAINS]) ? state[STORAGE_KEYS.CHAINS] : [];
+  const catalogVersion = typeof state[STORAGE_KEYS.CHAIN_CATALOG_VERSION] === 'string'
+    ? state[STORAGE_KEYS.CHAIN_CATALOG_VERSION]
+    : '';
+
+  // Seed chains if version mismatch (or first run)
+  const CHAIN_VERSION = '2026-04-13-chains-v1';
+  if (catalogVersion !== CHAIN_VERSION) {
+    const merged = [...chains];
+    const seen = new Set(merged.map(c => c.id));
+    
+    for (const template of ALL_DEFAULT_CHAINS) {
+      if (seen.has(template.id)) continue;
+      
+      const stepsWithVars = template.steps.map(step => ({
+        ...step,
+        variables: extractVariables(step.body)
+      }));
+
+      merged.push({
+        ...template,
+        steps: stepsWithVars,
+        createdAt: Date.now(),
+      });
+      seen.add(template.id);
+    }
+    
+    await storage.set({
+      [STORAGE_KEYS.CHAINS]: merged,
+      [STORAGE_KEYS.CHAIN_CATALOG_VERSION]: CHAIN_VERSION,
+    });
+    return merged;
+  }
+  return chains;
+}
+
 async function savePromptState(prompts) {
   await storage.set({
     [STORAGE_KEYS.PROMPTS]: prompts,
@@ -808,6 +860,20 @@ async function unassignChat(chatUrl) {
   await saveFolderState(state);
   return { chatUrl: normalizedUrl };
 }
+  await saveFolderState(state);
+  return { chatUrl: normalizedUrl };
+}
+
+async function setFolderContext(id, context) {
+  if (typeof id !== 'string' || !id) throw new Error('FOLDER_SET_CONTEXT requires id.');
+  const state = await loadFolderState();
+  const folder = state.folders.find((item) => item.id === id);
+  if (!folder) throw new Error('Folder not found.');
+
+  folder.context = typeof context === 'string' ? context : '';
+  await saveFolderState(state);
+  return folder;
+}
 
 async function getFolderByChatUrl(chatUrl) {
   const normalizedUrl = normalizeChatUrl(chatUrl);
@@ -955,8 +1021,16 @@ async function handleMessage(message, sender) {
     case MESSAGE_ACTIONS.FOLDER_GET_BY_CHAT_URL:
       return ok(await getFolderByChatUrl(message.chatUrl));
 
-    case MESSAGE_ACTIONS.PROMPT_LIST:
-      return ok(await listPrompts());
+    case MESSAGE_ACTIONS.FOLDER_SET_CONTEXT:
+      return ok(await setFolderContext(message.id, message.context));
+
+    case MESSAGE_ACTIONS.PROMPT_LIST: {
+      const { type } = message.payload || {};
+      if (type === 'chain') {
+        return ok(await loadChainState());
+      }
+      return ok(await loadPromptState());
+    }
 
     case MESSAGE_ACTIONS.PROMPT_CREATE:
       return ok(await createPrompt(message.prompt));

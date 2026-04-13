@@ -30,6 +30,8 @@ export function FolderTree({ currentChatUrl }) {
   const [renamingName, setRenamingName] = useState('');
   const [confirmTrashId, setConfirmTrashId] = useState(null);
   const [confirmPermId, setConfirmPermId] = useState(null);
+  const [editingContextId, setEditingContextId] = useState(null);
+  const [editingContextValue, setEditingContextValue] = useState('');
   const pendingDeletesRef = useRef(new Map());
 
   const notifyError = (operation, err) => {
@@ -245,6 +247,17 @@ export function FolderTree({ currentChatUrl }) {
     }
   }
 
+  async function updateFolderContext(id) {
+    try {
+      await callAction(MESSAGE_ACTIONS.FOLDER_SET_CONTEXT, { id, context: editingContextValue });
+      showDexToast({ type: 'success', title: 'Context updated', message: 'Folder knowledge base refreshed.' });
+      setEditingContextId(null);
+      await refresh();
+    } catch (err) {
+      notifyError('folder_set_context', err);
+    }
+  }
+
   function renderCreateForm(parentId) {
     return h('div', { class: 'dex-folder-inline-form' }, [
       h('input', {
@@ -342,6 +355,21 @@ export function FolderTree({ currentChatUrl }) {
             ]),
           ])
         : null,
+      editingContextId === folder.id
+        ? h('div', { class: 'dex-folder-node__context-editor', style: `--depth:${depth};` }, [
+            h('p', { class: 'dex-folder-state' }, 'Knowledge added here is automatically injected when using prompts from this folder.'),
+            h('textarea', {
+              class: 'dex-input dex-folder-context-textarea',
+              placeholder: 'System instructions or shared context...',
+              value: editingContextValue,
+              onInput: (event) => setEditingContextValue(event.currentTarget.value),
+            }),
+            h('div', { class: 'dex-folder-inline-actions' }, [
+              h('button', { type: 'button', class: 'dex-link-btn dex-link-btn--accent', onClick: () => void updateFolderContext(folder.id) }, 'Save Context'),
+              h('button', { type: 'button', class: 'dex-link-btn', onClick: () => setEditingContextId(null) }, 'Cancel'),
+            ]),
+          ])
+        : null,
       menuOpen
         ? h('div', { class: 'dex-folder-actions', style: `--depth:${depth};` },
             showTrash
@@ -383,6 +411,15 @@ export function FolderTree({ currentChatUrl }) {
                       setActiveMenuId(null);
                     },
                   }, assigned ? 'Reassign Here' : 'Assign Here'),
+                  h('button', {
+                    type: 'button',
+                    class: 'dex-link-btn',
+                    onClick: () => {
+                      setEditingContextId(folder.id);
+                      setEditingContextValue(folder.context || '');
+                      setActiveMenuId(null);
+                    },
+                  }, 'Knowledge'),
                   h('button', {
                     type: 'button',
                     class: 'dex-link-btn danger',

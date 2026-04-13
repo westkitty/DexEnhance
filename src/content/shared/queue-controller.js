@@ -24,7 +24,7 @@ function scheduleAnimationFrame(callback) {
   runtimeGlobal.setTimeout(callback, 0);
 }
 
-function createQueueItem({ text, siteLabel, originModule = 'composer', target = 'chat-composer' }) {
+function createQueueItem({ text, siteLabel, originModule = 'composer', target = 'chat-composer', metadata = {} }) {
   return {
     id: `dex-queue-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text,
@@ -32,6 +32,7 @@ function createQueueItem({ text, siteLabel, originModule = 'composer', target = 
     originModule,
     target,
     siteLabel,
+    metadata,
     createdAt: Date.now(),
     status: 'queued',
     attempts: 0,
@@ -155,28 +156,23 @@ export function setupQueueController({ adapter, siteLabel, onQueueSizeChange, on
     }
   }
 
-  function enqueueText(text, originModule = 'composer') {
+  function enqueueText(text, originModule = 'composer', metadata = {}) {
     const message = typeof text === 'string' ? text.trim() : '';
     if (!message) return null;
     const item = createQueueItem({
       text: message,
       siteLabel,
       originModule,
+      metadata,
     });
     items = [...items, item];
     emit();
     return item;
   }
 
-  function queueCurrentMessage() {
-    if (!textareaEl) return false;
-    const message = readTextFromInputElement(textareaEl);
-    if (!message) return false;
-
     const item = enqueueText(message, 'composer_intercept');
     if (!item) return false;
     clearTextInInputElement(textareaEl);
-    console.log(`[DexEnhance] ${siteLabel} queued message (${items.length} pending)`);
     return true;
   }
 

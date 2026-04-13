@@ -1,5 +1,6 @@
 import { h } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
+import * as templates from '../sandbox/app-templates.js';
 
 export function SandboxStage({
   visible,
@@ -82,11 +83,21 @@ export function SandboxStage({
         },
         disabled: loading,
       }, loading ? 'Generating...' : '🧪 Generate Tests'),
-      h('button', {
-        type: 'button',
-        class: 'dex-link-btn',
-        onClick: () => onCodeChange?.("() => html`<div style={{padding: '10px', background: '#f0f9ff', borderRadius: '4px'}}><h4>New Component</h4><button onClick={() => alert('Clicked!')}>Click Me</button></div>`"),
-      }, 'Load Template'),
+      h('select', {
+        class: 'dex-input',
+        style: { maxWidth: '160px' },
+        onChange: (e) => {
+          const val = e.currentTarget.value;
+          if (val && templates[val]) {
+            onCodeChange?.(templates[val]);
+          }
+        }
+      }, [
+        h('option', { value: '' }, 'Templates...'),
+        h('option', { value: 'SNAKE_TEMPLATE' }, 'Snake Game'),
+        h('option', { value: 'KANBAN_TEMPLATE' }, 'Kanban Board'),
+        h('option', { value: 'VISUALIZER_TEMPLATE' }, 'Data Viz'),
+      ]),
     ]),
 
     tests && h('div', { class: 'dex-drawer-stack', style: { marginTop: '16px' } }, [

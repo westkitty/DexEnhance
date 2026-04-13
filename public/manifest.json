@@ -59,6 +59,15 @@
       "matches": ["https://chatgpt.com/*", "https://gemini.google.com/*"]
     }
   ],
+  "commands": {
+    "toggle-omnibox": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+Space",
+        "mac": "Command+Shift+Space"
+      },
+      "description": "Toggle DexEnhance Omni-Box"
+    }
+  },
   "sandbox": {
     "pages": ["sandbox/sandbox.html"],
     "content_security_policy": "sandbox allow-scripts; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"

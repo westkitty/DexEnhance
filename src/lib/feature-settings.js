@@ -6,7 +6,7 @@ const DEFAULT_MODULE_SETTINGS = Object.freeze({
   observerAgent: Object.freeze({ enabled: false, notificationsEnabled: true }),
   semanticClipboard: Object.freeze({ enabled: true, maxTrackedTabs: 5, topK: 8 }),
   popoutCanvas: Object.freeze({ enabled: true, autoOpenOnCodeDetection: false }),
-  tokenOverlay: Object.freeze({ enabled: true, compactMode: true }),
+  tokenOverlay: Object.freeze({ enabled: false, compactMode: true }),
   macroRecorder: Object.freeze({ enabled: false, captureKeystrokes: false }),
   conversationMapper: Object.freeze({ enabled: false, clusterMode: 'temporal' }),
   promptUnitTesting: Object.freeze({ enabled: false, maxBatchSize: 8 }),
@@ -62,7 +62,7 @@ function normalizeModuleSettings(moduleId, value) {
       };
     case 'tokenOverlay':
       return {
-        enabled: source.enabled !== false,
+        enabled: source.enabled === true,
         compactMode: source.compactMode !== false,
       };
     case 'macroRecorder':
