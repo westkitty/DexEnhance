@@ -37,3 +37,10 @@
 - **Risk Level**: Low (Additive UI/Infrastructure).
 - **Checks Run**: Hotkey verification, MutationObserver performance check, site-specific CSS auditing.
 - **Rollback Notes**: Remove `commands` from manifest, delete `ghost-manager.js`, remove hooks from `init-host-shell.js`.
+
+### [UX Hardening] (Token Window Silence)
+- **Affected Files**: `src/background/service_worker.js`, `src/content/shared/init-host-shell.js`, `src/lib/ui-settings.js`, `src/lib/feature-settings.js`.
+- **Purpose**: Ensure token window is disabled by default for all users (opt-in only).
+- **Risk Level**: Low (UI logic).
+- **Checks Run**: Verified logical AND conditions in shell renderer.
+- **Rollback Notes**: Revert `visible` prop logic in `init-host-shell.js`.

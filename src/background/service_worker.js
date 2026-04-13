@@ -1338,7 +1338,7 @@ chrome.runtime.onInstalled.addListener((details) => {
             expanded: false,
           },
           tokenOverlay: {
-            enabled: true,
+            enabled: false,
             mode: 'compact',
           },
         },

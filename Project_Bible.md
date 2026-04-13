@@ -2092,3 +2092,21 @@ The project is in a high-fidelity, loadable state for Chrome. Loading the `dist/
 - Branch: `codex/DexEnhance_Vnext`
 - State: Fully enhanced with pervasive UX layer and orchestration engine.
 - Backup status: Git checkpointed and pushed.
+
+---
+## Work Unit — 2026-04-13T10:55:47Z
+
+### Timestamp
+- 2026-04-13T10:55:47Z
+
+### Task / Request
+- Finalize "opt-in" only behavior for the Token Window to prevent unwanted visibility.
+
+### Important Files Touched
+- `src/background/service_worker.js`
+- `src/content/shared/init-host-shell.js`
+
+### Decisions Made / Operational Outcome
+- [FIXED] Changed `onInstalled` seed for `tokenOverlay.enabled` to `false`.
+- [HARDENED] Modified `init-host-shell.js` visibility logic to strictly require `=== true` for both feature and HUD settings.
+- [RESULT] Token window is now hidden by default for all users.

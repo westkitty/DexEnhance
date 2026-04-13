@@ -1658,7 +1658,7 @@ async function logStorageRoundTrip(siteKey, siteLabel) {
         : null,
       h(TokenOverlay, {
         key: 'token-overlay',
-        visible: !welcomeVisible && featureSettings.modules.tokenOverlay?.enabled === true && hudSettings.tokenOverlay?.enabled !== false,
+        visible: !welcomeVisible && featureSettings.modules.tokenOverlay?.enabled === true && hudSettings.tokenOverlay?.enabled === true,
         model: tokenModel || '',
         tokens: tokenCount,
         source: tokenSource || '',
