@@ -21,3 +21,19 @@
 - **Task**: Verify that everything will work as an extension for Chrome.
 - **Audited Components**: `manifest.json`, `dist/`, `chrome.*` API namespace, Sandbox CSP, Offscreen documents.
 - **Result**: [PASSED] 100% compliant with Chrome Manifest V3 standards.
+
+---
+
+### [Chain Engine] (Wave 6 - Action Chains)
+- **Affected Files**: `src/lib/chain-engine.js`, `src/lib/default-chains.js`, `src/content/shared/init-host-shell.js`, `src/ui/components/PromptLibrary.jsx`, `src/content/shared/queue-controller.js`.
+- **Purpose**: Multi-step AI orchestration with variable piping (`{{LAST_RESULT}}`, `{{RESULTS[n]}}`).
+- **Risk Level**: Medium (Complex state/async logic).
+- **Checks Run**: Verified piping logic and step execution in ChatGPT/Gemini.
+- **Rollback Notes**: Revert `ChainEngine` instantiation logic in `init-host-shell.js`.
+
+### [Ghost Menus & Omni-Box] (The Ubiquitous Workspace)
+- **Affected Files**: `src/content/shared/ghost-manager.js`, `src/ui/components/OmniBox.jsx`, `public/manifest.json`, `src/background/service_worker.js`, `src/ui/styles/theme.css`.
+- **Purpose**: Pervasive AI layer via global search hotkey and in-situ code block actions.
+- **Risk Level**: Low (Additive UI/Infrastructure).
+- **Checks Run**: Hotkey verification, MutationObserver performance check, site-specific CSS auditing.
+- **Rollback Notes**: Remove `commands` from manifest, delete `ghost-manager.js`, remove hooks from `init-host-shell.js`.
