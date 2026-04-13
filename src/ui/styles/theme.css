@@ -1275,6 +1275,26 @@ select.dex-input {
   border-radius: 10px;
 }
 
+
 .dex-drawer__body::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* Premium Staggered Entry Animations */
+@keyframes dex-entry-slide {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dex-drawer-stack > *,
+.dex-status-card-grid > *,
+.dex-prompt-list > *,
+.dex-folder-list > * {
+  animation: dex-entry-slide 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.dex-drawer-stack > *:nth-child(1), .dex-status-card-grid > *:nth-child(1) { animation-delay: 0.05s; }
+.dex-drawer-stack > *:nth-child(2), .dex-status-card-grid > *:nth-child(2) { animation-delay: 0.10s; }
+.dex-drawer-stack > *:nth-child(3), .dex-status-card-grid > *:nth-child(3) { animation-delay: 0.15s; }
+.dex-drawer-stack > *:nth-child(4), .dex-status-card-grid > *:nth-child(4) { animation-delay: 0.20s; }
+.dex-drawer-stack > *:nth-child(5), .dex-status-card-grid > *:nth-child(5) { animation-delay: 0.25s; }
